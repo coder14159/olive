@@ -1,0 +1,50 @@
+# Makefile which includes core functionality
+
+.DEFAULT_GOAL:= all
+
+COMPILER := /usr/bin/g++
+
+CXXFLAGS	+= -g -Wall
+CXXFLAGS	+= -DBOOST_LOG_DYN_LINK
+CXXFLAGS	+= -lrt -lpthread
+
+# _GNU_SOURCE is required for pthreads
+CXXFLAGS	+= -D_GNU_SOURCE
+
+ifdef DEBUG
+	CXXFLAGS 		+= -O0
+	BUILD_SUFFIX	+= .debug
+else
+	CXXFLAGS 		+= -O3
+endif
+
+PROCESSOR	:= $(shell uname -m)
+BASE_DIR 	:= $(CURDIR)
+BIN_DIR		:= build/$(PROCESSOR)$(BUILD_SUFFIX)/bin
+LIB_DIR		:= build/$(PROCESSOR)$(BUILD_SUFFIX)/lib
+
+THIRD_PARTY_DIR		:= /home/ian/thirdparty
+
+# Third party libraries
+BOOST_BASE_DIR		:= $(THIRD_PARTY_DIR)/boost_1_73_0
+BOOST_LIB_DIR		:= $(BOOST_BASE_DIR)/build/lib
+BOOST_HEADER_DIR	:= $(BOOST_BASE_DIR)/build/include
+CXXFLAGS			+= -L$(BOOST_LIB_DIR)
+CXXFLAGS			+= -Wl,-rpath=$(BOOST_LIB_DIR)
+
+CXXOPTS_BASE_DIR	:= $(THIRD_PARTY_DIR)/cxxopts-2.2.0
+CXXOPTS_HEADER_DIR	:= $(CXXOPTS_BASE_DIR)/include
+
+CXXFLAGS_LIB		:= -fPIC
+
+ROOT_DIR	:= $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
+
+#make_bin_dir:
+#	@echo "   >> create $(BIN_DIR)"
+#	@if [ ! -d $(BIN_DIR) ]; then echo "   >> create $(BIN_DIR)" && mkdir -p $(BIN_DIR); fi
+
+#make_lib_dir:
+#	@if [ ! -d $(LIB_DIR)/.obj/detail ]; then \
+#		echo "  >> create $(LIB_DIR)/.obj/detail"; \
+#		mkdir -p $(LIB_DIR)/.obj/detail; \
+#	fi
