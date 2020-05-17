@@ -4,7 +4,6 @@
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics.hpp>
 
-#include <chrono>
 #include <fstream>
 #include <map>
 #include <string>

@@ -18,16 +18,12 @@ public:
   TimeDuration ();
   TimeDuration (Nanoseconds nanoseconds);
 
-  static TimeDuration minimum ();
-  static TimeDuration maximum ();
-
-  int64_t nanoseconds () const { return m_nanoseconds.count (); }
+  Nanoseconds nanoseconds () const { return m_nanoseconds; }
 
   std::string pretty () const;
 
-  // std::string pretty (int64_t nanoseconds) const;
-
 private:
+
   Nanoseconds m_nanoseconds;
 };
 
@@ -47,6 +43,20 @@ inline
 bool operator== (TimeDuration lhs, TimeDuration rhs)
 {
   return lhs.nanoseconds () == rhs.nanoseconds ();
+}
+
+inline
+double to_seconds_floating_point (TimeDuration duration)
+{
+  using namespace std::chrono;
+  return duration_cast<Seconds> (duration.nanoseconds ()).count ();
+}
+
+inline
+double to_microseconds_floating_point (TimeDuration duration)
+{
+  using namespace std::chrono;
+  return duration_cast<Microseconds> (duration.nanoseconds ()).count ();
 }
 
 } // namespace spmc

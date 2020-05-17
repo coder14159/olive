@@ -1,3 +1,5 @@
+#include "src/Buffer.h"
+#include "src/Timer.h"
 #if 0
 #include "src/SPMCSink.h"
 #include "src/SPMCStream.h"
@@ -7,6 +9,7 @@
 #include "spmc_async.h"
 #include "spmc_time_duration.h"
 #include "spmc_timer.h"
+#endif
 
 #include <boost/circular_buffer.hpp>
 #include <boost/container/small_vector.hpp>
@@ -15,9 +18,10 @@
 
 #include <thread>
 #include <vector>
-#endif
 
+#include <iomanip>
 #include <iostream>
+#include <ext/numeric>
 
 #include "src/Logger.h"
 #include "src/TimeDuration.h"
@@ -78,7 +82,6 @@ BOOST_AUTO_TEST_CASE (TestTimeDuration)
   BOOST_CHECK (per_call.count () < 200);
 }
 
-#if 0
 BOOST_AUTO_TEST_CASE (PerformanceOfCircularBuffers)
 {
   if (getenv ("NOTIMING") != nullptr)
@@ -88,23 +91,30 @@ BOOST_AUTO_TEST_CASE (PerformanceOfCircularBuffers)
 
   std::vector<uint8_t> in (1024);
   std::iota (in.begin (), in.end (), 1);
-  TimeDuration duration = seconds (2);
+
+  TimeDuration duration (Nanoseconds (Seconds (5)));
+
   size_t size = 204800;
 
-  double bufferThroughput = 0;
-  double boostThroughput  = 0;
+  /*
+   * Throughput in GB/s
+   */
+  double bufferThroughput = 0.;
+  double boostThroughput  = 0.;
 
   {
     Buffer<std::allocator<uint8_t>> buffer (size);
     std::vector<uint8_t> out;
 
-    auto start = Time::now ();
-    Timer timer;
     uint64_t bytes = 0;
+
+    Timer timer;
+
     for (int i = 0; ; ++i)
     {
-      if ((i % 1000000) == 0 && (Time::now () - start) > duration)
+      if ((i % 1000000) == 0 && duration < timer.elapsed ())
       {
+        timer.elapsed ().pretty ();
         break;
       }
 
@@ -121,28 +131,29 @@ BOOST_AUTO_TEST_CASE (PerformanceOfCircularBuffers)
 
       ++i;
     }
+
     timer.stop ();
 
-    double throughput =
-      bytes / (1024*1024*1024) / timer.elapsed ().seconds ();
+    bufferThroughput = static_cast<double> (bytes) / (1024.*1024.*1024.)
+                    / to_seconds_floating_point (timer.elapsed ());
+
     BOOST_TEST_MESSAGE ("Custom Buffer throughput\t\t"
-                        << "size=" << size << " "
                         << std::fixed << std::setprecision (3)
-                        << throughput << " GB/s");
+                        << bufferThroughput << " GB/s");
   }
+
   {
     boost::circular_buffer<uint8_t> buffer (size);
     std::vector<uint8_t> out;
     out.reserve (size);
 
-    auto start = Time::now ();
     Timer timer;
     uint64_t i = 0;
     uint64_t bytes = 0;
     while (true)
     {
       // check time more often as circular buffer is slow
-      if ((i % 10000) == 0 && (Time::now () - start) > duration)
+      if ((i % 1000) == 0 && duration < timer.elapsed ())
       {
         break;
       }
@@ -153,6 +164,7 @@ BOOST_AUTO_TEST_CASE (PerformanceOfCircularBuffers)
       // is there a better way to copy from and then remove data from
       // a boost::circular_buffer?
       std::copy (buffer.begin (), buffer.end (), std::back_inserter(out));
+
       buffer.erase (buffer.begin (), buffer.begin () + in.size ());
       bytes += out.size ();
 
@@ -161,23 +173,29 @@ BOOST_AUTO_TEST_CASE (PerformanceOfCircularBuffers)
       bytes += out.size ();
 
       out.clear ();
+
       std::copy (buffer.begin (), buffer.end (), std::back_inserter(out));
       buffer.erase (buffer.begin (), buffer.begin () + in.size () * 2);
-      ASSERT (out.size () == in.size () * 2);
+
+      BOOST_CHECK (out.size () == in.size () * 2);
 
       ++i;
     }
+
     timer.stop ();
 
-    double throughput =
-      bytes / (1024.*1024.*1024.) / timer.elapsed ().seconds ();
-    BOOST_TEST_MESSAGE ("boost circular_buffer throughput\t"
-                        << "size=" << size << " "
-                        << std::fixed << std::setprecision (3)
-                        << throughput << " GB/s");
-  }
+    boostThroughput = static_cast<double> (bytes) / (1024.*1024.*1024.)
+                    / to_seconds_floating_point (timer.elapsed ());
 
-  BOOST_CHECK_EQUAL (bufferThroughput, boostThroughput);
+    BOOST_TEST_MESSAGE ("boost::circular_buffer throughput\t"
+                        << std::fixed << std::setprecision (3)
+                        << boostThroughput << " GB/s");
+    /*
+     * Expect the throughput of the local custom circular buffer to be faster
+     * than boost::circular_buffer by roughly x100 for my use case.
+     */
+    BOOST_CHECK (bufferThroughput > (boostThroughput*10));
+  }
 }
 
 template<class Vector>
@@ -189,12 +207,16 @@ double VectorThroughput (size_t bufferSize, size_t batchSize)
 
   uint64_t i = 0;
   uint64_t bytes = 0;
-  TimeDuration duration = seconds (1);
+
+  TimeDuration duration (Nanoseconds (Seconds (2)));
+
   auto start = Time::now ();
+
   Timer timer;
+
   while (true)
   {
-    if ((i % 1000000) == 0 && (Time::now () - start) > duration)
+    if ((i % 1000000) == 0 && duration < timer.elapsed ())
     {
       break;
     }
@@ -209,8 +231,11 @@ double VectorThroughput (size_t bufferSize, size_t batchSize)
   }
   timer.stop ();
 
-  return (bytes / (1024*1024*1024)) / timer.elapsed ().seconds ();
+  return static_cast<double> (bytes) / (1024.*1024.*1024.)
+                / to_seconds_floating_point (timer.elapsed ());
 };
+
+#if 0
 
 BOOST_AUTO_TEST_CASE (VectorPerformance)
 {

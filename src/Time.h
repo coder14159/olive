@@ -13,9 +13,6 @@ using Nanoseconds  = std::chrono::nanoseconds;
 using Microseconds = std::chrono::microseconds;
 using Milliseconds = std::chrono::milliseconds;
 
-using SecondsFP =
-        std::chrono::duration<float, std::chrono::seconds::period>;
-
 /*
  * Return a human readable string describing duration
  */
@@ -27,6 +24,7 @@ int64_t nanoseconds_since_epoch (const TimePoint &time_point);
 
 /*
  * Careful with this function.
+ *
  * TimePoint must be initialised with min value for is_valid () to work
  */
 static const TimePoint INVALID_TIME_POINT = TimePoint::min ();
@@ -34,14 +32,15 @@ static const TimePoint INVALID_TIME_POINT = TimePoint::min ();
 inline
 bool is_valid (TimePoint time_point)
 {
-	return (time_point != TimePoint::min ());
+  return (time_point != TimePoint::min ());
 }
 
 class Time
 {
 public:
 
-	static TimePoint now ();
+  static TimePoint now ();
+
 };
 
 } // namespace spmc

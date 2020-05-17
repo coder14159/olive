@@ -2,6 +2,7 @@
 #define IPC_THROUGHPUT_H
 
 #include "Time.h"
+#include "Timer.h"
 
 #include <fstream>
 #include <string>
@@ -9,11 +10,14 @@
 namespace spmc {
 
 /*
- * Throughput computes throughput statistics and persist the data to file
+ * Computes message throughput and persist data to file
+ *
+ * Default behaviour is to do nothing unless the enabled () method is called
  */
 class Throughput
 {
 public:
+
   Throughput ();
 
   /*
@@ -52,6 +56,9 @@ public:
   uint32_t megabytes_per_sec (TimePoint time) const;
   uint32_t messages_per_sec (TimePoint time) const;
 
+  /*
+   * Return a throughput string for the current moment in time
+   */
   std::string to_string () const;
 
   void write_header ();
@@ -67,7 +74,7 @@ private:
   uint64_t       m_bytes      = 0;
   uint64_t       m_seqNum     = 0;
 
-  TimePoint      m_start      = INVALID_TIME_POINT;
+  Timer m_timer;
 
   std::ofstream  m_file;
   std::string    m_path;

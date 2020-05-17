@@ -7,8 +7,6 @@
 #include <iostream>
 #include <iomanip>
 
-namespace fs = boost::filesystem;
-
 namespace spmc {
 
 Throughput::Throughput ()
@@ -16,6 +14,8 @@ Throughput::Throughput ()
 
 void Throughput::enable (bool enable)
 {
+  namespace fs = boost::filesystem;
+
   if (!m_enabled && enable && !m_path.empty ())
   {
     if (!fs::exists (m_path))
@@ -54,7 +54,8 @@ void Throughput::reset ()
   m_messages   = 0;
   m_dropped    = 0;
   m_bytes      = 0;
-  m_start      = INVALID_TIME_POINT;
+
+  m_timer.reset ().start ();
 }
 
 void Throughput::write_header ()
@@ -104,23 +105,24 @@ void Throughput::next (uint64_t bytes, uint64_t seqNum)
     return;
   }
 
-  if (m_start == INVALID_TIME_POINT)
-  {
-    m_start = Clock::now ();
-  }
-  // reset seqNum on startup and if the server was restarted
+  /*
+   * Reset on startup or if the server was restarted
+   */
   if (m_seqNum == 0 || seqNum == 1)
   {
     reset ();
+
     m_seqNum = seqNum;
   }
   else
   {
     uint64_t diff = (seqNum - m_seqNum);
+
     if (diff > 1)
     {
       m_dropped += diff;
     }
+
     m_seqNum = seqNum;
 
     ++m_messages;
@@ -131,22 +133,26 @@ void Throughput::next (uint64_t bytes, uint64_t seqNum)
 
 uint32_t Throughput::megabytes_per_sec (TimePoint time) const
 {
-  if (m_start == INVALID_TIME_POINT)
+  if (m_bytes == 0)
   {
     return 0;
   }
 
-  return (m_bytes / (1024. * 1024.)) / SecondsFP (time - m_start).count ();
+  auto seconds = to_seconds_floating_point (m_timer.elapsed ());
+
+  return (m_bytes / (1024. * 1024.)) / seconds;
 }
 
 uint32_t Throughput::messages_per_sec (TimePoint time) const
 {
-  if (m_start == INVALID_TIME_POINT)
+  if (m_bytes == 0)
   {
     return 0;
   }
 
-  return m_messages / SecondsFP (time - m_start).count ();
+  auto seconds = to_seconds_floating_point (m_timer.elapsed ());
+
+  return m_messages / seconds;
 }
 
 std::string Throughput::to_string () const

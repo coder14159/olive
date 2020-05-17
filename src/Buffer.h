@@ -121,11 +121,14 @@ public:
    */
   uint8_t *data ();
 
-  uint8_t *begin ();
 
   void print_debug ();
 
 private:
+  /*
+   * Return a pointer to the start of the circular buffer data
+   */
+  uint8_t *begin ();
 
   template<class T>
   bool push_from_spsc_queue (T &queue, size_t size);

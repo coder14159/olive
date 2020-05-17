@@ -36,13 +36,6 @@ using namespace spmc;
 
 using namespace boost::log::trivial;
 
-BOOST_AUTO_TEST_CASE (Asserts)
-{
-  int a = 2;
-
-  ASSERT (a == 2, "generate assert");
-}
-
 BOOST_AUTO_TEST_CASE (BasicBufferTests)
 {
   auto level = get_log_level ();
@@ -220,8 +213,6 @@ BOOST_AUTO_TEST_CASE (BufferConsumesFromSPSCQueue)
   BOOST_CHECK_EQUAL (buffer.size (), 7);
 
   BOOST_CHECK_EQUAL (queue.read_available (), 5);
-
-
 }
 
 BOOST_AUTO_TEST_CASE (SPMCQueueBasicTest)
