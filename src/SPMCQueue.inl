@@ -8,9 +8,8 @@ namespace spmc {
 
 template <class Allocator, size_t MaxNoDropConsumers>
 SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (size_t capacity)
+: m_queue (std::make_unique<QueueType> (capacity))
 {
-  m_queue = std::make_unique<QueueType> (capacity);
-
   ASSERT (m_queue.get () != nullptr, "SPMCQueue initialisation failed");
 }
 
