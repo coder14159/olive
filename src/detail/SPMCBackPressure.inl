@@ -1,4 +1,5 @@
 #include "src/Assert.h"
+
 #include <boost/log/trivial.hpp>
 
 #include <mutex>
@@ -21,8 +22,8 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer ()
    * SPMCBackPressure supports a configurable limited number of consumer threads
    */
   ASSERT_SS (m_consumerCount < m_maxNoDropConsumers,
-             "The maximum number of consumers are registered max: "
-              /*<< m_consumerCount*/);
+          "Cannot register another consumer. The maximum number of no-drop"
+          " consumers (" << m_maxNoDropConsumers << ") are already registered");
 
   size_t index = 0;
 
