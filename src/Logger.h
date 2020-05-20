@@ -11,6 +11,23 @@ void set_log_level (boost::log::trivial::severity_level level);
 
 void set_log_level (const std::string &level);
 
+class ScopedLogLevel
+{
+public:
+  ScopedLogLevel (boost::log::trivial::severity_level level) : m_level (level)
+  {
+    set_log_level (level);
+  }
+
+  ~ScopedLogLevel ()
+  {
+    set_log_level (m_level);
+  }
+
+private:
+  boost::log::trivial::severity_level m_level;
+};
+
 #define TRACE_ENABLED 0
 
 } // namespace spmc
