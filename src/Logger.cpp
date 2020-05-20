@@ -42,6 +42,4 @@ void set_log_level (const std::string &level)
   }
 }
 
-
-
 } // namespace spmc
