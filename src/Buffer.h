@@ -11,7 +11,8 @@
 namespace spmc {
 
 /*
- * A fast minimal circular buffer for caching serialised data
+ * A fast minimal circular buffer for caching prefetched serialised data from
+ * the main data buffer.
  *
  * Data pushed into the buffer is expected to be of a size equal to or smaller
  * than the Buffer size.
