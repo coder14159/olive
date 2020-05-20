@@ -3,9 +3,7 @@
 
 #include "src/detail/SharedMemory.h"
 
-#include "spmc_exception.h"
-#include "spmc_noncopyable.h"
-
+#include <boost/core/noncopyable.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <atomic>
 #include <string>
@@ -14,11 +12,11 @@ namespace spmc {
 
 /*
  * A shared memory counter.
- * 
+ *
  * The counter stays resident in shared memory on destruction unless the counter
  * value is zero.
  */
-class SharedMemoryCounter : spmc::noncopyable
+class SharedMemoryCounter : private boost::noncopyable
 {
 public:
 
