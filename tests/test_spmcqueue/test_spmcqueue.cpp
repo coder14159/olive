@@ -23,6 +23,7 @@
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/scope_exit.hpp>
 
+#include <exception>
 #include <functional>
 #include <future>
 #include <iomanip>
@@ -38,13 +39,7 @@ using namespace boost::log::trivial;
 
 BOOST_AUTO_TEST_CASE (BasicBufferTests)
 {
-  auto level = get_log_level ();
-
-  BOOST_SCOPE_EXIT (&level) {
-    set_log_level (level);
-  }BOOST_SCOPE_EXIT_END;
-
-  set_log_level (error);
+  spmc::ScopedLogLevel log (error);
 
   { // Add max data size
     Buffer<std::allocator<uint8_t>> buffer (5);
@@ -130,13 +125,7 @@ BOOST_AUTO_TEST_CASE (BasicBufferTests)
 
 BOOST_AUTO_TEST_CASE (BufferPopStruct)
 {
-  auto level = get_log_level ();
-
-  BOOST_SCOPE_EXIT (&level) {
-    set_log_level (level);
-  }BOOST_SCOPE_EXIT_END;
-
-  set_log_level (error);
+  spmc::ScopedLogLevel log (error);
 
   Buffer<std::allocator<uint8_t>> buffer (100);
 
@@ -158,13 +147,7 @@ BOOST_AUTO_TEST_CASE (BufferPopStruct)
 
 BOOST_AUTO_TEST_CASE (BufferConsumesFromSPSCQueue)
 {
-  auto level = get_log_level ();
-
-  BOOST_SCOPE_EXIT (&level) {
-    set_log_level (level);
-  }BOOST_SCOPE_EXIT_END;
-
-  set_log_level (error);
+  spmc::ScopedLogLevel log (error);
 
   Buffer<std::allocator<uint8_t>> buffer (7);
 
@@ -295,13 +278,7 @@ BOOST_AUTO_TEST_CASE (SPMCQueuePushPod)
 
 BOOST_AUTO_TEST_CASE (SlowConsumer)
 {
-  auto level = get_log_level ();
-
-  BOOST_SCOPE_EXIT (&level) {
-    set_log_level (level);
-  }BOOST_SCOPE_EXIT_END;
-
-  set_log_level (error);
+  spmc::ScopedLogLevel log (error);
 
   SPMCQueue<std::allocator<uint8_t>> queue (100);
 
@@ -349,13 +326,7 @@ BOOST_AUTO_TEST_CASE (SlowConsumer)
 
 BOOST_AUTO_TEST_CASE (SlowConsumerPrefetch)
 {
-  auto level = get_log_level ();
-
-  BOOST_SCOPE_EXIT (&level) {
-    set_log_level (level);
-  }BOOST_SCOPE_EXIT_END;
-
-  set_log_level (error);
+  spmc::ScopedLogLevel log (error);
 
   SPMCQueue<std::allocator<uint8_t>> queue (128);
 
@@ -406,13 +377,7 @@ BOOST_AUTO_TEST_CASE (SlowConsumerPrefetch)
 
 BOOST_AUTO_TEST_CASE (ConsumerPrefetchSmallerThanMessageSize)
 {
-  auto level = get_log_level ();
-
-  BOOST_SCOPE_EXIT (&level) {
-    set_log_level (level);
-  }BOOST_SCOPE_EXIT_END;
-
-  set_log_level (error);
+  spmc::ScopedLogLevel log (error);
 
   SPMCQueue<std::allocator<uint8_t>> queue (1024);
 
@@ -592,10 +557,11 @@ public:
     m_data (dataSize, 0),
     m_latencyStats (100)
   {
-    m_latencyStats.interval ()    .enable (true);
-    m_latencyStats.summary ()     .enable (true);
-    m_throughputStats.interval () .enable (true);
-    m_throughputStats.summary ()  .enable (true);
+    m_latencyStats.interval ().enable (true);
+    m_latencyStats.summary ().enable (true);
+
+    m_throughputStats.interval ().enable (true);
+    m_throughputStats.summary ().enable (true);
 
     m_thread = std::thread ([this, &queue]() {
 
@@ -658,10 +624,11 @@ private:
 
   std::vector<uint8_t> m_data;
 
-  bool     m_messageDropsAllowed = false;
+  bool m_messageDropsAllowed = false;
 
   std::atomic<bool> m_stop  = { false };
-  std::thread     m_thread;
+
+  std::thread m_thread;
 
   ThroughputStats m_throughputStats;
   LatencyStats    m_latencyStats;
@@ -674,13 +641,7 @@ using DefaultClient = Client<SPMCQueue<std::allocator<uint8_t>>>;
 
 BOOST_AUTO_TEST_CASE (ThreadedProducerSingleConsumer)
 {
-  auto level = get_log_level ();
-
-  BOOST_SCOPE_EXIT (&level) {
-    set_log_level (level);
-  }BOOST_SCOPE_EXIT_END;
-
-  set_log_level (error);
+  spmc::ScopedLogLevel log (error);
 
   SPMCQueue<std::allocator<uint8_t>> queue (1024*1024*100);
   queue.cache_size (1024);
@@ -719,15 +680,7 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerSingleConsumer)
 
 BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerAllowDrops)
 {
-  auto level = get_log_level ();
-
-  BOOST_SCOPE_EXIT (&level) {
-    set_log_level (level);
-  }BOOST_SCOPE_EXIT_END;
-
-  set_log_level (debug);
-
-  BOOST_TEST_MESSAGE ("test");
+  spmc::ScopedLogLevel log (error);
 
   SPMCQueue<std::allocator<uint8_t>> queue (1024*1024*10);
 
@@ -784,12 +737,15 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerAllowDrops)
 
 BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerNoMesssageDropsAllowed)
 {
+  spmc::ScopedLogLevel log (error);
+
   SPMCQueue<std::allocator<uint8_t>> queue (1024*1024);
 
+  int clientCount = 4;
   size_t messageSize = 128;
   std::vector<std::unique_ptr<DefaultClient>> clients;
 
-  for (int i = 0; i < 4; ++i)
+  for (int i = 0; i < clientCount; ++i)
   {
     auto client = std::make_unique<DefaultClient>(queue, 0);
     clients.push_back(std::move (client));
@@ -798,7 +754,7 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerNoMesssageDropsAllowed)
   // allow the clients to initialise
   std::this_thread::sleep_for (Milliseconds (10));
 
-  uint32_t throughput = 10e6;
+  uint32_t throughput = 5e6;
   DefaultServer server (queue, messageSize, throughput);
 
   BOOST_TEST_MESSAGE ("server throughput:\t" << throughput);
@@ -824,10 +780,13 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerNoMesssageDropsAllowed)
   {
     client->stop ();
 
+    print (client->throughputStats ().summary ());
+
     // test throughput against a relatively conservative value
     BOOST_CHECK ((client->throughputStats ().summary ()
                             .messages_per_sec (now) / 1.0e6) > .99);
     BOOST_TEST_MESSAGE ("client");
+
     print (client->throughputStats ().summary ());
   }
 
@@ -840,6 +799,8 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerNoMesssageDropsAllowed)
 
 BOOST_AUTO_TEST_CASE (TooManyConsumers)
 {
+  spmc::ScopedLogLevel log (trace);
+
   // set the maximum number of consumers to a small number
   const size_t maxClients = 3;
 
@@ -873,8 +834,8 @@ BOOST_AUTO_TEST_CASE (TooManyConsumers)
     std::this_thread::sleep_for (Milliseconds (100));
 
     BOOST_CHECK_MESSAGE (client.exception () != nullptr,
-                "The 4th client should fail as the queue is configured to a have"
-                " a maximum of 3 clients");
+                "The 4th client fails to initialise as the queue is configured "
+                "to a have a maximum of 3 clients");
   }
 
   BOOST_TEST_MESSAGE ("Remove one client");
@@ -953,13 +914,7 @@ BOOST_AUTO_TEST_CASE (RestartClient)
  */
 BOOST_AUTO_TEST_CASE (RestartServer)
 {
-  auto level = get_log_level ();
-
-  BOOST_SCOPE_EXIT (&level) {
-    set_log_level (level);
-  }BOOST_SCOPE_EXIT_END;
-
-  set_log_level (error);
+  spmc::ScopedLogLevel log (error);
 
   using QueueType = SPMCQueue<std::allocator<uint8_t>>;
   QueueType queue (500);
@@ -997,13 +952,7 @@ BOOST_AUTO_TEST_CASE (SinkStreamInSharedMemory)
   using namespace boost;
   using namespace boost::interprocess;
 
-  auto level = get_log_level ();
-
-  BOOST_SCOPE_EXIT (&level) {
-    set_log_level (level);
-  }BOOST_SCOPE_EXIT_END;
-
-  set_log_level (error);
+  spmc::ScopedLogLevel log (error);
 
   std::string name = "SinkStreamInSharedMemory:Test";
 
