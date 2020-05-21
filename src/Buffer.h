@@ -122,7 +122,6 @@ public:
    */
   uint8_t *data ();
 
-
   void print_debug ();
 
 private:
@@ -147,7 +146,6 @@ private:
    */
   typename Allocator::pointer m_buffer = nullptr;
 };
-
 
 } // namespace spmc
 

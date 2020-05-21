@@ -105,8 +105,6 @@ bool Buffer<Allocator>::push (const std::vector<uint8_t> &data)
 template <class Allocator>
 bool Buffer<Allocator>::push (const uint8_t* data, size_t size)
 {
-  assert (size <= m_capacity);
-
   if (size == 0 || (m_size + size) > m_capacity)
   {
     return false;
@@ -144,8 +142,6 @@ template <class Allocator>
 template<typename T>
 bool Buffer<Allocator>::push_from_spsc_queue (T &queue, size_t size)
 {
-  assert (size <= m_capacity);
-
   if (size == 0 || (m_size + size) > m_capacity)
   {
     return false;
