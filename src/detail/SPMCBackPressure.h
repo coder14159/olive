@@ -1,7 +1,7 @@
 #ifndef IPC_DETAIL_SPMC_BACK_PRESSURE_H
 #define IPC_DETAIL_SPMC_BACK_PRESSURE_H
 
-#include "src/detail/SharedMemory.h"
+#include "detail/SharedMemory.h"
 
 #include <array>
 #include <atomic>
@@ -94,6 +94,6 @@ protected:
 
 } // namespace spmc {
 
-#include "src/detail/SPMCBackPressure.inl"
+#include "detail/SPMCBackPressure.inl"
 
 #endif // IPC_DETAIL_SPMC_BACK_PRESSURE_H

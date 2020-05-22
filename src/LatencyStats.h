@@ -1,7 +1,7 @@
 #ifndef IPC_LATENCY_STATS_H
 #define IPC_LATENCY_STATS_H
 
-#include "src/Latency.h"
+#include "Latency.h"
 
 #include <boost/lockfree/spsc_queue.hpp>
 // TODO is the current spsc queue patched?

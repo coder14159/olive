@@ -1,7 +1,7 @@
 #include "SharedMemoryCounter.h"
 
 #include "Assert.h"
-#include "src/detail/SharedMemory.h"
+#include "detail/SharedMemory.h"
 
 #include <boost/log/trivial.hpp>
 

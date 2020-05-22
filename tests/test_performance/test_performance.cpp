@@ -1,59 +1,35 @@
-#include "src/Buffer.h"
-#include "src/Timer.h"
-#if 0
-#include "src/SPMCSink.h"
-#include "src/SPMCStream.h"
-#include "src/PerformanceStats.h"
-#include "src/Throttle.h"
-
-#include "spmc_async.h"
-#include "spmc_time_duration.h"
-#include "spmc_timer.h"
-#endif
+#include "Buffer.h"
+#include "Logger.h"
+#include "PerformanceStats.h"
+#include "SPMCSink.h"
+#include "SPMCStream.h"
+#include "Throttle.h"
+#include "TimeDuration.h"
+#include "Timer.h"
+#include "detail/SharedMemory.h"
 
 #include <boost/circular_buffer.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/container/static_vector.hpp>
-#include <boost/scope_exit.hpp>
+#include <boost/log/trivial.hpp>
 
-#include <thread>
-#include <vector>
-
+#include <ext/numeric>
 #include <iomanip>
 #include <iostream>
-#include <ext/numeric>
-
-#include "src/Logger.h"
-#include "src/TimeDuration.h"
-
+#include <thread>
+#include <vector>
 
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE SPMCTestPerformance
 
+#define SPMC_DEBUG_ASSERT
+
 #include <boost/test/unit_test.hpp>
 
+using namespace std::chrono_literals;
+using namespace boost::log::trivial;
+
 using namespace spmc;
-
-#include <boost/log/trivial.hpp>
-
-static inline unsigned long long getticks(void)
-{
-    unsigned int lo, hi;
-
-    // RDTSC copies contents of 64-bit TSC into EDX:EAX
-    asm volatile("rdtsc" : "=a" (lo), "=d" (hi));
-    return (unsigned long long)hi << 32 | lo;
-}
-
-// BOOST_AUTO_TEST_CASE (LoggerPerformance)
-// {
-//   set_log_level (boost::log::trivial::info);
-
-//   BOOST_LOG_TRIVIAL (debug) << "debug";
-//   BOOST_LOG_TRIVIAL (info) << "info";
-//   BOOST_LOG_TRIVIAL (warning) << "warning";
-
-// }
 
 BOOST_AUTO_TEST_CASE (TestTimeDuration)
 {
@@ -208,9 +184,7 @@ double VectorThroughput (size_t bufferSize, size_t batchSize)
   uint64_t i = 0;
   uint64_t bytes = 0;
 
-  TimeDuration duration (Nanoseconds (Seconds (2)));
-
-  auto start = Time::now ();
+  TimeDuration duration (Seconds (2));
 
   Timer timer;
 
@@ -234,8 +208,6 @@ double VectorThroughput (size_t bufferSize, size_t batchSize)
   return static_cast<double> (bytes) / (1024.*1024.*1024.)
                 / to_seconds_floating_point (timer.elapsed ());
 };
-
-#if 0
 
 BOOST_AUTO_TEST_CASE (VectorPerformance)
 {
@@ -278,6 +250,7 @@ BOOST_AUTO_TEST_CASE (VectorPerformance)
   BOOST_CHECK (true);
 }
 
+#if 0
 void async_queue_performance (
   size_t            capacity,
   PerformanceStats &stats,
@@ -474,6 +447,9 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfAsync)
   }
 }
 
+#endif // Async tests not available
+
+
 void sink_stream_in_single_process (
     size_t            capacity,
     PerformanceStats &stats,
@@ -501,10 +477,10 @@ void sink_stream_in_single_process (
     }
   });
 
-  sleep_for (milliseconds (5));
+  std::this_thread::sleep_for (5ms);
 
   auto consumer = std::thread ([&stop, &stream, &stats] () {
-    ipc::Header header;
+    Header header;
 
     std::vector<uint8_t> data;
 
@@ -513,12 +489,12 @@ void sink_stream_in_single_process (
       if (stream.next (header, data))
       {
         stats.update (sizeof (Header), data.size (), header.seqNum,
-                      Time::deserialise (header.timestamp));
+                      TimePoint (Nanoseconds (header.timestamp)));
       }
     }
   });
 
-  sleep_for (seconds (2));
+  std::this_thread::sleep_for (Seconds (2));
 
   stop = true;
 
@@ -545,14 +521,6 @@ void sink_stream_in_single_process_pod (
 
     Throttle throttle (rate);
 
-
-    size_t bbaSize = 128;
-    std::vector<uint8_t> message (bbaSize, 0);
-
-    std::iota (std::begin (message), std::end (message), 1);
-
-    constexpr size_t size = 128;
-
     POD payload;
 
     while (!stop)
@@ -563,10 +531,11 @@ void sink_stream_in_single_process_pod (
     }
   });
 
-  sleep_for (milliseconds (5));
+  std::this_thread::sleep_for (Milliseconds (5));
 
   auto consumer = std::thread ([&stop, &stream, &stats] () {
-    ipc::Header header;
+
+    Header header;
 
     std::vector<uint8_t> data;
 
@@ -575,12 +544,12 @@ void sink_stream_in_single_process_pod (
       if (stream.next (header, data))
       {
         stats.update (sizeof (Header), data.size (), header.seqNum,
-                      Time::deserialise (header.timestamp));
+                      TimePoint (Nanoseconds (header.timestamp)));
       }
     }
   });
 
-  sleep_for (seconds (2));
+  std::this_thread::sleep_for (Seconds (2));
 
   stop = true;
 
@@ -598,12 +567,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStream)
     return;
   }
 
-  auto level = ipc::logger ().level ();
-  ipc::logger ().set_level (ERROR);
-
-  BOOST_SCOPE_EXIT (&level) {
-    ipc::logger ().set_level (level);
-  }BOOST_SCOPE_EXIT_END;
+  spmc::ScopedLogLevel log (error);
 
   size_t capacity = 2048000;
   size_t rate     = 0;
@@ -636,12 +600,7 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStream)
     return;
   }
 
-  auto level = ipc::logger ().level ();
-  ipc::logger ().set_level (ERROR);
-
-  BOOST_SCOPE_EXIT (&level) {
-    ipc::logger ().set_level (level);
-  }BOOST_SCOPE_EXIT_END;
+  spmc::ScopedLogLevel log (error);
 
   size_t capacity = 20480;
   size_t rate     = 1e6;
@@ -683,12 +642,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamWithPrefetch)
    * when transmitting smaller messages at the cost of a higher mean latency.
    */
 
-  auto level = ipc::logger ().level ();
-  ipc::logger ().set_level (ERROR);
-
-  BOOST_SCOPE_EXIT (&level) {
-    ipc::logger ().set_level (level);
-  }BOOST_SCOPE_EXIT_END;
+  spmc::ScopedLogLevel log (error);
 
   size_t capacity = 2048000;
   size_t rate     = 0;
@@ -726,13 +680,7 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStreamWithPrefetch)
    * Using a prefetch size of around 1KB provides good throughput improvements
    * when transmitting smaller messages at the cost of a higher mean latency.
    */
-
-  auto level = ipc::logger ().level ();
-  ipc::logger ().set_level (ERROR);
-
-  BOOST_SCOPE_EXIT (&level) {
-    ipc::logger ().set_level (level);
-  }BOOST_SCOPE_EXIT_END;
+  spmc::ScopedLogLevel log (error);
 
   size_t capacity = 20480;
   size_t rate     = 1e6;
@@ -773,19 +721,14 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamPOD)
     return;
   }
 
-  auto duration = seconds (2);
+  auto duration = Seconds (2);
 
   if (getenv ("TIMEOUT") != nullptr)
   {
-    duration = seconds (atoi (getenv ("TIMEOUT")));
+    duration = Seconds (atoi (getenv ("TIMEOUT")));
   }
 
-  auto level = ipc::logger ().level ();
-  ipc::logger ().set_level (ERROR);
-
-  BOOST_SCOPE_EXIT (&level) {
-    ipc::logger ().set_level (level);
-  }BOOST_SCOPE_EXIT_END;
+  spmc::ScopedLogLevel log (error);
 
   size_t capacity = 2048000;
   size_t rate     = 0;
@@ -822,19 +765,14 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStreamPOD)
     return;
   }
 
-  auto duration = seconds (2);
+  auto duration = Seconds (2);
 
   if (getenv ("TIMEOUT") != nullptr)
   {
-    duration = seconds (atoi (getenv ("TIMEOUT")));
+    duration = Seconds (atoi (getenv ("TIMEOUT")));
   }
 
-  auto level = ipc::logger ().level ();
-  ipc::logger ().set_level (ERROR);
-
-  BOOST_SCOPE_EXIT (&level) {
-    ipc::logger ().set_level (level);
-  }BOOST_SCOPE_EXIT_END;
+  spmc::ScopedLogLevel log (error);
 
   size_t capacity = 20480;
   size_t rate     = 1e6;
@@ -877,19 +815,14 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamPODWithPrefetch)
     return;
   }
 
-  auto duration = seconds (2);
+  auto duration = Seconds (2);
 
   if (getenv ("TIMEOUT") != nullptr)
   {
-    duration = seconds (atoi (getenv ("TIMEOUT")));
+    duration = Seconds (atoi (getenv ("TIMEOUT")));
   }
 
-  auto level = ipc::logger ().level ();
-  ipc::logger ().set_level (ERROR);
-
-  BOOST_SCOPE_EXIT (&level) {
-    ipc::logger ().set_level (level);
-  }BOOST_SCOPE_EXIT_END;
+  spmc::ScopedLogLevel log (error);
 
   size_t capacity = 2048000;
   size_t rate     = 0;
@@ -925,19 +858,14 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStreamPODWithPrefetch)
     return;
   }
 
-  auto duration = seconds (2);
+  auto duration = Seconds (2);
 
   if (getenv ("TIMEOUT") != nullptr)
   {
-    duration = seconds (atoi (getenv ("TIMEOUT")));
+    duration = Seconds (atoi (getenv ("TIMEOUT")));
   }
 
-  auto level = ipc::logger ().level ();
-  ipc::logger ().set_level (ERROR);
-
-  BOOST_SCOPE_EXIT (&level) {
-    ipc::logger ().set_level (level);
-  }BOOST_SCOPE_EXIT_END;
+  spmc::ScopedLogLevel log (error);
 
   size_t capacity = 20480;
   size_t rate     = 1e6;
@@ -981,11 +909,11 @@ void sink_stream_in_shared_memory (
   using namespace boost;
   using namespace boost::interprocess;
 
-  auto duration = seconds (2);
+  auto duration = Seconds (2);
 
   if (getenv ("TIMEOUT") != nullptr)
   {
-    duration = seconds (atoi (getenv ("TIMEOUT")));
+    duration = Seconds (atoi (getenv ("TIMEOUT")));
   }
 
   std::string name = "SinkStreamInSharedMemory:Perf";
@@ -1031,7 +959,6 @@ void sink_stream_in_shared_memory (
     }
   });
 
-
   bool allowMessageDrops = false;
 
   SPMCStreamProcess stream (name, name + ":queue",
@@ -1047,7 +974,7 @@ void sink_stream_in_shared_memory (
       if (stream.next (header, message))
       {
         stats.update (header.size+sizeof (Header), header.seqNum,
-                      Time::deserialise (header.timestamp));
+                      TimePoint (Nanoseconds (header.timestamp)));
 
         message.clear ();
       }
@@ -1058,7 +985,7 @@ void sink_stream_in_shared_memory (
     }
   });
 
-  sleep_for (duration);
+  std::this_thread::sleep_for (Seconds (2));
 
   stream.stop ();
   sink.stop ();
@@ -1078,12 +1005,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceSinkStreamInSharedMemory)
     return;
   }
 
-  auto level = ipc::logger ().level ();
-  ipc::logger ().set_level (ERROR);
-
-  BOOST_SCOPE_EXIT (&level) {
-    ipc::logger ().set_level (level);
-  }BOOST_SCOPE_EXIT_END;
+  spmc::ScopedLogLevel log (error);
 
   PerformanceStats stats;
   stats.throughput ().summary ().enable (true);
@@ -1098,7 +1020,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceSinkStreamInSharedMemory)
                          .summary ()
                          .megabytes_per_sec (Time::now ());
 
-  BOOST_CHECK (megabytes_per_sec > 1000);
+  BOOST_CHECK (megabytes_per_sec > 500);
 
   BOOST_TEST_MESSAGE ("throughput\t" << std::setprecision (3)
                       << (megabytes_per_sec/1024.) << " GB/sec");
@@ -1118,12 +1040,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceSinkStreamInSharedMemoryPrefetch)
     return;
   }
 
-  auto level = ipc::logger ().level ();
-  ipc::logger ().set_level (ERROR);
-
-  BOOST_SCOPE_EXIT (&level) {
-    ipc::logger ().set_level (level);
-  }BOOST_SCOPE_EXIT_END;
+  spmc::ScopedLogLevel log (error);
 
   PerformanceStats stats;
   stats.throughput ().summary ().enable (true);
@@ -1158,12 +1075,7 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceSinkStreamInSharedMemory)
     return;
   }
 
-  auto level = ipc::logger ().level ();
-  ipc::logger ().set_level (ERROR);
-
-  BOOST_SCOPE_EXIT (&level) {
-    ipc::logger ().set_level (level);
-  }BOOST_SCOPE_EXIT_END;
+  spmc::ScopedLogLevel log (error);
 
   PerformanceStats stats;
   stats.throughput ().summary ().enable (true);
@@ -1219,7 +1131,7 @@ BOOST_AUTO_TEST_CASE (ThreadIdentity)
       }
     });
 
-    sleep_for (seconds (2));
+    std::this_thread::sleep_for (Seconds (2));
     stop = true;
     test_thread_id.join ();
 
@@ -1247,7 +1159,7 @@ BOOST_AUTO_TEST_CASE (ThreadIdentity)
       }
     });
 
-    sleep_for (seconds (2));
+    std::this_thread::sleep_for (Seconds (2));
     stop = true;
     test_thread_specific.join ();
 
@@ -1276,7 +1188,7 @@ BOOST_AUTO_TEST_CASE (ThreadIdentity)
       }
     });
 
-    sleep_for (seconds (2));
+    std::this_thread::sleep_for (Seconds (2));
     stop = true;
     test_thread_local.join ();
     BOOST_TEST_MESSAGE ("thread_local count=" << thread_local_count);
@@ -1299,7 +1211,7 @@ BOOST_AUTO_TEST_CASE (ThreadIdentity)
       }
     });
 
-    sleep_for (seconds (2));
+    std::this_thread::sleep_for (Seconds (2));
     stop = true;
     test_bare.join ();
 
@@ -1309,4 +1221,4 @@ BOOST_AUTO_TEST_CASE (ThreadIdentity)
   BOOST_CHECK ((2*thread_id_count) < thread_local_count);
 
 }
-#endif
+

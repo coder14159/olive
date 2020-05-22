@@ -1,9 +1,9 @@
-#include "src/CpuBind.h"
-#include "src/Logger.h"
-#include "src/detail/SharedMemory.h"
-#include "src/SPSCSink.h"
-#include "src/Throttle.h"
-#include "src/detail/SharedMemoryCounter.h"
+#include "CpuBind.h"
+#include "Logger.h"
+#include "detail/SharedMemory.h"
+#include "SPSCSink.h"
+#include "Throttle.h"
+#include "detail/SharedMemoryCounter.h"
 
 #include "spmc_argparse.h"
 #include "spmc_signal_catcher.h"
@@ -43,18 +43,18 @@ void server (const std::string& name,
   for (int i = 1; i < numClients+1; ++i)
   {
     std::string objectName = name + ":sink:" + std::to_string (i);
-    
+
     auto sink = std::make_unique<SPSCSink> (name, objectName, queueSize);
 
     sinks.push_back (std::move (sink));
   }
 
   spmc::SignalCatcher s({ SIGINT, SIGTERM }, [&sinks] (int) {
-    
+
     logger ().notice () << "stopping server..";
-    
+
     g_stop = true;
-    
+
     for (auto &sink : sinks)
     {
       logger ().info () << "stop " << sink->name ();
@@ -72,11 +72,11 @@ void server (const std::string& name,
   while (clientsReady.get () < numClients && !g_stop)
   {
     sleep_for (milliseconds (1));
-    
+
     if ((numClients - clientsReady.get ()) != toConnect)
     {
       toConnect = numClients - clientsReady.get ();
-  
+
       if (toConnect > 0)
       {
         logger ().info () << "waiting for " << toConnect << " clients..";
@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
                "zero indicates no throttling",        rate)
     .optional ("--loglevel <level>", "logging level", level)
     .choices  (Logger::level_strings ())
-    .optional ("--cpu-bind <cpu>", 
+    .optional ("--cpu-bind <cpu>",
                "bind main thread to a cpu processor",  cpu)
    .run (argc, argv);
 
@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
                          << ((rate == 0) ? "max" : std::to_string (rate));
   logger ().info () << "queue size\t= "   << queueSize;
   logger ().info () << "memory name\t= "  << name;
-  
+
   bind_to_cpu (cpu);
 
   /*

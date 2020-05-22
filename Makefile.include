@@ -1,4 +1,4 @@
-# Makefile which includes core functionality
+# Makefile which contains core definitions
 
 .DEFAULT_GOAL:= all
 

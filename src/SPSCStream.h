@@ -1,6 +1,6 @@
 #ifndef IPC_SPSC_STREAM_H
 
-#include "src/Buffer.h"
+#include "Buffer.h"
 #include "detail/SharedMemory.h"
 
 #include <boost/interprocess/managed_shared_memory.hpp>

@@ -1,5 +1,5 @@
-#include "src/PerformanceStats.h"
-#include "src/detail/SharedMemory.h"
+#include "PerformanceStats.h"
+#include "detail/SharedMemory.h"
 
 // #include "spmc_filesystem.h"
 // #include "spmc_time.h"

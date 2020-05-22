@@ -1,8 +1,8 @@
 #ifndef IPC_SPMC_STREAM_H
 
 #include "SPMCQueue.h"
-#include "src/Buffer.h"
-#include "src/detail/SharedMemory.h"
+#include "Buffer.h"
+#include "detail/SharedMemory.h"
 
 #include <atomic>
 #include <vector>
@@ -78,6 +78,6 @@ using SPMCStreamThread  = SPMCStream<SPMCQueue<std::allocator<uint8_t>>>;
 
 }
 
-#include "src/SPMCStream.inl"
+#include "SPMCStream.inl"
 
 #endif // IPC_SPMC_STREAM_H

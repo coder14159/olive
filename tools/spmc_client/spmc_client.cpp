@@ -1,12 +1,12 @@
 #define SPMC_ENABLE_ASSERTS 1
 
-#include "src/Assert.h"
-#include "src/CpuBind.h"
-#include "src/Logger.h"
-#include "src/PerformanceStats.h"
-#include "src/SPMCStream.h"
-#include "src/detail/SharedMemory.h"
-#include "src/detail/CXXOptsHelper.h"
+#include "Assert.h"
+#include "CpuBind.h"
+#include "Logger.h"
+#include "PerformanceStats.h"
+#include "SPMCStream.h"
+#include "detail/SharedMemory.h"
+#include "detail/CXXOptsHelper.h"
 
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/log/trivial.hpp>

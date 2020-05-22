@@ -1,7 +1,7 @@
 #ifndef IPC_DETAIL_SHARED_MEMORY_COUNTER_H
 #define IPC_DETAIL_SHARED_MEMORY_COUNTER_H
 
-#include "src/detail/SharedMemory.h"
+#include "detail/SharedMemory.h"
 
 #include <boost/core/noncopyable.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>

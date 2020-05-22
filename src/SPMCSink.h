@@ -4,6 +4,7 @@
 #include "detail/SharedMemory.h"
 
 #include <atomic>
+#include <string>
 #include <vector>
 
 namespace spmc {
@@ -69,6 +70,6 @@ using SPMCSinkThread  = SPMCSink<SPMCQueue<std::allocator<uint8_t>>>;
 
 }
 
-// #include "src/SPMCSink.inl"
+#include "SPMCSink.inl"
 
 #endif // IPC_SPMC_SINK_H

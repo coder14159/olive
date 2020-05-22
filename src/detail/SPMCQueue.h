@@ -1,14 +1,13 @@
 #ifndef IPC_DETAIL_SPMC_QUEUE_H
 #define IPC_DETAIL_SPMC_QUEUE_H
 
-#include "src/Buffer.h"
-#include "src/Logger.h"
-#include "src/detail/SharedMemory.h"
-#include "src/detail/SPMCBackPressure.h"
+#include "Buffer.h"
+#include "Logger.h"
+#include "detail/SharedMemory.h"
+#include "detail/SPMCBackPressure.h"
 
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
-// #include <boost/thread/tss.hpp>
 
 #include <atomic>
 #include <mutex>
@@ -326,6 +325,6 @@ private:
 } // namespace detail {
 } // namespace spmc {
 
-#include "src/detail/SPMCQueue.inl"
+#include "detail/SPMCQueue.inl"
 
 #endif // IPC_DETAIL_SPMC_QUEUE_H

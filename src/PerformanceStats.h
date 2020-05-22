@@ -19,8 +19,14 @@ public:
 
   void output_directory (const std::string &path);
 
+  /*
+   * Update number of bytes sent at a time point
+   */
   void update (uint64_t bytes, uint64_t seqNum, TimePoint timestamp);
 
+  /*
+   * Update header size and payload size sent at a time point
+   */
   void update (uint64_t header, uint64_t payload, uint64_t seqNum,
                TimePoint timestamp);
 

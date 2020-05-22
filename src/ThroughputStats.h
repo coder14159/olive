@@ -1,7 +1,7 @@
 #ifndef IPC_THROUGHPUT_STATS_H
 #define IPC_THROUGHPUT_STATS_H
 
-#include "src/Throughput.h"
+#include "Throughput.h"
 
 namespace spmc {
 

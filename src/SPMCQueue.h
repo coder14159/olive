@@ -1,9 +1,9 @@
 #ifndef IPC_SPMC_QUEUE_H
 #define IPC_SPMC_QUEUE_H
 
-#include "src/Buffer.h"
-#include "src/detail/SharedMemory.h"
-#include "src/detail/SPMCQueue.h"
+#include "Buffer.h"
+#include "detail/SharedMemory.h"
+#include "detail/SPMCQueue.h"
 
 #include <string>
 #include <vector>
@@ -131,6 +131,6 @@ private:
 
 } // namespace spmc {
 
-#include "src/SPMCQueue.inl"
+#include "SPMCQueue.inl"
 
 #endif // IPC_SPMC_QUEUE_H

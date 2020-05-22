@@ -1,8 +1,8 @@
-#include "src/CpuBind.h"
-#include "src/Logger.h"
-#include "src/SPMCQueue.h"
-#include "src/SPMCSink.h"
-#include "src/Throttle.h"
+#include "CpuBind.h"
+#include "Logger.h"
+#include "SPMCQueue.h"
+#include "SPMCSink.h"
+#include "Throttle.h"
 
 #include "spmc_argparse.h"
 #include "spmc_signal_catcher.h"
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
                "message throughput, zero indicates no throttling", rate)
     .optional ("--loglevel <level>", "logging level", level)
     .choices  (Logger::level_strings ())
-    .optional ("--cpu-bind <cpu>", 
+    .optional ("--cpu-bind <cpu>",
                "bind main thread to a cpu processor",  cpu)
     .run (argc, argv);
 

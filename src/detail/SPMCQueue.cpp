@@ -1,5 +1,5 @@
-#include "src/SPMCQueue.h"
-#include "src/detail/SharedMemory.h"
+#include "SPMCQueue.h"
+#include "detail/SharedMemory.h"
 
 #include <boost/thread/tss.hpp>
 #include <limits>

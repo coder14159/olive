@@ -1,8 +1,7 @@
-#include "Logger.h"
+#include "Time.h"
 #include "detail/SharedMemory.h"
 
 #include <boost/interprocess/managed_shared_memory.hpp>
-#include <atomic>
 
 namespace bi = boost::interprocess;
 using namespace spmc;
@@ -39,7 +38,7 @@ void SPMCSink<Queuetype>::next (const std::vector<uint8_t> &data)
   Header header;
   header.size      = data.size ();
   header.seqNum    = ++m_sequenceNumber;
-  header.timestamp = Time::now ().serialise ();
+  header.timestamp = Clock::now ().time_since_epoch ().count ();
 
   while (true)
   {

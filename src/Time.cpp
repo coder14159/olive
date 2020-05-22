@@ -3,7 +3,7 @@
 
 namespace spmc {
 
-std::string nanoseconds_to_string (int64_t nanoseconds)
+std::string nanoseconds_to_pretty (int64_t nanoseconds)
 {
   char buffer [1024];
   buffer[0] = '\0';
@@ -28,7 +28,7 @@ std::string nanoseconds_to_string (int64_t nanoseconds)
 
 std::string nanoseconds_to_pretty (Nanoseconds nanoseconds)
 {
-  return nanoseconds_to_string (nanoseconds.count ());
+  return nanoseconds_to_pretty (nanoseconds.count ());
 }
 
 int64_t nanoseconds_since_epoch (const TimePoint &time_point)

@@ -1,8 +1,8 @@
-#include "src/CpuBind.h"
-#include "src/Logger.h"
-#include "src/PerformanceStats.h"
-#include "src/SPSCStream.h"
-#include "src/detail/SharedMemory.h"
+#include "CpuBind.h"
+#include "Logger.h"
+#include "PerformanceStats.h"
+#include "SPSCStream.h"
+#include "detail/SharedMemory.h"
 
 #include "patch/lockfree/spsc_queue.hpp"
 

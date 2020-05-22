@@ -1,16 +1,16 @@
 #define SPMC_ENABLE_ASSERTS 1
-#include "src/Assert.h"
+#include "Assert.h"
 
-#include "src/Buffer.h"
-#include "src/LatencyStats.h"
-#include "src/Logger.h"
-#include "src/PerformanceStats.h"
-#include "src/SPMCQueue.h"
-#include "src/SPMCSink.h"
-#include "src/SPMCStream.h"
-#include "src/Throttle.h"
-#include "src/Throughput.h"
-#include "src/detail/SharedMemory.h"
+#include "Buffer.h"
+#include "LatencyStats.h"
+#include "Logger.h"
+#include "PerformanceStats.h"
+#include "SPMCQueue.h"
+#include "SPMCSink.h"
+#include "SPMCStream.h"
+#include "Throttle.h"
+#include "Throughput.h"
+#include "detail/SharedMemory.h"
 
 // #include "spmc_format_float.h"
 // #include "spmc_noncopyable.h"
@@ -30,8 +30,11 @@
 #include <iostream>
 #include <thread>
 
+#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE SPMCQueueTests
 #include <boost/test/unit_test.hpp>
+
+#define SPMC_DEBUG_ASSERT
 
 using namespace spmc;
 
@@ -589,6 +592,7 @@ public:
       }
       catch (...)
       {
+        std::cout << "exceptioin caught" << std::endl;
         m_exception = std::current_exception ();
       }
      /*
@@ -687,7 +691,7 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerAllowDrops)
   size_t messageSize = 128;
   std::vector<std::unique_ptr<DefaultClient>> clients;
 
-  for (int i = 0; i < 3; ++i)
+  for (int i = 0; i < 2; ++i)
   {
     clients.push_back (std::make_unique<DefaultClient> (queue, 0));
   }
@@ -741,7 +745,7 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerNoMesssageDropsAllowed)
 
   SPMCQueue<std::allocator<uint8_t>> queue (1024*1024);
 
-  int clientCount = 4;
+  int clientCount = 2;
   size_t messageSize = 128;
   std::vector<std::unique_ptr<DefaultClient>> clients;
 
@@ -754,7 +758,7 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerNoMesssageDropsAllowed)
   // allow the clients to initialise
   std::this_thread::sleep_for (Milliseconds (10));
 
-  uint32_t throughput = 5e6;
+  uint32_t throughput = 1e6;
   DefaultServer server (queue, messageSize, throughput);
 
   BOOST_TEST_MESSAGE ("server throughput:\t" << throughput);
@@ -780,8 +784,6 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerNoMesssageDropsAllowed)
   {
     client->stop ();
 
-    print (client->throughputStats ().summary ());
-
     // test throughput against a relatively conservative value
     BOOST_CHECK ((client->throughputStats ().summary ()
                             .messages_per_sec (now) / 1.0e6) > .99);
@@ -799,7 +801,7 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerNoMesssageDropsAllowed)
 
 BOOST_AUTO_TEST_CASE (TooManyConsumers)
 {
-  spmc::ScopedLogLevel log (trace);
+  spmc::ScopedLogLevel log (error);
 
   // set the maximum number of consumers to a small number
   const size_t maxClients = 3;
@@ -828,14 +830,21 @@ BOOST_AUTO_TEST_CASE (TooManyConsumers)
 
   {
     BOOST_TEST_MESSAGE ("Add one client too many");
-    // an exception should be thrown when registering more clients than the queue
-    // is configured to accept
+
+    /*
+     * An exception should be thrown when registering more clients than the
+     * queue is configured to accept.
+     *
+     * For the purposes of this test the exception is stored in an exception
+     * pointer stored in the ClientType.
+     */
     ClientType client (queue, messageSize);
+
     std::this_thread::sleep_for (Milliseconds (100));
 
     BOOST_CHECK_MESSAGE (client.exception () != nullptr,
-                "The 4th client fails to initialise as the queue is configured "
-                "to a have a maximum of 3 clients");
+                "The 4th client should not initialise as the queue"
+                " is configured to have a maximum of 3 clients");
   }
 
   BOOST_TEST_MESSAGE ("Remove one client");

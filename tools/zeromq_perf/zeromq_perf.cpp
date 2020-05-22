@@ -1,6 +1,6 @@
-#include "src/Logger.h"
-#include "src/PerformanceStats.h"
-#include "src/Throttle.h"
+#include "Logger.h"
+#include "PerformanceStats.h"
+#include "Throttle.h"
 
 #include "spmc_argparse.h"
 #include "spmc_filesystem.h"
