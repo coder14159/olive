@@ -58,29 +58,75 @@ BOOST_AUTO_TEST_CASE (TestTimeDuration)
   BOOST_CHECK (per_call.count () < 200);
 }
 
-BOOST_AUTO_TEST_CASE (PerformanceOfCircularBuffers)
+BOOST_AUTO_TEST_CASE (ThroughputOfCircularBuffers)
 {
   if (getenv ("NOTIMING") != nullptr)
   {
     return;
   }
 
-  std::vector<uint8_t> in (1024);
-  std::iota (in.begin (), in.end (), 1);
-
   TimeDuration duration (Nanoseconds (Seconds (5)));
 
-  size_t size = 204800;
-
-  /*
-   * Throughput in GB/s
-   */
-  double bufferThroughput = 0.;
-  double boostThroughput  = 0.;
-
+  auto stress_boost_buffer = [&duration] (
+    size_t bufferSize, size_t messageSize) -> double
   {
-    Buffer<std::allocator<uint8_t>> buffer (size);
+    BOOST_CHECK (bufferSize > messageSize);
+
+    std::vector<uint8_t> message (messageSize);
+
+    boost::circular_buffer<uint8_t> buffer (bufferSize);
+
     std::vector<uint8_t> out;
+    out.reserve (bufferSize);
+
+    uint64_t bytes = 0;
+
+    Timer timer;
+
+    for (int i = 0; ; ++i)
+    {
+      if ((i % 1000000) == 0 && duration < timer.elapsed ())
+      {
+        timer.elapsed ().pretty ();
+        break;
+      }
+      out.clear ();
+
+      // insert data to the buffer
+      buffer.insert (buffer.end (), message.begin (), message.end ());
+
+      // copy data out of circular buffer
+      std::copy (buffer.begin (), buffer.end (), std::back_inserter (out));
+
+      // erase copied data from the buffer
+      buffer.erase (buffer.begin (), buffer.begin () + buffer.size ());
+
+      bytes += out.size ();
+
+      ++i;
+    }
+
+    timer.stop ();
+
+    auto throughput = static_cast<double> (bytes) / (1024.*1024.*1024.)
+                    / to_seconds_floating_point (timer.elapsed ());
+
+    BOOST_TEST_MESSAGE ("    boost  buffer: "
+                        << std::fixed << std::setprecision (3)
+                        << throughput << " GB/s");
+
+    return throughput;
+  };
+
+  auto stress_custom_buffer = [&duration] (
+    size_t bufferSize, size_t messageSize) -> double
+  {
+    BOOST_CHECK (bufferSize > messageSize);
+
+    std::vector<uint8_t> message (messageSize);
+
+    Buffer<std::allocator<uint8_t>> buffer (bufferSize);
+    std::vector<uint8_t> out (bufferSize);
 
     uint64_t bytes = 0;
 
@@ -94,15 +140,12 @@ BOOST_AUTO_TEST_CASE (PerformanceOfCircularBuffers)
         break;
       }
 
-      buffer.push (in.data (), in.size ());
+      // insert data to the buffer
+      buffer.push (message.data (), message.size ());
 
-      buffer.pop (out, in.size ());
-      bytes += out.size ();
+      // copy data out of circular buffer
+      buffer.pop (out, message.size ());
 
-      buffer.push (in.data (), in.size ());
-      buffer.push (in.data (), in.size ());
-
-      buffer.pop (out, in.size () * 2);
       bytes += out.size ();
 
       ++i;
@@ -110,67 +153,27 @@ BOOST_AUTO_TEST_CASE (PerformanceOfCircularBuffers)
 
     timer.stop ();
 
-    bufferThroughput = static_cast<double> (bytes) / (1024.*1024.*1024.)
+    auto throughput = static_cast<double> (bytes) / (1024.*1024.*1024.)
                     / to_seconds_floating_point (timer.elapsed ());
 
-    BOOST_TEST_MESSAGE ("Custom Buffer throughput\t\t"
+    BOOST_TEST_MESSAGE ("    custom buffer: "
                         << std::fixed << std::setprecision (3)
-                        << bufferThroughput << " GB/s");
-  }
+                        << throughput << " GB/s");
+    return throughput;
+  };
 
+  for (size_t bufferSize : { 10000, 20480, 409600})
   {
-    boost::circular_buffer<uint8_t> buffer (size);
-    std::vector<uint8_t> out;
-    out.reserve (size);
+    BOOST_TEST_MESSAGE ("buffer size: " << bufferSize);
 
-    Timer timer;
-    uint64_t i = 0;
-    uint64_t bytes = 0;
-    while (true)
+    for (size_t messageSize : { 128, 512, 1024, 2048, 4096 })
     {
-      // check time more often as circular buffer is slow
-      if ((i % 1000) == 0 && duration < timer.elapsed ())
-      {
-        break;
-      }
+      BOOST_TEST_MESSAGE ("  message size: " << messageSize);
 
-      buffer.insert (buffer.end (), in.begin (), in.end ());
+      stress_custom_buffer (bufferSize, messageSize);
 
-      out.clear ();
-      // is there a better way to copy from and then remove data from
-      // a boost::circular_buffer?
-      std::copy (buffer.begin (), buffer.end (), std::back_inserter(out));
-
-      buffer.erase (buffer.begin (), buffer.begin () + in.size ());
-      bytes += out.size ();
-
-      buffer.insert (buffer.end (), in.begin (), in.end ());
-      buffer.insert (buffer.end (), in.begin (), in.end ());
-      bytes += out.size ();
-
-      out.clear ();
-
-      std::copy (buffer.begin (), buffer.end (), std::back_inserter(out));
-      buffer.erase (buffer.begin (), buffer.begin () + in.size () * 2);
-
-      BOOST_CHECK (out.size () == in.size () * 2);
-
-      ++i;
+      stress_boost_buffer (bufferSize, messageSize);
     }
-
-    timer.stop ();
-
-    boostThroughput = static_cast<double> (bytes) / (1024.*1024.*1024.)
-                    / to_seconds_floating_point (timer.elapsed ());
-
-    BOOST_TEST_MESSAGE ("boost::circular_buffer throughput\t"
-                        << std::fixed << std::setprecision (3)
-                        << boostThroughput << " GB/s");
-    /*
-     * Expect the throughput of the local custom circular buffer to be faster
-     * than boost::circular_buffer by roughly x100 for my use case.
-     */
-    BOOST_CHECK (bufferThroughput > (boostThroughput*10));
   }
 }
 
