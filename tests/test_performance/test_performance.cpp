@@ -428,6 +428,7 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStream)
                             .messages_per_sec (Time::now ());
 
   BOOST_TEST_MESSAGE ("rate\t\t" << (rate/1.0e6) << " M messages/sec");
+
   for (auto &line : stats.latency ().summary ().to_strings ())
   {
     BOOST_TEST_MESSAGE (line);
@@ -471,6 +472,11 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamWithPrefetch)
   BOOST_TEST_MESSAGE ("rate\t\t" << (rate/1.0e6) << " M messages/sec");
 
   BOOST_CHECK (rate > 2e6);
+
+  for (auto &line : stats.latency ().summary ().to_strings ())
+  {
+    BOOST_TEST_MESSAGE (line);
+  }
 }
 
 BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStreamWithPrefetch)
