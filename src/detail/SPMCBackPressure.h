@@ -9,8 +9,8 @@
 namespace spmc {
 
 /*
- * SPMCBackPressure manages the registration and unregistration of consumer threads
- * or processes with the queue.
+ * SPMCBackPressure manages the registration and unregistration of consumer
+ * threads or processes with the queue.
  *
  * It exerts back pressure on the producer if required.
  */
