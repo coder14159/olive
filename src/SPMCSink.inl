@@ -13,8 +13,7 @@ SPMCSink<Queuetype>::SPMCSink (const std::string &memoryName,
                                const std::string &queueName,
                                size_t             capacity)
 : m_queue (memoryName, queueName, capacity)
-{
-}
+{ }
 
 template <class Queuetype>
 void SPMCSink<Queuetype>::stop ()
@@ -67,3 +66,4 @@ void SPMCSink<Queuetype>::next (const POD &data)
 }
 
 }
+
