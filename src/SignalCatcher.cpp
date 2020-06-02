@@ -1,5 +1,4 @@
 #include "SignalCatcher.h"
-#include <csignal>
 
 namespace spmc {
 namespace {
