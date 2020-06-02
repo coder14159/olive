@@ -100,7 +100,6 @@ private:
   template<typename T>
   bool list_contains (const std::string &value, const std::vector<T> &list) const
   {
-    std::cout << value << std::endl;
     return boost::range::find (list, value) != list.end ();
   }
 
