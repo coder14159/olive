@@ -71,7 +71,7 @@ private:
 
 private:
   std::map<float, Quantile> m_quantiles;
-  std::map<float, Quantile> m_empty; // empty set of quantiles for resetting
+  std::map<float, Quantile> m_empty; // empty quantiles used for resetting
   std::string               m_path;
   std::ofstream             m_file;
   bool                      m_enabled = false;

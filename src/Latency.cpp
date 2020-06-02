@@ -1,10 +1,11 @@
 #include "LatencyStats.h"
+#include "Time.h"
 
 #include <boost/cstdint.hpp>
 #include <boost/format.hpp>
+#include <boost/filesystem.hpp>
 
 #include <algorithm>
-#include <boost/filesystem.hpp>
 
 namespace ba = boost::accumulators;
 
@@ -93,7 +94,6 @@ void Latency::latency (int64_t nanoseconds)
 
 void Latency::write_header ()
 {
-#if TODO
   if (!m_file.is_open ())
   {
     return;
@@ -103,22 +103,20 @@ void Latency::write_header ()
 
   for (auto &quantile : m_quantiles)
   {
-     m_file << "," << boost::format (quantile.first).str ();
+     m_file << "," << boost::format ("%d") % quantile.first;
   }
 
   m_file << ",100\n";
-#endif
 }
 
 void Latency::write_data ()
 {
-#if 0
   if (!m_file.is_open () || !m_enabled)
   {
     return;
   }
 
-  m_file << m_min.nanoseconds ();
+  m_file << m_min;
 
   for (const auto &quantile : m_quantiles)
   {
@@ -127,8 +125,7 @@ void Latency::write_data ()
                                         ::p_square_quantile (quantile.second));
   }
 
-  m_file << "," << m_max.nanoseconds () << "\n";
-#endif
+  m_file << "," << m_max << "\n";
 }
 
 std::vector<std::string> Latency::to_strings () const
@@ -140,19 +137,17 @@ std::vector<std::string> Latency::to_strings () const
 
   std::vector<std::string> stats;
 
-#if O
-  stats.push_back(std::string ("min\t= ") + m_min.pretty ());
+  stats.push_back(std::string ("min\t= ") + nanoseconds_to_pretty (m_min));
 
   for (const auto &quantile : m_quantiles)
   {
     int64_t t = boost::accumulators::p_square_quantile (quantile.second);
 
-    stats.push_back(format_float (quantile.first).str ()
-                    + "\t= " + nanoseconds (t).pretty ());
+    stats.push_back(std::to_string (quantile.first)
+                    + "\t= " + nanoseconds_to_pretty (t));
   }
 
-  stats.push_back(std::string ("max\t= ") + m_max.pretty ());
-#endif
+  stats.push_back(std::string ("max\t= ") + nanoseconds_to_pretty (m_max));
 
   return stats;
 }
