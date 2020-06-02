@@ -13,6 +13,11 @@ namespace {
   static boost::log::trivial::severity_level LOG_LEVEL = log::trivial::info;
 }
 
+std::vector<std::string> log_levels ()
+{
+  return { "TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "FATAL" };
+}
+
 boost::log::trivial::severity_level get_log_level ()
 {
   // store the log level

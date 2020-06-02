@@ -3,6 +3,8 @@
 
 #include <boost/log/trivial.hpp>
 
+#include <vector>
+
 namespace spmc {
 
 boost::log::trivial::severity_level get_log_level ();
@@ -10,6 +12,8 @@ boost::log::trivial::severity_level get_log_level ();
 void set_log_level (boost::log::trivial::severity_level level);
 
 void set_log_level (const std::string &level);
+
+std::vector<std::string> log_levels ();
 
 class ScopedLogLevel
 {
