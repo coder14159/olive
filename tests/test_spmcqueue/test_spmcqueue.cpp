@@ -1,4 +1,5 @@
 #define SPMC_ENABLE_ASSERTS 1
+
 #include "Assert.h"
 
 #include "Buffer.h"
@@ -566,7 +567,7 @@ public:
     m_throughputStats.interval ().enable (true);
     m_throughputStats.summary ().enable (true);
 
-    m_thread = std::thread ([this, &queue]() {
+    m_thread = std::thread ([this] () {
 
       try
       {
@@ -576,38 +577,38 @@ public:
         {
           // call no drops in the client thread context
           m_queue.allow_message_drops ();
-          m_messageDropsAllowed = true;
         }
 
         while (!m_stop)
         {
           if (m_queue.pop (header, m_data))
           {
-            assert (header.version == 1);
-
             m_throughputStats.next (sizeof (header) + m_data.size (), header.seqNum);
+
             m_latencyStats.next (TimePoint (Nanoseconds (header.timestamp)));
           }
         }
+       /*
+        * Notifying the queue of a consumer exiting should occur from the thread
+        * context of the consumer.
+        *
+        * Failure to do this will prevent the consumer slot from being reused.
+        */
+        m_queue.unregister_consumer ();
       }
-      catch (...)
+      catch (const std::exception &e)
       {
-        std::cout << "exceptioin caught" << std::endl;
-        m_exception = std::current_exception ();
+        std::cerr << "Client exception caught: " << e.what () << std::endl;
+
+        m_queue.unregister_consumer ();
       }
-     /*
-      * Notifying the queue of a consumer exiting should occur from the thread
-      * context of the consumer.
-      *
-      * Failure to do this will prevent the consumer slot from being reused.
-      */
-      queue.unregister_consumer ();
     });
   }
 
   ~Client ()
   {
     m_stop = true;
+
     m_thread.join ();
   }
 
@@ -619,9 +620,6 @@ public:
 
   const LatencyStats    &latencyStats ()    const { return m_latencyStats;    }
   const ThroughputStats &throughputStats () const { return m_throughputStats; }
-
-  std::exception_ptr exception ()  const { return m_exception;  }
-
 
 private:
   Queue &m_queue;
@@ -637,7 +635,6 @@ private:
   ThroughputStats m_throughputStats;
   LatencyStats    m_latencyStats;
 
-  std::exception_ptr m_exception = nullptr;
 };
 
 using DefaultServer = Server<SPMCQueue<std::allocator<uint8_t>>>;
@@ -803,8 +800,10 @@ BOOST_AUTO_TEST_CASE (TooManyConsumers)
 {
   spmc::ScopedLogLevel log (error);
 
-  // set the maximum number of consumers to a small number
-  const size_t maxClients = 3;
+  /*
+   * Set the maximum number of consumers to be three
+   */
+  const size_t maxClients = 2;
 
   using QueueType = SPMCQueue<std::allocator<uint8_t>, maxClients>;
   QueueType queue (1024*1024*10);
@@ -813,21 +812,22 @@ BOOST_AUTO_TEST_CASE (TooManyConsumers)
 
   std::vector<std::unique_ptr<ClientType>> clients;
 
-  size_t messageSize = 128;
+  size_t messageSize  = 128;
+  uint32_t throughput = 1e6;
 
   clients.push_back(std::move (std::make_unique<ClientType>(queue, messageSize)));
   clients.push_back(std::move (std::make_unique<ClientType>(queue, messageSize)));
-  clients.push_back(std::move (std::make_unique<ClientType>(queue, messageSize)));
 
-  uint32_t throughput = 2e6;
   Server<QueueType> server (queue, messageSize, throughput);
 
   BOOST_TEST_MESSAGE ("server throughput:\t" << throughput);
   BOOST_TEST_MESSAGE ("message size:\t\t"    << messageSize);
 
   // allow the clients to initialise
-  std::this_thread::sleep_for (Milliseconds (100));
+  std::this_thread::sleep_for (Milliseconds (5));
 
+  int exceptions_caught = 0;
+  try
   {
     BOOST_TEST_MESSAGE ("Add one client too many");
 
@@ -840,39 +840,39 @@ BOOST_AUTO_TEST_CASE (TooManyConsumers)
      */
     ClientType client (queue, messageSize);
 
-    std::this_thread::sleep_for (Milliseconds (100));
+    std::this_thread::sleep_for (Seconds (10));
 
-    BOOST_CHECK_MESSAGE (client.exception () != nullptr,
-                "The 4th client should not initialise as the queue"
-                " is configured to have a maximum of 3 clients");
+    BOOST_TEST_MESSAGE ("'Too many clients' exception should have been thrown");
+  }
+  catch (const std::exception &e)
+  {
+    ++exceptions_caught;
   }
 
-  BOOST_TEST_MESSAGE ("Remove one client");
-  // stop one of the clients
+  BOOST_CHECK_MESSAGE (exceptions_caught == 1,
+      "The expected 'Too many clients' exception was not thrown");
+
+  // stop one of the clients to create room for a new client to be added
   clients.resize (clients.size () -1);
 
   std::this_thread::sleep_for (Milliseconds (10));
 
+  try
   {
     BOOST_TEST_MESSAGE ("Add a client");
+
     ClientType client (queue, messageSize);
 
     std::this_thread::sleep_for (Milliseconds (10));
-
-    BOOST_CHECK_MESSAGE (client.exception () == nullptr,
-          "Stopping a client should free a slot of a new client to register");
   }
-
-  std::this_thread::sleep_for (Seconds (1));
+  catch (const std::exception &e)
   {
-    BOOST_TEST_MESSAGE ("Add a client");
-    ClientType client (queue, messageSize);
-
-    std::this_thread::sleep_for (Milliseconds (10));
-
-    BOOST_CHECK_MESSAGE (client.exception () == nullptr,
-          "Stopping a client should free a slot of a new client to register");
+    BOOST_CHECK_MESSAGE (false,
+        "An unexpected exception was caught: " << e.what ());
   }
+
+  std::this_thread::sleep_for (Milliseconds (10));
+
 
   BOOST_TEST_MESSAGE ("Stop all clients");
   for (auto &client : clients)
