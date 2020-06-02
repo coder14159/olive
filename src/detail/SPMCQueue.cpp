@@ -4,8 +4,6 @@
 #include <boost/thread/tss.hpp>
 #include <limits>
 
-#include <unordered_set>
-
 namespace spmc {
 
 constexpr size_t   Consumer::UnInitialisedIndex;

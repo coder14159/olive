@@ -454,8 +454,8 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::initialise_consumer (
   if (consumer.message_drops_allowed ())
   {
     /*
-     * On startup begin consuming data from the start of the queue buffer unless
-     * the producer has wrapped the buffer.
+     * On startup, begin consuming data from the start of the queue buffer
+     * unless the producer has overwritten more than the whole the buffer.
      */
     if (m_committed < m_capacity)
     {
@@ -473,7 +473,14 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::initialise_consumer (
      */
     if (producer.index () == Consumer::UnInitialisedIndex)
     {
-      producer.index (m_backPressure.register_consumer ());
+      auto consumerIndex = m_backPressure.register_consumer ();
+
+      if (consumerIndex == Consumer::UnInitialised)
+      {
+        throw std::logic_error ("Failed to register a no-drop consumer");
+      }
+
+      producer.index (consumerIndex);
     }
 
     consumer.consumed (0);
@@ -482,11 +489,6 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::initialise_consumer (
     BOOST_LOG_TRIVIAL(trace) << "consumer.consumed ()="
                              << consumer.consumed ()
                              << " producer.index ()=" << producer.index ();
-
-
-    BOOST_LOG_TRIVIAL (trace) << "consumer.consumed ()="
-                   << consumer.consumed ()
-                   << " producer.index ()=" << producer.index ();
 #endif
     /*
      * If producer wrapped the queue before the producer could be informed of
@@ -510,6 +512,7 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::initialise_consumer (
                       << " m_backPressure.min_consumed ()="
                             << m_backPressure.min_consumed ();
 #endif
+
     }
   }
 }
