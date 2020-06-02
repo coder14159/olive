@@ -1,3 +1,5 @@
+#include "CpuBind.h"
+
 #include <boost/log/trivial.hpp>
 
 #include <pthread.h>
