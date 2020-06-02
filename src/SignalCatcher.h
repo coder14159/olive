@@ -1,7 +1,6 @@
 #ifndef IPC_DETAIL_SIGNAL_CATCHER_H
 #define IPC_DETAIL_SIGNAL_CATCHER_H
 
-#include <csignal>
 #include <functional>
 #include <vector>
 
