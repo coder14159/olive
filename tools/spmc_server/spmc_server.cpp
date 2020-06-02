@@ -1,41 +1,92 @@
 #include "CpuBind.h"
 #include "Logger.h"
+#include "SignalCatcher.h"
 #include "SPMCQueue.h"
 #include "SPMCSink.h"
 #include "Throttle.h"
 
-#include "spmc_argparse.h"
-#include "spmc_signal_catcher.h"
+#include "detail/CXXOptsHelper.h"
 
 #include <boost/interprocess/managed_shared_memory.hpp>
 
 #include <atomic>
+#include <chrono>
+#include <csignal>
+#include <numeric>
 
-using namespace spmc;
 using namespace spmc;
 namespace bi = boost::interprocess;
 
 std::atomic<bool> g_stop = { false };
+
+CxxOptsHelper parse (int argc, char* argv[])
+{
+  std::string oneKB = std::to_string (1024);
+  std::string oneGB = std::to_string (1024*1024*1024);
+  std::string level = "NOTICE";
+  std::string rate  = "0";
+  std::string cpu   = "0";
+
+  cxxopts::Options cxxopts ("spmc_server",
+                    "Generate and send messages through named shared memory");
+
+  cxxopts.add_options ()
+    ("h,help", "Produce messages for shared memory performance testing")
+    ("name", "Shared memory name", cxxopts::value<std::string> ())
+    ("messagesize", "Message size (bytes)",
+    cxxopts::value<size_t> ()->default_value (oneKB))
+    ("queuesize", "Size of queue (bytes)",
+    cxxopts::value<size_t> ()->default_value (oneGB))
+    ("rate", "msgs/sec (value=0 for maximum rate)",
+    cxxopts::value<uint32_t> ()->default_value (rate))
+    ("l,loglevel", "Logging level",
+    cxxopts::value<std::string> ()->default_value (level))
+    ("cpu", "bind main thread to a cpu processor id",
+    cxxopts::value<int> ()->default_value (cpu));
+
+  CxxOptsHelper options (cxxopts.parse (argc, argv));
+
+  if (options.exists ("help"))
+  {
+    std::cout << cxxopts.help ({"", "Group"}) << std::endl;
+    exit (0);
+  }
+
+  return options;
+}
+
 
 void server (const std::string& name,
              size_t             messageSize,
              size_t             queueSize,
              uint32_t           rate)
 {
+  /*
+   * Create enough shared memory for a single queue which is shared by all the
+   * clients.
+   */
+  auto memory = bi::managed_shared_memory (bi::open_or_create, name.c_str(),
+                                    (queueSize) + (SharedMemory::BOOK_KEEPING));
+
   using Queue = SPMCQueue<SharedMemory::Allocator>;
   using Sink  = SPMCSink<Queue>;
 
   Sink sink (name, name + ":queue", queueSize);
 
-  spmc::SignalCatcher s({ SIGINT, SIGTERM }, [&sink] (int) {
-    logger ().notice () << "stopping server..";
+  /*
+   * Handle signals
+   */
+  SignalCatcher s ({SIGINT, SIGTERM}, [&sink] (int) {
     g_stop = true;
+
+    std::cout << "stopping.." << std::endl;
+
     sink.stop ();
   });
 
-  logger ().info () << "start sending data";
-
-  // create a reusable test message
+  /*
+   * Create a reusable test message to send to a client
+   */
   std::vector<uint8_t> message (messageSize, 0);
 
   std::iota (std::begin (message), std::end (message), 1);
@@ -50,37 +101,51 @@ void server (const std::string& name,
   }
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char *argv[]) try
 {
-  // set some defaults
-  std::string level ("NOTICE");
-  size_t messageSize = 1024;
-  size_t queueSize   = 1024*1024*1024;
-  uint32_t rate      = 0;
-  int cpu            = -1;
+  auto options = parse (argc, argv);
 
-  std::string name;
+  auto name        = options.required<std::string> ("name");
+  auto messageSize = options.required<size_t> ("messagesize");
+  auto queueSize   = options.required<size_t> ("queuesize");
+  auto rate        = options.required<uint32_t> ("rate");
+  auto cpu         = options.value<int> ("cpu", -1);
+  auto logLevel = options.value<std::string>   ("loglevel", log_levels (),
+                                                "INFO");
 
-  ArgParse ()
-    .optional ("--message-size <bytes>", "message size", messageSize)
-    .optional ("--queue-size <bytes>",   "queue size",   queueSize)
-    .optional ("--name <name>",          "memory name",  name)
-    .optional ("--rate <msgs/sec>",
-               "message throughput, zero indicates no throttling", rate)
-    .optional ("--loglevel <level>", "logging level", level)
-    .choices  (Logger::level_strings ())
-    .optional ("--cpu-bind <cpu>",
-               "bind main thread to a cpu processor",  cpu)
-    .run (argc, argv);
+  set_log_level (logLevel);
 
-  logger ().info () << "start shared memory SPMC server";
-  logger ().info () << "message size\t= " << messageSize;
-  logger ().info () << "message rate\t= "
-                         << ((rate == 0) ? "max" : std::to_string (rate));
-  logger ().info () << "queue size\t= "   << queueSize;
-  logger ().info () << "memory name\t= "  << name;
+  BOOST_LOG_TRIVIAL (info) <<  "Start shared memory spmc_server";
 
   bind_to_cpu (cpu);
+
+  server (name, messageSize, queueSize, rate);
+
+#if 0
+
+  std::cout << "start shared memory SPMC server\n"
+            << "memory name:  " << name  << '\n'
+            << "queue size:   " << queueSize <<   " bytes\n"
+            << "message size: " << messageSize << " bytes\n"
+            << "message rate: " << ((rate == 0)
+                ? "max" : std::to_string (rate)) << " msg/sec\n"
+            << std::endl;
+
+  bind_to_cpu (cpu);
+
+  auto start = std::chrono::steady_clock::now ();
+
+  using namespace std::chrono_literals;
+
+  std::cout << "sleep";
+
+  while ((std::chrono::steady_clock::now () - start) < 10s)
+  {
+    std::cout << "." << std::flush;
+    std::this_thread::sleep_for (500ms);
+  }
+
+  std::cout << "\ndone sleeping" << std::endl;
 
   /*
    * Create enough shared memory for a single queue which is shared by all the
@@ -92,8 +157,10 @@ int main(int argc, char *argv[])
                               (SharedMemory::BOOK_KEEPING));
 
   server (name, messageSize, queueSize, rate);
-
-  ipc::logger ().info () << "exit spmc_server";
-
+#endif
   return 1;
+}
+catch (const std::exception &e)
+{
+  std::cerr << e.what () << std::endl;
 }
