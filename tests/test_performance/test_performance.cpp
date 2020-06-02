@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE (ThroughputOfCircularBuffers)
 
   TimeDuration duration (Nanoseconds (Seconds (5)));
 
-  auto stress_boost_buffer = [&duration] (
+  auto stress_boost_circular_buffer = [&duration] (
     size_t bufferSize, size_t messageSize) -> double
   {
     BOOST_CHECK (bufferSize > messageSize);
@@ -170,9 +170,9 @@ BOOST_AUTO_TEST_CASE (ThroughputOfCircularBuffers)
     {
       BOOST_TEST_MESSAGE ("  message size: " << messageSize);
 
-      stress_custom_buffer (bufferSize, messageSize);
+      stress_boost_circular_buffer (bufferSize, messageSize);
 
-      stress_boost_buffer (bufferSize, messageSize);
+      stress_custom_buffer (bufferSize, messageSize);
     }
   }
 }
@@ -219,7 +219,7 @@ BOOST_AUTO_TEST_CASE (VectorPerformance)
     return;
   }
 
-  auto run_test = [](size_t batchSize) {
+  auto run_test = [] (size_t batchSize) {
     using namespace boost::container;
 
     size_t bufferSize = 204800;
@@ -248,210 +248,10 @@ BOOST_AUTO_TEST_CASE (VectorPerformance)
   run_test (512);
   run_test (1024);
   run_test (2048);
-  run_test (4092);
+  run_test (4096);
 
   BOOST_CHECK (true);
 }
-
-#if 0
-void async_queue_performance (
-  size_t            capacity,
-  PerformanceStats &stats,
-  uint32_t          rate)
-{
-  constexpr size_t size = 128;
-  struct Data
-  {
-    Header header;
-    char   data[size];
-  };
-
-  auto duration = seconds (2);
-
-  if (getenv ("TIMEOUT") != nullptr)
-  {
-    duration = seconds (atoi (getenv ("TIMEOUT")));
-  }
-
-  Async::Queue<Data> queue (capacity/sizeof (Data));
-  Async::Flag stop;
-
-  Throttle throttle (rate);
-
-  auto producer = std::thread ([&stop, &queue, &throttle] () {
-    /*
-     * Make size of data reasonably comparable to PerformanceOfSinkStreamPOD by
-     * sending data of size header + payload
-     */
-    uint64_t seqNum = 0;
-
-    while (true)
-    {
-      Data data;
-
-      throttle.throttle ();
-
-      data.header.timestamp = Time::now ().serialise ();
-
-      data.header.seqNum = ++seqNum;
-      data.header.size   = size;
-
-      if (Async::wait (stop.is_set (),
-                       queue.send (std::move (data))) == 0)
-      {
-        break;
-      }
-    }
-  });
-
-  sleep_for (milliseconds (5));
-
-  auto consumer = std::thread ([&stop, &queue, &stats] () {
-
-    uint64_t seqNum = 0;
-    while (true)
-    {
-      Data data;
-
-      if (Async::wait (stop.is_set (), queue.receive (data)) == 0)
-      {
-        break;
-      }
-
-      stats.update (data.header.size+sizeof (Header), data.header.seqNum,
-                    Time::deserialise (data.header.timestamp));
-    }
-  });
-
-
-  sleep_for (duration);
-
-  stop.set ();
-
-  consumer.join ();
-  producer.join ();
-}
-
-BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfAsync)
-{
-  /*
-   * Use the performance of the async queue as a baseline.
-   *
-   * Under high throughput it is essentially the performance of the underlying
-   * boost::spsc_queue
-   */
-
-  if (getenv ("NOTIMING") != nullptr)
-  {
-    return;
-  }
-
-  auto duration = seconds (2);
-
-  if (getenv ("TIMEOUT") != nullptr)
-  {
-    duration = seconds (atoi (getenv ("TIMEOUT")));
-  }
-
-  auto level = ipc::logger ().level ();
-  ipc::logger ().set_level (ERROR);
-
-  BOOST_SCOPE_EXIT (&level) {
-    ipc::logger ().set_level (level);
-  }BOOST_SCOPE_EXIT_END;
-
-  /*
-   * Give the queue the same number of elements as the SPMC queue.
-   */
-
-  size_t capacity = 2048000;
-  uint32_t rate   = 0;
-
-  PerformanceStats stats;
-  stats.throughput ().summary ().enable (true);
-
-  async_queue_performance (capacity, stats, rate);
-
-  auto throughput = stats.throughput ()
-                         .summary ()
-                         .megabytes_per_sec (Time::now ());
-
-  BOOST_CHECK (throughput > 100);
-
-  BOOST_TEST_MESSAGE ("throughput\t" << std::setprecision (3)
-                      << (throughput/1024.) << " GB/sec");
-
-  rate = stats.throughput ()
-                         .summary ()
-                         .messages_per_sec (Time::now ());
-
-  BOOST_TEST_MESSAGE ("rate\t\t" << std::fixed << std::setprecision (3)
-                      << (rate/1.0e6) << " M messages/sec");
-
-}
-
-BOOST_AUTO_TEST_CASE (LatencyPerformanceOfAsync)
-{
-  /*
-   * Use the performance of the async queue as a baseline.
-   *
-   * Under high throughput it is essentially the performance of the underlying
-   * boost::spsc_queue
-   */
-
-  if (getenv ("NOTIMING") != nullptr)
-  {
-    return;
-  }
-
-  auto duration = seconds (2);
-
-  if (getenv ("TIMEOUT") != nullptr)
-  {
-    duration = seconds (atoi (getenv ("TIMEOUT")));
-  }
-
-  auto level = ipc::logger ().level ();
-  ipc::logger ().set_level (ERROR);
-
-  BOOST_SCOPE_EXIT (&level) {
-    ipc::logger ().set_level (level);
-  }BOOST_SCOPE_EXIT_END;
-
-  size_t capacity = 20480;
-
-  uint32_t rate  = 1e6;
-
-  PerformanceStats stats;
-  stats.throughput ().summary ().enable (true);
-  stats.latency ().summary ().enable (true);
-
-  async_queue_performance (capacity, stats, rate);
-
-  auto megabytes_per_sec = stats.throughput ()
-                         .summary ()
-                         .megabytes_per_sec (Time::now ());
-
-  BOOST_CHECK (megabytes_per_sec > 100);
-
-  BOOST_TEST_MESSAGE ("throughput\t" << std::setprecision (3)
-                      << (megabytes_per_sec/1024.) << " GB/sec");
-
-  auto messages_per_sec = stats.throughput ()
-                         .summary ()
-                         .messages_per_sec (Time::now ());
-
-  BOOST_TEST_MESSAGE ("rate\t\t" << std::fixed << std::setprecision (3)
-                      << (messages_per_sec/1.0e6) << " M messages/sec");
-
-  for (auto &line : stats.latency ().summary ().to_strings ())
-  {
-    BOOST_TEST_MESSAGE (line);
-  }
-}
-
-#endif // Async tests not available
-
 
 void sink_stream_in_single_process (
     size_t            capacity,
@@ -1220,8 +1020,8 @@ BOOST_AUTO_TEST_CASE (ThreadIdentity)
 
     BOOST_TEST_MESSAGE ("bare_count=" << bare_count);
   }
-  BOOST_CHECK ((2*thread_specific_count) < thread_id_count);
-  BOOST_CHECK ((2*thread_id_count) < thread_local_count);
+  BOOST_CHECK (thread_specific_count < thread_id_count);
+  BOOST_CHECK (thread_id_count < thread_local_count);
 
 }
 
