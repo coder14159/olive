@@ -19,11 +19,16 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer ()
   std::lock_guard<Mutex> g (m_mutex);
 
   /*
-   * SPMCBackPressure supports a configurable limited number of consumer threads
+   * SPMCBackPressure supports a limited number of consumer threads
    */
-  ASSERT_SS (m_consumerCount < m_maxNoDropConsumers,
-          "Cannot register another consumer. The maximum number of no-drop"
-          " consumers (" << m_maxNoDropConsumers << ") are already registered");
+  if (m_consumerCount >= m_maxNoDropConsumers)
+  {
+    BOOST_LOG_TRIVIAL(warning)
+      << "Cannot register another consumer. The maximum number of no-drop"
+      << " consumers (" << m_maxNoDropConsumers << ") are already registered";
+
+    return Consumer::UnInitialised;
+  }
 
   size_t index = 0;
 
@@ -38,9 +43,7 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer ()
   for (size_t i = 0; i < m_maxConsumerIndex; ++i)
   {
     BOOST_LOG_TRIVIAL(trace)
-          << "slot check m_consumed[" << i << "]=" << m_consumed[i]
-          << " Consumer::Stopped="              << Consumer::Stopped
-          << " Consumer::UnInitialised="        << Consumer::UnInitialised;
+      << "slot check m_consumed[" << i << "]=" << m_consumed[i];
 
     if (m_consumed[i] == Consumer::Stopped)
     {
