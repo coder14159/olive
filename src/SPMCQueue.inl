@@ -106,8 +106,8 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   std::vector<uint8_t> &data)
 {
   /*
-   * Use of the cache is only permnitted if the there are no consumers permitted
-   * to drop messages.
+   * Use of the cache is only permitted if no consumers are permitted to drop
+   * messages.
    */
   if (m_cacheEnabled && !m_consumer.message_drops_allowed ())
   {

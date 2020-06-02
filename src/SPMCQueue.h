@@ -23,7 +23,7 @@ class SPMCQueue
 
 public:
   /*
-   * Construct an SPMCQueue for multiple threads
+   * Construct an SPMCQueue for multiple threads in a single process.
    */
   SPMCQueue (size_t capacity);
 
