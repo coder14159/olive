@@ -891,7 +891,7 @@ BOOST_AUTO_TEST_CASE (RestartClient)
   using QueueType = SPMCQueue<std::allocator<uint8_t>>;
   QueueType queue (500);
 
-  size_t   messageSize = 68; // packet size is 100 bytes including header
+  size_t   messageSize = 68; // sizeof (header) + messageSize = 100 bytes
   uint32_t throughput = 1000;
 
   /*
