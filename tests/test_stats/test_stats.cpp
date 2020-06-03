@@ -1,12 +1,8 @@
+#include "Logger.h"
 #include "PerformanceStats.h"
 #include "detail/SharedMemory.h"
 
-// #include "spmc_filesystem.h"
-// #include "spmc_time.h"
-// #include "spmc_time_duration.h"
-// #include "spmc_timer.h"
-
-#include <boost/scope_exit.hpp>
+#include "boost/filesystem.hpp"
 
 #define BOOST_TEST_DYN_LINK
 
@@ -15,75 +11,100 @@
 
 using namespace spmc;
 
-BOOST_AUTO_TEST_CASE (ThroughputStatsUpdates)
+using namespace boost::log::trivial;
+
+BOOST_AUTO_TEST_CASE(ThroughputStatsUpdates)
 {
-	logger ().set_level (WARNING);
+  spmc::ScopedLogLevel log (warning);
 
-	std::vector<int> payload;
-	payload.resize (10240);
+  std::vector<int> payload;
+  payload.resize (10240);
 
-	PerformanceStats stats;
+  PerformanceStats stats;
 
-	stats.throughput ().summary ().enable (true);
+  stats.throughput ().summary ().enable (true);
 
-	auto start = Time::now ();
+  auto start = Time::now ();
 
-	for (int i = 1; ; ++i)
-	{
-	stats.update (sizeof (ipc::Header), payload.size (), i, Time::now ());
+  for (int i = 1;; ++i)
+  {
+    stats.update (sizeof (Header), payload.size (), i, Time::now ());
 
-	if ((Time::now () - start) > seconds (2))
-	{
-	break;
-	}
-	}
+    if ((Time::now() - start) > Seconds (2))
+    {
+      break;
+    }
+  }
 
-	BOOST_CHECK (stats.throughput ().summary ()
-	.megabytes_per_sec (Time::now ()) > 100);
-
+  BOOST_CHECK (stats.throughput ().summary ()
+                     .megabytes_per_sec (Time::now ()) > 100);
 }
 
-BOOST_AUTO_TEST_CASE (LatencyStatsUpdateIsFast)
+boost::filesystem::path
+operator+ (boost::filesystem::path left, boost::filesystem::path right)
 {
-  auto level = ipc::logger ().level ();
-  ipc::logger ().set_level (ERROR);
+  return boost::filesystem::path(left) += right;
+}
 
-  BOOST_SCOPE_EXIT (&level) {
-    ipc::logger ().set_level (level);
-  }BOOST_SCOPE_EXIT_END;
+BOOST_AUTO_TEST_CASE(LatencyStatsUpdateIsFast)
+{
+  spmc::ScopedLogLevel log (warning);
 
-	std::vector<int> payload;
-	payload.resize (128);
+  namespace fs = boost::filesystem;
+
+  struct TempDir
+  {
+    TempDir ()
+    {
+      m_path  = fs::temp_directory_path () + fs::path ("/")
+              + fs::unique_path ("%%%%-%%%%-%%%%-%%%%");
+
+      fs::create_directory (m_path);
+    }
+
+    ~TempDir () { fs::remove_all (m_path); }
+
+    const std::string path () const { return m_path.native (); }
+
+  private:
+
+    fs::path m_path;
+  };
+
+  std::vector<int> payload;
+  payload.resize (128);
 
   TempDir dir;
 
-	PerformanceStats stats (dir.path ());
+  PerformanceStats stats (dir.path ());
 
-	stats.latency ().summary ().enable (true);
+  stats.latency ().summary ().enable (true);
 
-	auto start = Time::now ();
+  auto start = Time::now ();
 
-	for (int i = 1; ; ++i)
-	{
-	stats.update (sizeof (ipc::Header), payload.size (), i, Time::now ());
+  for (int i = 1;; ++i)
+  {
+    stats.update (sizeof (Header), payload.size (), i, Time::now ());
 
-	if ((Time::now () - start) > seconds (2))
-	{
-	break;
-	}
-	}
+    if ((Time::now () - start) > Seconds (2))
+    {
+      break;
+    }
+  }
 
- 	auto &quantiles = stats.latency ().summary ().quantiles ();
-	BOOST_CHECK (quantiles.empty () == false);
+  auto &quantiles = stats.latency ().summary ().quantiles ();
 
-	auto median =
-	static_cast<int64_t>(boost::accumulators
-	 	::p_square_quantile (quantiles.at (50)));
+  BOOST_CHECK (quantiles.empty () == false);
 
-	BOOST_CHECK (nanoseconds (median)  < microseconds (2));
+  auto median = static_cast<int64_t> (
+                  boost::accumulators::p_square_quantile (quantiles.at (50)));
 
-	for (auto &s : stats.latency ().summary ().to_strings ())
-	{
-	BOOST_TEST_MESSAGE (s);
-	}
+  BOOST_CHECK (Nanoseconds (median) < Microseconds (2));
+
+  for (auto &s : stats.latency ().summary ().to_strings ())
+  {
+    BOOST_TEST_MESSAGE (s);
+  }
+
+  BOOST_CHECK (fs::exists (dir.path ()));
 }
