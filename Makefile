@@ -24,6 +24,7 @@ LIB_SRC_CPP_FILES += src/Latency.cpp
 LIB_SRC_CPP_FILES += src/LatencyStats.cpp
 LIB_SRC_CPP_FILES += src/Logger.cpp
 LIB_SRC_CPP_FILES += src/PerformanceStats.cpp
+LIB_SRC_CPP_FILES += src/SignalCatcher.cpp
 LIB_SRC_CPP_FILES += src/SPMCSink.cpp
 LIB_SRC_CPP_FILES += src/Time.cpp
 LIB_SRC_CPP_FILES += src/Timer.cpp
@@ -63,30 +64,49 @@ $(LIB_FILE_PATH): $(LIB_OBJ_FILES)
 	@ar -r -o $(LIB_FILE_PATH) $(LIB_OBJ_FILES)
 
 # Build tools
-$(BIN_DIR)/spmc_client: bin_dir Makefile tools/spmc_client/spmc_client.cpp $(LIB_FILE_PATH)
-	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $(BIN_DIR)/spmc_client tools/spmc_client/spmc_client.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
+$(BIN_DIR)/spmc_client: $(BIN_DIR) Makefile tools/spmc_client/spmc_client.cpp $(LIB_FILE_PATH)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $(BIN_DIR)/spmc_client tools/spmc_client/spmc_client.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
 
-$(BIN_DIR)/remove_shared_memory: bin_dir Makefile tools/remove_shared_memory/remove_shared_memory.cpp $(LIB_FILE_PATH)
+$(BIN_DIR)/spmc_server: $(BIN_DIR) Makefile tools/spmc_server/spmc_server.cpp $(LIB_FILE_PATH)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $(BIN_DIR)/spmc_server tools/spmc_server/spmc_server.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
+
+# Requires a patch for boost spsc_queue (or used to..)
+# $(BIN_DIR)/spsc_client: $(BIN_DIR) Makefile tools/spsc_client/spsc_client.cpp $(LIB_FILE_PATH)
+# 	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $(BIN_DIR)/spsc_client tools/spsc_client/spsc_client.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
+
+# $(BIN_DIR)/spsc_server: $(BIN_DIR) Makefile tools/spsc_server/spsc_server.cpp $(LIB_FILE_PATH)
+# 	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $(BIN_DIR)/spsc_server tools/spsc_server/spsc_server.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
+
+$(BIN_DIR)/remove_shared_memory: $(BIN_DIR) Makefile tools/remove_shared_memory/remove_shared_memory.cpp $(LIB_FILE_PATH)
 	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $(BIN_DIR)/remove_shared_memory tools/remove_shared_memory/remove_shared_memory.cpp $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
 
 # Build tests
-$(BIN_DIR)/test_performance: bin_dir Makefile tests/test_performance/test_performance.cpp $(LIB_FILE_PATH)
+$(BIN_DIR)/test_performance: $(BIN_DIR) Makefile tests/test_performance/test_performance.cpp $(LIB_FILE_PATH)
 	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -o $(BIN_DIR)/test_performance tests/test_performance/test_performance.cpp -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_THREAD) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
 
-$(BIN_DIR)/test_spmcqueue: bin_dir Makefile tests/test_spmcqueue/test_spmcqueue.cpp $(LIB_FILE_PATH)
+$(BIN_DIR)/test_spmcqueue: $(BIN_DIR) Makefile tests/test_spmcqueue/test_spmcqueue.cpp $(LIB_FILE_PATH)
 	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -o $(BIN_DIR)/test_spmcqueue tests/test_spmcqueue/test_spmcqueue.cpp -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_THREAD) $(LIB_BOOST_FILESYSTEM)
 
+$(BIN_DIR)/test_stats: $(BIN_DIR) Makefile tests/test_stats/test_stats.cpp $(LIB_FILE_PATH)
+	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -o $(BIN_DIR)/test_stats tests/test_stats/test_stats.cpp -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_THREAD) $(LIB_BOOST_FILESYSTEM)
+
 # Build all binaries
-all: $(BIN_DIR)/spmc_client \
-     $(BIN_DIR)/remove_shared_memory \
-     $(BIN_DIR)/test_performance \
-     $(BIN_DIR)/test_spmcqueue \
+all:	$(BIN_DIR)/spmc_client \
+		$(BIN_DIR)/spmc_server \
+		$(BIN_DIR)/remove_shared_memory \
+		$(BIN_DIR)/test_performance \
+		$(BIN_DIR)/test_spmcqueue
+		$(BIN_DIR)/test_stats \
+    #  $(BIN_DIR)/test_allocator \
+    #  $(BIN_DIR)/spmc_server \
+    #  $(BIN_DIR)/spsc_client \
+    #  $(BIN_DIR)/spsc_server \
 
 clean:
 	rm -rf build/$(PROCESSOR)$(BUILD_SUFFIX)
 
 test:
-	$(BIN_DIR)/test_performance
+	$(BIN_DIR)/test_performance --log_level=INFO
 	$(BIN_DIR)/test_spmcqueue
 
 .PHONY: all
