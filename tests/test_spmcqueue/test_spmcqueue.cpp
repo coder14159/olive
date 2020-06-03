@@ -13,13 +13,6 @@
 #include "Throughput.h"
 #include "detail/SharedMemory.h"
 
-// #include "spmc_format_float.h"
-// #include "spmc_noncopyable.h"
-// #include "spmc_time.h"
-// #include "spmc_time_duration.h"
-// #include "spmc_timer.h"
-// #include "spmc_timezone.h"
-
 #include <boost/core/noncopyable.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/scope_exit.hpp>
@@ -815,8 +808,8 @@ BOOST_AUTO_TEST_CASE (TooManyConsumers)
   size_t messageSize  = 128;
   uint32_t throughput = 1e6;
 
-  clients.push_back(std::move (std::make_unique<ClientType>(queue, messageSize)));
-  clients.push_back(std::move (std::make_unique<ClientType>(queue, messageSize)));
+  clients.push_back (std::move (std::make_unique<ClientType>(queue, messageSize)));
+  clients.push_back (std::move (std::make_unique<ClientType>(queue, messageSize)));
 
   Server<QueueType> server (queue, messageSize, throughput);
 
