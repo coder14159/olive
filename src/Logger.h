@@ -32,6 +32,25 @@ private:
   boost::log::trivial::severity_level m_level;
 };
 
+class ScopedLogMessage
+{
+public:
+  ScopedLogMessage (boost::log::trivial::severity_level level,
+                    const std::string &message)
+  : m_message (message)
+  , m_level (level)
+  {
+    BOOST_LOG_TRIVIAL(info) << "Enter: " << m_message;
+  }
+  ~ScopedLogMessage ()
+  {
+    BOOST_LOG_TRIVIAL(info) << "Exit: " << m_message;
+  }
+
+  std::string m_message;
+  boost::log::trivial::severity_level m_level;
+};
+
 #define TRACE_ENABLED 0
 
 } // namespace spmc

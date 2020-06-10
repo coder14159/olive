@@ -20,7 +20,6 @@ std::vector<std::string> log_levels ()
 
 boost::log::trivial::severity_level get_log_level ()
 {
-  // store the log level
   return LOG_LEVEL;
 }
 
