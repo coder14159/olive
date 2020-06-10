@@ -28,7 +28,7 @@ CxxOptsHelper parse (int argc, char* argv[])
   std::string cpu   = "0";
 
   cxxopts::Options cxxopts ("spmc_server",
-                    "Generate and send messages through named shared memory");
+        "Generate test messages and send them to local named shared memory");
 
   cxxopts.add_options ()
     ("h,help", "Produce messages for shared memory performance testing")
@@ -54,7 +54,6 @@ CxxOptsHelper parse (int argc, char* argv[])
 
   return options;
 }
-
 
 void server (const std::string& name,
              size_t             messageSize,
@@ -110,54 +109,17 @@ int main(int argc, char *argv[]) try
   auto queueSize   = options.required<size_t> ("queuesize");
   auto rate        = options.required<uint32_t> ("rate");
   auto cpu         = options.value<int> ("cpu", -1);
-  auto logLevel = options.value<std::string>   ("loglevel", log_levels (),
+  auto logLevel    = options.value<std::string> ("loglevel", log_levels (),
                                                 "INFO");
 
   set_log_level (logLevel);
 
-  BOOST_LOG_TRIVIAL (info) <<  "Start shared memory spmc_server";
+  BOOST_LOG_TRIVIAL (info) << "Start spmc_server";
 
   bind_to_cpu (cpu);
 
   server (name, messageSize, queueSize, rate);
 
-#if 0
-
-  std::cout << "start shared memory SPMC server\n"
-            << "memory name:  " << name  << '\n'
-            << "queue size:   " << queueSize <<   " bytes\n"
-            << "message size: " << messageSize << " bytes\n"
-            << "message rate: " << ((rate == 0)
-                ? "max" : std::to_string (rate)) << " msg/sec\n"
-            << std::endl;
-
-  bind_to_cpu (cpu);
-
-  auto start = std::chrono::steady_clock::now ();
-
-  using namespace std::chrono_literals;
-
-  std::cout << "sleep";
-
-  while ((std::chrono::steady_clock::now () - start) < 10s)
-  {
-    std::cout << "." << std::flush;
-    std::this_thread::sleep_for (500ms);
-  }
-
-  std::cout << "\ndone sleeping" << std::endl;
-
-  /*
-   * Create enough shared memory for a single queue which is shared by all the
-   * clients.
-   */
-  auto memory =
-    bi::managed_shared_memory (bi::open_or_create, name.c_str(),
-                              (queueSize) +
-                              (SharedMemory::BOOK_KEEPING));
-
-  server (name, messageSize, queueSize, rate);
-#endif
   return 1;
 }
 catch (const std::exception &e)

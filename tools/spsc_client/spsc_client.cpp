@@ -84,8 +84,6 @@ int main(int argc, char* argv[])
 
   logger ().notice () << "sizeof Header=" << sizeof (Header);
 
-
-
   while (true)
   {
     if (g_stop)

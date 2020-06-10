@@ -25,7 +25,7 @@ namespace {
 CxxOptsHelper parse (int argc, char* argv[])
 {
   cxxopts::Options cxxopts ("spmc_client",
-                        "Consume messages sent through named shared memory");
+                "Consume messages sent to local named shared memory");
 
   cxxopts.add_options ()
     ("h,help", "Performance test consuming of shared memory messages")
@@ -79,23 +79,11 @@ int main(int argc, char* argv[]) try
   auto prefetchCache   = options.value<size_t> ("prefetchcache", 0);
   auto test            = options.value<bool>   ("test", false);
   auto logLevel = options.value<std::string> ("loglevel", log_levels (),"INFO");
-#if 0
-  std::cout << "name: "            << name << '\n'
-            << "loglevel: "        << logLevel << '\n'
-            << "cpu: "             << cpu << '\n'
-            << "prefetchCache: "   << prefetchCache << '\n'
-            << "allowDrops: "      << std::boolalpha << allowDrops << '\n'
-            << "intervalStats: "   << std::boolalpha << intervalStats << '\n'
-            << "throughputStats: " << std::boolalpha << throughputStats << '\n'
-            << "latencyStats: "    << std::boolalpha << latencyStats << '\n'
-            << "test: "            << std::boolalpha << test
-            << std::endl;
-#endif
 
   set_log_level (logLevel);
 
-  BOOST_LOG_TRIVIAL (info) <<  "Start shared memory spmc_client";
-  BOOST_LOG_TRIVIAL (info) <<  "Consume from: " << name;
+  BOOST_LOG_TRIVIAL (info) <<  "Start spmc_client";
+  BOOST_LOG_TRIVIAL (info) <<  "Consume from shared memory named: " << name;
 
   using Queue  = SPMCQueue<SharedMemory::Allocator>;
   using Stream = SPMCStream<Queue>;
