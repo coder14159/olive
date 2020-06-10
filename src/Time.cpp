@@ -1,5 +1,6 @@
 #include "Time.h"
 #include <iostream>
+#include <cmath>
 
 namespace spmc {
 
@@ -8,7 +9,12 @@ std::string nanoseconds_to_pretty (int64_t nanoseconds)
   char buffer [1024];
   buffer[0] = '\0';
 
-  if (nanoseconds > 1e6)
+  if (nanoseconds > 1e9)
+  {
+  	double secs = nanoseconds / 1.0e9;
+    snprintf (buffer, sizeof (buffer), "%9.0f s", secs);
+  }
+  else if (nanoseconds > 1e6)
   {
   	double secs = nanoseconds / 1.0e6;
     snprintf (buffer, sizeof (buffer), "%9.0f ms", secs);
@@ -42,9 +48,5 @@ TimePoint timepoint_from_nanoseconds_since_epoch (int64_t nanoseconds)
   return TimePoint (Nanoseconds (nanoseconds));
 }
 
-TimePoint Time::now ()
-{
-  return TimePoint (Clock::now ());
-}
 
 } // namespace spmc

@@ -28,8 +28,6 @@ private:
 
     bool is_stopped () const;
 
-    bool is_valid_interval () const;
-
 private:
     TimePoint m_begin;
     TimePoint m_end;

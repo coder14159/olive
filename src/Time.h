@@ -24,20 +24,6 @@ int64_t nanoseconds_since_epoch (const TimePoint &time_point);
 
 TimePoint timepoint_from_nanoseconds_since_epoch (int64_t nanoseconds);
 
-inline
-bool is_valid (TimePoint time_point)
-{
-  return (time_point != TimePoint::min ());
-}
-
-class Time
-{
-public:
-
-  static TimePoint now ();
-
-};
-
 } // namespace spmc
 
 #endif // IPC_TIME_H
