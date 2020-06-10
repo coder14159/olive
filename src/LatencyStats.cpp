@@ -89,9 +89,9 @@ void LatencyStats::next (std::chrono::steady_clock::time_point time)
    * Use samples of latency information because Time::now () as
    * quantiles can be somewhat expensive to compute
    */
-  std::chrono::nanoseconds time_duration_since_sampled (time - m_sampled);
+  std::chrono::nanoseconds duration_since_sampled (time - m_sampled);
 
-  if (time_duration_since_sampled < std::chrono::microseconds (1))
+  if (duration_since_sampled < std::chrono::microseconds (5))
   {
     return;
   }
