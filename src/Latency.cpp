@@ -1,4 +1,5 @@
 #include "LatencyStats.h"
+#include "TimeDuration.h"
 #include "Time.h"
 
 #include <boost/cstdint.hpp>
@@ -137,17 +138,21 @@ std::vector<std::string> Latency::to_strings () const
 
   std::vector<std::string> stats;
 
-  stats.push_back(std::string ("min\t= ") + nanoseconds_to_pretty (m_min));
+  stats.push_back ("percentile latency");
+  stats.push_back (
+    (boost::format ("min  %|6t|%1%") % nanoseconds_to_pretty (m_min)).str ());
 
   for (const auto &quantile : m_quantiles)
   {
     int64_t t = boost::accumulators::p_square_quantile (quantile.second);
 
-    stats.push_back(std::to_string (quantile.first)
-                    + "\t= " + nanoseconds_to_pretty (t));
+    stats.push_back (
+      (boost::format ("%1% %|6t|%2%") % quantile.first
+                                      % nanoseconds_to_pretty (t)).str ());
   }
 
-  stats.push_back(std::string ("max\t= ") + nanoseconds_to_pretty (m_max));
+  stats.push_back (
+    (boost::format ("max  %|6t|%1%") % nanoseconds_to_pretty (m_max)).str ());
 
   return stats;
 }
