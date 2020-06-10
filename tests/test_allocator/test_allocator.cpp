@@ -2,12 +2,14 @@
 #include <boost/interprocess/managed_shared_memory.hpp>
 
 #include <boost/container/static_vector.hpp>
-
-#include "patch/lockfree/spsc_queue.hpp"
+#include <boost/lockfree/spsc_queue.hpp>
 
 #include <iostream>
 
+
+#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE AllocatorTests
+
 #include <boost/test/unit_test.hpp>
 
 BOOST_AUTO_TEST_CASE (SPSCQueueSharedMemory)
@@ -16,9 +18,8 @@ BOOST_AUTO_TEST_CASE (SPSCQueueSharedMemory)
    * https://svn.boost.org/trac/boost/attachment/ticket/11490/spsc_queue_interprocess_test.cpp
    * https://svn.boost.org/trac/boost/attachment/ticket/11490/boost_1_58_0.patch
    *
-   * boost spsc_queue contains a bug which prevents compiling run-time sizing
-   *
-   * A patched is copy is stored locally
+   * boost spsc_queue contained a bug which prevents compiling run-time sizing.
+   * Now fixed.
    */
   using namespace boost;
   using namespace boost::interprocess;
