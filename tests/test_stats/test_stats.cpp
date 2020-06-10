@@ -24,20 +24,20 @@ BOOST_AUTO_TEST_CASE(ThroughputStatsUpdates)
 
   stats.throughput ().summary ().enable (true);
 
-  auto start = Time::now ();
+  auto start = Clock::now ();
 
   for (int i = 1;; ++i)
   {
-    stats.update (sizeof (Header), payload.size (), i, Time::now ());
+    stats.update (sizeof (Header), payload.size (), i, Clock::now ());
 
-    if ((Time::now() - start) > Seconds (2))
+    if ((Clock::now() - start) > Seconds (2))
     {
       break;
     }
   }
 
   BOOST_CHECK (stats.throughput ().summary ()
-                     .megabytes_per_sec (Time::now ()) > 100);
+                    .megabytes_per_sec (Clock::now ()) > 100);
 }
 
 boost::filesystem::path
@@ -80,13 +80,13 @@ BOOST_AUTO_TEST_CASE(LatencyStatsUpdateIsFast)
 
   stats.latency ().summary ().enable (true);
 
-  auto start = Time::now ();
+  auto start = Clock::now ();
 
   for (int i = 1;; ++i)
   {
-    stats.update (sizeof (Header), payload.size (), i, Time::now ());
+    stats.update (sizeof (Header), payload.size (), i, Clock::now ());
 
-    if ((Time::now () - start) > Seconds (2))
+    if ((Clock::now () - start) > Seconds (2))
     {
       break;
     }
