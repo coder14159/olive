@@ -11,7 +11,7 @@ class Throttle
 {
 public:
   Throttle (uint32_t rate)
-  : m_rate (rate), m_startTime (Time::now ()) { }
+  : m_rate (rate), m_startTime (Clock::now ()) { }
 
   void throttle ()
   {
@@ -20,7 +20,7 @@ public:
       return;
     }
 
-    auto now = Time::now ();
+    auto now = Clock::now ();
 
     ++m_counter;
     auto targetInterval = Seconds (m_counter/m_rate);
@@ -30,7 +30,7 @@ public:
     {
       std::this_thread::sleep_for (targetInterval - targetInterval);
 
-      actualInterval = Time::now () - m_startTime;
+      actualInterval = Clock::now () - m_startTime;
     }
 
     /*
