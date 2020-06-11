@@ -8,7 +8,7 @@ namespace spmc {
 
 void bind_to_cpu (int cpu)
 {
-  if (cpu != -1)
+  if (cpu > -1)
   {
     cpu_set_t cpuset;
 
@@ -18,9 +18,17 @@ void bind_to_cpu (int cpu)
 
     auto thisThread = pthread_self ();
 
-    pthread_setaffinity_np (thisThread, sizeof (cpu_set_t), &cpuset);
-
-    BOOST_LOG_TRIVIAL(info) << "bind to cpu: " << cpu;
+    auto result = pthread_setaffinity_np (thisThread,
+                                    sizeof (cpu_set_t), &cpuset);
+    if (result != 0)
+    {
+      BOOST_LOG_TRIVIAL(warning) << "Failed to bind to CPU #" << cpu
+                               << " [" << strerror (result) << "]";
+    }
+    else
+    {
+      BOOST_LOG_TRIVIAL(info) << "Bound process to CPU #" << cpu;
+    }
   }
 }
 
