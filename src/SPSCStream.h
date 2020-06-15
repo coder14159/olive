@@ -6,6 +6,7 @@
 #include <boost/interprocess/managed_shared_memory.hpp>
 
 #include <atomic>
+#include <string>
 #include <vector>
 
 namespace spmc {
