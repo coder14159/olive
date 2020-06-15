@@ -12,6 +12,8 @@ namespace spmc {
 
 /*
  * Use SPSCSink to put data into the shared memory queue.
+ *
+ * Currently in prototype for testing.
  */
 class SPSCSinks
 {
@@ -54,4 +56,4 @@ private:
 
 }
 
-#endif // IPC_SPSC_SINK_H
+#endif // IPC_SPSC_SINKS_H
