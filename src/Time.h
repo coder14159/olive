@@ -8,10 +8,10 @@ namespace spmc {
 
 using Clock        = std::chrono::steady_clock;
 using TimePoint    = std::chrono::time_point<Clock>;
-using Seconds      = std::chrono::seconds;
 using Nanoseconds  = std::chrono::nanoseconds;
 using Microseconds = std::chrono::microseconds;
 using Milliseconds = std::chrono::milliseconds;
+using Seconds      = std::chrono::seconds;
 
 /*
  * Return a human readable string describing duration
