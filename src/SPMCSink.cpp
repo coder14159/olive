@@ -1,7 +1,7 @@
-#include "detail/SharedMemory.h"
 #include "Assert.h"
 #include "SPSCSink.h"
 #include "Time.h"
+#include "detail/SharedMemory.h"
 
 #include <boost/lockfree/spsc_queue.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
