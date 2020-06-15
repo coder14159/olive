@@ -19,7 +19,6 @@ SPSCSink::SPSCSink (const std::string &memoryName,
   m_memory (bi::managed_shared_memory (bi::open_only, memoryName.c_str())),
   m_allocator (m_memory.get_segment_manager ())
 {
-  BOOST_LOG_TRIVIAL(info) << "INL SPMCSink<Queuetype>::SPMCSink (const std::string &memoryName..";
   // TODO clients could create queue and notify sink/server
   // TODO maybe support multiple queues in a single sink
 
