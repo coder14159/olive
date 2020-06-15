@@ -65,7 +65,7 @@ void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
 
     if (interval > Seconds (1))
     {
-      BOOST_LOG_TRIVIAL(info)    << m_throughput.interval ().to_string()
+      BOOST_LOG_TRIVIAL(info) << m_throughput.interval ().to_string ()
             << " min " << nanoseconds_to_pretty (m_latency.interval ().min ())
             << " max " << nanoseconds_to_pretty (m_latency.interval ().max ());
 
