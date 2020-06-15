@@ -4,7 +4,7 @@ include Makefile.include
 
 # TODO remove this line, add the commented out one below and delete need for
 # myheader.h to have the src directory prefix
-INCLUDE_DIRS	+= -I$(ROOT_DIR)
+# INCLUDE_DIRS	+= -I$(ROOT_DIR)
 INCLUDE_DIRS	+= -I$(ROOT_DIR)src
 
 CXXFLAGS		+= $(INCLUDE_DIRS)
@@ -70,12 +70,11 @@ $(BIN_DIR)/spmc_client: $(BIN_DIR) Makefile tools/spmc_client/spmc_client.cpp $(
 $(BIN_DIR)/spmc_server: $(BIN_DIR) Makefile tools/spmc_server/spmc_server.cpp $(LIB_FILE_PATH)
 	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $(BIN_DIR)/spmc_server tools/spmc_server/spmc_server.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
 
-# TODO
-# $(BIN_DIR)/spsc_client: $(BIN_DIR) Makefile tools/spsc_client/spsc_client.cpp $(LIB_FILE_PATH)
-# 	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $(BIN_DIR)/spsc_client tools/spsc_client/spsc_client.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
+$(BIN_DIR)/spsc_client: $(BIN_DIR) Makefile tools/spsc_client/spsc_client.cpp $(LIB_FILE_PATH)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $(BIN_DIR)/spsc_client tools/spsc_client/spsc_client.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
 
-# $(BIN_DIR)/spsc_server: $(BIN_DIR) Makefile tools/spsc_server/spsc_server.cpp $(LIB_FILE_PATH)
-# 	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $(BIN_DIR)/spsc_server tools/spsc_server/spsc_server.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
+$(BIN_DIR)/spsc_server: $(BIN_DIR) Makefile tools/spsc_server/spsc_server.cpp $(LIB_FILE_PATH)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $(BIN_DIR)/spsc_server tools/spsc_server/spsc_server.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
 
 $(BIN_DIR)/remove_shared_memory: $(BIN_DIR) Makefile tools/remove_shared_memory/remove_shared_memory.cpp $(LIB_FILE_PATH)
 	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $(BIN_DIR)/remove_shared_memory tools/remove_shared_memory/remove_shared_memory.cpp $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
@@ -100,9 +99,9 @@ all:	$(BIN_DIR)/spmc_client \
 		$(BIN_DIR)/test_performance \
 		$(BIN_DIR)/test_spmcqueue \
 		$(BIN_DIR)/test_stats \
-		$(BIN_DIR)/test_allocator
-    #  $(BIN_DIR)/spsc_client \
-    #  $(BIN_DIR)/spsc_server \
+		$(BIN_DIR)/test_allocator \
+		$(BIN_DIR)/spsc_client \
+		$(BIN_DIR)/spsc_server
 
 clean:
 	rm -rf build/$(PROCESSOR)$(BUILD_SUFFIX)
