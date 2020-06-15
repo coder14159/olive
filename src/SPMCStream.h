@@ -5,6 +5,7 @@
 #include "detail/SharedMemory.h"
 
 #include <atomic>
+#include <string>
 #include <vector>
 
 namespace spmc {
@@ -45,11 +46,14 @@ public:
   ~SPMCStream ();
 
   /*
+   * Stop retrieving data from share memory
+   */
+  void stop ();
+
+  /*
    * Retrieve the next packet of data, blocks until successful
    */
   bool next (Header &header, std::vector<uint8_t> &data);
-
-  void stop ();
 
 private:
 
