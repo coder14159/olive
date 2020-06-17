@@ -1,4 +1,4 @@
-#include "src/Assert.h"
+#include "Assert.h"
 
 #include <boost/log/trivial.hpp>
 
@@ -24,8 +24,8 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer ()
   if (m_consumerCount >= m_maxNoDropConsumers)
   {
     BOOST_LOG_TRIVIAL(warning)
-      << "Cannot register another consumer. The maximum number of no-drop"
-      << " consumers (" << m_maxNoDropConsumers << ") are already registered";
+      << "Cannot register another consumer: Maximum number of no-drop"
+      << " consumers [" << m_maxNoDropConsumers << "] already registered";
 
     return Consumer::UnInitialised;
   }
