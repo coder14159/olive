@@ -25,24 +25,24 @@ CxxOptsHelper parse (int argc, char* argv[])
   std::string oneGB = std::to_string (1024*1024*1024);
   std::string level = "NOTICE";
   std::string rate  = "0";
-  std::string cpu   = "0";
+  std::string cpu   = "-1";
 
   cxxopts::Options cxxopts ("spmc_server",
-        "Generate test messages and send them to local named shared memory");
+        "Message producer for shared memory performance testing");
 
   cxxopts.add_options ()
     ("h,help", "Produce messages for shared memory performance testing")
     ("name", "Shared memory name", cxxopts::value<std::string> ())
     ("messagesize", "Message size (bytes)",
-    cxxopts::value<size_t> ()->default_value (oneKB))
+     cxxopts::value<size_t> ()->default_value (oneKB))
     ("queuesize", "Size of queue (bytes)",
-    cxxopts::value<size_t> ()->default_value (oneGB))
+     cxxopts::value<size_t> ()->default_value (oneGB))
     ("rate", "msgs/sec (value=0 for maximum rate)",
-    cxxopts::value<uint32_t> ()->default_value (rate))
+     cxxopts::value<uint32_t> ()->default_value (rate))
     ("l,loglevel", "Logging level",
-    cxxopts::value<std::string> ()->default_value (level))
+     cxxopts::value<std::string> ()->default_value (level))
     ("cpu", "bind main thread to a cpu processor id",
-    cxxopts::value<int> ()->default_value (cpu));
+     cxxopts::value<int> ()->default_value (cpu));
 
   CxxOptsHelper options (cxxopts.parse (argc, argv));
 
@@ -105,12 +105,12 @@ int main(int argc, char *argv[]) try
   auto options = parse (argc, argv);
 
   auto name        = options.required<std::string> ("name");
-  auto messageSize = options.required<size_t> ("messagesize");
-  auto queueSize   = options.required<size_t> ("queuesize");
-  auto rate        = options.required<uint32_t> ("rate");
-  auto cpu         = options.value<int> ("cpu", -1);
-  auto logLevel    = options.value<std::string> ("loglevel", log_levels (),
-                                                "INFO");
+  auto messageSize = options.required<size_t>      ("messagesize");
+  auto queueSize   = options.required<size_t>      ("queuesize");
+  auto rate        = options.required<uint32_t>    ("rate");
+  auto cpu         = options.value<int>            ("cpu", -1);
+  auto logLevel    = options.value<std::string>    ("loglevel", log_levels (),
+                                                    "INFO");
 
   set_log_level (logLevel);
 
@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) try
 
   server (name, messageSize, queueSize, rate);
 
-  return 1;
+  return EXIT_SUCCESS;
 }
 catch (const std::exception &e)
 {

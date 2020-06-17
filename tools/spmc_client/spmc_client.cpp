@@ -6,10 +6,9 @@
 #include "PerformanceStats.h"
 #include "SignalCatcher.h"
 #include "SPMCStream.h"
-#include "detail/SharedMemory.h"
 #include "detail/CXXOptsHelper.h"
+#include "detail/SharedMemory.h"
 
-#include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/log/trivial.hpp>
 
 #include <exception>
@@ -18,9 +17,9 @@ using namespace spmc;
 
 namespace bi = boost::interprocess;
 
-std::atomic<bool> g_stop = { false };
-
 namespace {
+
+std::atomic<bool> g_stop = { false };
 
 CxxOptsHelper parse (int argc, char* argv[])
 {
@@ -29,11 +28,10 @@ CxxOptsHelper parse (int argc, char* argv[])
 
   cxxopts.add_options ()
     ("h,help", "Performance test consuming of shared memory messages")
-    ("name", "Shared memory name",
-      cxxopts::value<std::string> ())
+    ("name", "Shared memory name", cxxopts::value<std::string> ())
     ("allowdrops", "Allow message drops")
     ("cpu", "Bind main thread to a cpu processor integer (default off)",
-      cxxopts::value<size_t> ()->default_value ("0"))
+      cxxopts::value<int> ()->default_value ("-1"))
     ("p,prefetchcache", "Size of a prefetch cache",
       cxxopts::value<size_t> ()->default_value ("0"))
     ("directory", "Directory for statistics files",
@@ -54,7 +52,8 @@ CxxOptsHelper parse (int argc, char* argv[])
   if (options.exists ("help"))
   {
     std::cout << cxxopts.help ({"", "Group"}) << std::endl;
-    exit (0);
+
+    exit (EXIT_SUCCESS);
   }
 
   return options;
@@ -71,7 +70,7 @@ int main(int argc, char* argv[]) try
    */
   auto name            = options.required<std::string> ("name");
   auto directory       = options.value<std::string> ("directory", "");
-  auto cpu             = options.value<size_t> ("cpu", -1);
+  auto cpu             = options.value<int>    ("cpu", -1);
   auto allowDrops      = options.value<bool>   ("allowdrops", false);
   auto intervalStats   = options.value<bool>   ("intervalstats", false);
   auto throughputStats = options.value<bool>   ("throughputstats", false);
@@ -138,13 +137,14 @@ int main(int argc, char* argv[]) try
         if (expected.size () < data.size ())
         {
           expected.resize (data.size ());
+
           std::iota (std::begin (expected), std::end (expected), 1);
         }
 
         ASSERT_SS(expected.size () == data.size (),
                 "expected.size ()=" << expected.size ()
                 << " data.size ()=" << data.size ());
-        ASSERT(expected == data, "unexpected data");
+        ASSERT(expected == data, "unexpected data packet");
 
         data.clear ();
       }
@@ -156,10 +156,6 @@ int main(int argc, char* argv[]) try
   return EXIT_SUCCESS;
 }
 catch (const cxxopts::OptionException &e)
-{
-  std::cerr << e.what () << std::endl;
-}
-catch (const std::exception &e)
 {
   std::cerr << e.what () << std::endl;
 }
