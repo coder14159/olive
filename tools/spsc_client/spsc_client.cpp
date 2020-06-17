@@ -23,9 +23,6 @@ CxxOptsHelper parse (int argc, char* argv[])
 {
   std::string oneKB = std::to_string (1024);
   std::string oneGB = std::to_string (1024*1024*1024);
-  // std::string level = "NOTICE";
-  // std::string rate  = "0";
-  // std::string cpu   = "-1";
 
   cxxopts::Options cxxopts ("spsc_server",
         "Message consumer for shared memory performance testing");
@@ -55,7 +52,8 @@ CxxOptsHelper parse (int argc, char* argv[])
   if (options.exists ("help"))
   {
     std::cout << cxxopts.help ({"", "Group"}) << std::endl;
-    exit (0);
+
+    exit (EXIT_SUCCESS);
   }
 
   return options;

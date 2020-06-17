@@ -49,7 +49,8 @@ CxxOptsHelper parse (int argc, char* argv[])
   if (options.exists ("help"))
   {
     std::cout << cxxopts.help ({"", "Group"}) << std::endl;
-    exit (0);
+
+    exit (EXIT_SUCCESS);
   }
 
   return options;
