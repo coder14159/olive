@@ -18,7 +18,7 @@ SharedMemoryCounter::SharedMemoryCounter (
 
   m_counter = m_memory.find_or_construct<CounterType> (m_objectName.c_str())();
 
-  BOOST_LOG_TRIVIAL(debug)  << "find_or_construct object: " << m_objectName;
+  BOOST_LOG_TRIVIAL(info)  << "find_or_construct object: " << m_objectName;
 
   ASSERT_SS (m_counter != nullptr,
              "shared memory counter initialisation failed: " << m_objectName);
@@ -28,12 +28,24 @@ SharedMemoryCounter::~SharedMemoryCounter ()
 {
   CounterType &counter = *m_counter;
 
+
+  BOOST_LOG_TRIVIAL(info)  << "destroy object: " << m_objectName;
+  BOOST_LOG_TRIVIAL(info)  << "counter: " << counter;
+
   if (counter == 0)
   {
+    BOOST_LOG_TRIVIAL(info)  << "destroy object: " << m_objectName;
+
     if (m_memory.destroy<CounterType> (m_objectName.c_str ()))
     {
       BOOST_LOG_TRIVIAL(error)  << "Failed to destroy object: " << m_objectName;
     }
+    else
+    {
+      BOOST_LOG_TRIVIAL(info)  << "destroyed object: " << m_objectName;
+
+    }
+
   }
 }
 
