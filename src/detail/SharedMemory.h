@@ -6,7 +6,6 @@
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/thread/tss.hpp>
 
-//#include "patch/lockfree/spsc_queue.hpp"
 #include <boost/lockfree/spsc_queue.hpp>
 
 #include <atomic>
