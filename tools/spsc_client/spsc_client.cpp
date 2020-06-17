@@ -1,16 +1,13 @@
+#include "Assert.h"
 #include "CpuBind.h"
 #include "Logger.h"
 #include "PerformanceStats.h"
+#include "SignalCatcher.h"
 #include "SPSCStream.h"
+#include "detail/CXXOptsHelper.h"
 #include "detail/SharedMemory.h"
 
-#include "patch/lockfree/spsc_queue.hpp"
-
-#include "spmc_argparse.h"
-#include "spmc_signal_catcher.h"
-#include "spmc_time_duration.h"
-
-#include <boost/interprocess/managed_shared_memory.hpp>
+#include <boost/log/trivial.hpp>
 
 #include <thread>
 
@@ -18,48 +15,88 @@ using namespace spmc;
 
 namespace bi = boost::interprocess;
 
+namespace {
+
 std::atomic<bool> g_stop = { false };
 
-int main(int argc, char* argv[])
+CxxOptsHelper parse (int argc, char* argv[])
 {
-  std::string name;
-  std::string directory;
-  std::string level ("NOTICE");
+  std::string oneKB = std::to_string (1024);
+  std::string oneGB = std::to_string (1024*1024*1024);
+  // std::string level = "NOTICE";
+  // std::string rate  = "0";
+  // std::string cpu   = "-1";
 
-  size_t prefetchCache  = 0;
-  bool test             = false;
-  bool intervalStats    = false;
-  bool latencyStats     = false;
-  bool throughputStats  = false;
-  size_t cpu            = -1;
+  cxxopts::Options cxxopts ("spsc_server",
+        "Message consumer for shared memory performance testing");
 
-  ArgParse ().required ("--name <name>",
-                        "shared memory name to consume data", name)
-             .optional ("--directory <path>",
-                        "directory for statistics files", directory)
-             .optional ("--prefetch-cache <size>",
-                        "size of a prefetch cache", prefetchCache)
-             .optional ("--interval-stats", "periodically print statistics",
-                        intervalStats)
-             .optional ("--latency-stats", "enable latency statistics",
-                        latencyStats)
-             .optional ("--throughput-stats", "enable throughput statistics",
-                        throughputStats)
-             .optional ("--test", "basic tests for messege validity", test)
-             .optional ("--loglevel <level>", "logging level", level)
-             .choices (Logger::level_strings ())
-             .optional ("--cpu-bind <cpu>",
-                        "bind main thread to a cpu processor", cpu)
-             .description ("consume messages through shared memory")
-             .run (argc, argv);
+  cxxopts.add_options ()
+    ("h,help", "Message consumer for SPSC shared memory performance testing")
+    ("name", "Shared memory name", cxxopts::value<std::string> ())
+    ("cpu", "bind main thread to a cpu processor id",
+     cxxopts::value<int> ()->default_value ("-1"))
+    ("prefetchcache", "Size of a prefetch cache",
+      cxxopts::value<size_t> ()->default_value ("0"))
+    ("directory", "Directory for statistics files",
+      cxxopts::value<std::string> ())
+    ("intervalstats", "Periodically print statistics ",
+      cxxopts::value<bool> ())
+    ("latencystats", "Enable latency statistics",
+      cxxopts::value<bool> ())
+    ("throughputstats", "Enable throughput statistics",
+      cxxopts::value<bool> ())
+    ("test", "Enable basic tests for message validity",
+      cxxopts::value<bool> ())
+    ("loglevel", "l,Logging level",
+      cxxopts::value<std::string> ()->default_value ("NOTICE"));
 
-  logger ().info () << "Start shared memory spsc_client";
+  CxxOptsHelper options (cxxopts.parse (argc, argv));
 
-  logger ().info () << "Consume from: " << name;
+  if (options.exists ("help"))
+  {
+    std::cout << cxxopts.help ({"", "Group"}) << std::endl;
+    exit (0);
+  }
 
-  SignalCatcher signals({ SIGINT, SIGTERM });
+  return options;
+}
+
+} // namespace {
+
+int main(int argc, char* argv[]) try
+{
+  auto options = parse (argc, argv);
+
+  auto name            = options.required<std::string> ("name");
+  auto directory       = options.value<std::string> ("directory", "");
+  auto cpu             = options.value<int> ("cpu", -1);
+  auto prefetchCache   = options.value<size_t> ("prefetchcache", 0);
+  auto intervalStats   = options.value<bool>   ("intervalstats", false);
+  auto latencyStats    = options.value<bool>   ("latencystats", false);
+  auto throughputStats = options.value<bool>   ("throughputstats", false);
+  auto test            = options.value<bool>   ("test", false);
+  auto logLevel = options.value<std::string> ("loglevel", log_levels (),"INFO");
+
+  // TODO add message drop option
+//  auto allowDrops      = options.value<bool>   ("allowdrops", false);
+
+  BOOST_LOG_TRIVIAL (info) << "Start shared memory spsc_client";
+
+  BOOST_LOG_TRIVIAL (info) << "Consume from: " << name;
+  BOOST_LOG_TRIVIAL (info) << "CPU: " << cpu;
 
   SPSCStream stream (name, prefetchCache);
+
+  /*
+   * Handle signals
+   */
+  SignalCatcher s ({SIGINT, SIGTERM}, [&stream] (int) {
+    g_stop = true;
+
+    std::cout << "stopping.." << std::endl;
+
+    stream.stop ();
+  });
 
   PerformanceStats stats (directory);
 
@@ -69,37 +106,32 @@ int main(int argc, char* argv[])
   stats.latency ().summary () .enable (latencyStats);
   stats.latency ().interval ().enable (latencyStats && intervalStats);
 
-  signals.reset ([&] (int) {
-    logger ().notice () << "stopping client..";
-    g_stop = true;
-    stream.stop ();
-  });
-
   bind_to_cpu (cpu);
 
-  ipc::Header header;
+  Header header;
 
   std::vector<uint8_t> data;
   std::vector<uint8_t> expected;
-
-  logger ().notice () << "sizeof Header=" << sizeof (Header);
 
   while (true)
   {
     if (g_stop)
     {
-      logger ().notice () << "stopping stream..";
+      BOOST_LOG_TRIVIAL (info) << "stopping stream..";
       break;
     }
 
     if (stream.next (header, data))
     {
       stats.update (sizeof (Header), data.size (), header.seqNum,
-                    Time::deserialise (header.timestamp));
+                    timepoint_from_nanoseconds_since_epoch (header.timestamp));
       if (test)
       {
         assert (header.size == data.size ());
 
+        /*
+         * Initialise the expected packet on receipt of the first message
+         */
         if (expected.size () < data.size ())
         {
           expected.resize (data.size ());
@@ -110,14 +142,19 @@ int main(int argc, char* argv[])
         ASSERT_SS (expected.size () == data.size (),
                 "expected.size ()=" << expected.size ()
                 << " data.size ()=" << data.size ());
-        assert (expected == data);
+
+        ASSERT (expected == data, "unexpected data packet");
 
         data.clear ();
       }
     }
   }
 
-  logger ().info () << "exit shared memory spsc_client";
+  BOOST_LOG_TRIVIAL (info) << "exit shared memory spsc_client";
 
-  return 1;
+  return EXIT_SUCCESS;
+}
+catch (const cxxopts::OptionException &e)
+{
+  std::cerr << e.what () << std::endl;
 }
