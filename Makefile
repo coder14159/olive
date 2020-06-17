@@ -26,6 +26,7 @@ LIB_SRC_CPP_FILES += src/Logger.cpp
 LIB_SRC_CPP_FILES += src/PerformanceStats.cpp
 LIB_SRC_CPP_FILES += src/SignalCatcher.cpp
 LIB_SRC_CPP_FILES += src/SPMCSink.cpp
+LIB_SRC_CPP_FILES += src/SPSCStream.cpp
 LIB_SRC_CPP_FILES += src/Time.cpp
 LIB_SRC_CPP_FILES += src/Timer.cpp
 LIB_SRC_CPP_FILES += src/TimeDuration.cpp
