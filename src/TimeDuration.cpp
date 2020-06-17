@@ -5,6 +5,8 @@
 #include <limits>
 #include <string>
 
+#include <boost/format.hpp>
+
 namespace spmc {
 
 TimeDuration::TimeDuration ()
@@ -17,38 +19,48 @@ TimeDuration::TimeDuration (Nanoseconds nanoseconds)
 
 std::string TimeDuration::pretty () const
 {
-  /*
-   * TODO: safer string formatting method!
-   */
-  using namespace std::chrono;
+  return nanoseconds_to_pretty (m_nanoseconds);
+}
 
-  char buffer [1024];
-
-  buffer[0] = '\0';
-
-  auto ns_count = m_nanoseconds.count ();
-
-  if (ns_count < 1e3)
+std::string nanoseconds_to_pretty (int64_t nanoseconds)
+{
+  if (nanoseconds == std::numeric_limits<int64_t>::max ())
   {
-    snprintf (buffer, sizeof (buffer), "%ld ns\n", ns_count);
+    return "0 ns";
   }
-  else if (ns_count < 1e6)
+  else if (nanoseconds == std::numeric_limits<int64_t>::min ())
   {
-    double usecs = static_cast<double> (ns_count) / (1.0e3);
-    snprintf (buffer, sizeof (buffer), "%.3f us\n", usecs);
+    return "0 ns";
   }
-  else if (ns_count < 1.0e9)
+  else if (nanoseconds < 1e3)
   {
-    double msecs = static_cast<double> (ns_count) / (1.0e6);
-    snprintf (buffer, sizeof (buffer), "%.3f ms\n", msecs);
+    return (boost::str (boost::format ("%d ns") % nanoseconds));
+  }
+  else if (nanoseconds < 1e6)
+  {
+    double usecs = static_cast<double> (nanoseconds) / 1.0e3;
+    return (boost::str (boost::format ("%.0f us") % usecs));
+  }
+  else if (nanoseconds < 1e9)
+  {
+    double msecs = static_cast<double> (nanoseconds) / 1.0e6;
+    return (boost::str (boost::format ("%.0f ms") % msecs));
+  }
+  else if (nanoseconds < (1e9*60))
+  {
+    double secs = static_cast<double> (nanoseconds) / 1.0e9*60;
+    return (boost::str (boost::format ("%.0f s") % secs));
   }
   else
   {
-    double secs = static_cast<double> (ns_count) / (1.0e9);
-    snprintf (buffer, sizeof (buffer), "%.3f s\n", secs);
+    double mins = static_cast<double> (nanoseconds) / (1e9*60);
+    return (boost::str (boost::format ("%.0f min") % mins));
   }
+}
 
-  return buffer;
+std::string nanoseconds_to_pretty (Nanoseconds nanoseconds)
+{
+  return nanoseconds_to_pretty (nanoseconds.count ());
 }
 
 } // namespace spmc

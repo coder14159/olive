@@ -1,7 +1,7 @@
 #include "PerformanceStats.h"
 #include "LatencyStats.h"
 #include "Throughput.h"
-#include "Time.h"
+#include "TimeDuration.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
@@ -30,7 +30,10 @@ PerformanceStats::~PerformanceStats ()
    */
   if (m_latency.summary ().enabled ())
   {
-    BOOST_LOG_TRIVIAL(info) << m_throughput.summary ().to_string ();
+    for (auto line : m_throughput.summary ().to_strings ())
+    {
+      BOOST_LOG_TRIVIAL(info) << line;
+    }
 
     for (auto line : m_latency.summary ().to_strings ())
     {
@@ -97,22 +100,22 @@ void PerformanceStats::update (uint64_t header,
 
     if (m_latency.interval ().enabled ())
     {
-      log += " min " + nanoseconds_to_pretty (m_latency.interval ().min ())
-          +  " max " + nanoseconds_to_pretty (m_latency.interval ().max ());
+      log += " min=" + nanoseconds_to_pretty (m_latency.interval ().min ())
+          +  " max=" + nanoseconds_to_pretty (m_latency.interval ().max ());
 
-      m_latency   .reset_interval ();
+      m_latency.reset_interval ();
     }
 
     if (m_throughput.interval ().enabled ())
     {
-      log += " " + m_throughput.interval ().to_string();
+      log += " " + m_throughput.interval ().to_string ();
 
       m_throughput.reset_interval ();
     }
 
     if (!log.empty ())
     {
-      BOOST_LOG_TRIVIAL(info) << log;
+      BOOST_LOG_TRIVIAL (info) << log;
     }
 
     m_last = Clock::now ();

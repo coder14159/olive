@@ -6,6 +6,7 @@
 
 #include <fstream>
 #include <string>
+#include <vector>
 
 namespace spmc {
 
@@ -57,11 +58,17 @@ public:
   uint32_t messages_per_sec (TimePoint time) const;
 
   /*
-   * Return a throughput string for the current moment in time
+   * Return a throughput string since start or last reset
    */
   std::string to_string () const;
 
+  /*
+   * Return throughput strings since start or last reset
+   */
+  std::vector<std::string> to_strings () const;
+
   void write_header ();
+
   Throughput &write_data ();
 
 private:

@@ -3,6 +3,7 @@
 #include "detail/SharedMemory.h"
 
 #include <boost/filesystem.hpp>
+#include <boost/format.hpp>
 
 #include <iostream>
 #include <iomanip>
@@ -167,12 +168,33 @@ std::string Throughput::to_string () const
 
   auto now = Clock::now ();
 
-  stats << megabytes_per_sec (now)   << " MB/s\t"
-        << std::fixed << std::setprecision (3)
-        << messages_per_sec (now) / 1.0e6 << "\tM msgs/sec "
-        << "dropped=" << m_dropped;
+  stats << megabytes_per_sec (now) << " MB/s "
+      << std::fixed << std::setprecision (3)
+      << messages_per_sec (now) / 1.0e6 << " M msgs/sec "
+      << m_dropped << " msgs dropped";
 
   return stats.str ();
+}
+
+std::vector<std::string> Throughput::to_strings () const
+{
+  if (!m_enabled)
+  {
+    return {};
+  }
+
+  std::vector<std::string> stats;
+
+  auto now = Clock::now ();
+
+  stats.push_back (
+    (boost::format ("MB/s:     %.3f") % megabytes_per_sec (now)).str ());
+  stats.push_back (
+    (boost::format ("M msgs/s: %.3f") % (messages_per_sec (now) / 1.0e6)).str ());
+  stats.push_back (
+    (boost::format ("dropped:  %d") % m_dropped).str ());
+
+  return stats;
 }
 
 } // namespace spmc

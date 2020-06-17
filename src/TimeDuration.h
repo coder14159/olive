@@ -45,18 +45,33 @@ bool operator== (TimeDuration lhs, TimeDuration rhs)
   return lhs.nanoseconds () == rhs.nanoseconds ();
 }
 
+/*
+ * Return a human readable string describing duration
+ */
+std::string nanoseconds_to_pretty (int64_t nanoseconds);
+
+std::string nanoseconds_to_pretty (Nanoseconds nanoseconds);
+
+
+/*
+ * Cast TimeDuration to a floating point value
+ */
 inline
-double to_seconds_floating_point (TimeDuration duration)
+double to_seconds (TimeDuration duration)
 {
-  using namespace std::chrono;
-  return duration_cast<Seconds> (duration.nanoseconds ()).count ();
+  return static_cast<double> (duration.nanoseconds ().count ()) / 1.0e9;
 }
 
 inline
-double to_microseconds_floating_point (TimeDuration duration)
+double to_milliseconds (TimeDuration duration)
 {
-  using namespace std::chrono;
-  return duration_cast<Microseconds> (duration.nanoseconds ()).count ();
+  return static_cast<double> (duration.nanoseconds ().count ()) / 1.0e6;
+}
+
+inline
+double to_microseconds (TimeDuration duration)
+{
+  return static_cast<double> (duration.nanoseconds ().count ()) / 1.0e3;
 }
 
 } // namespace spmc

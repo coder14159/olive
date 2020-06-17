@@ -3,8 +3,8 @@
 #include "Time.h"
 
 #include <boost/cstdint.hpp>
-#include <boost/format.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/format.hpp>
 
 #include <algorithm>
 
@@ -100,11 +100,13 @@ void Latency::write_header ()
     return;
   }
 
+  boost::format fmt ("%d");
+
   m_file << "0";
 
   for (auto &quantile : m_quantiles)
   {
-     m_file << "," << boost::format ("%d") % quantile.first;
+     m_file << "," << fmt % quantile.first;
   }
 
   m_file << ",100\n";
@@ -122,8 +124,7 @@ void Latency::write_data ()
   for (const auto &quantile : m_quantiles)
   {
     m_file << ","
-           << static_cast<int64_t>(boost::accumulators
-                                        ::p_square_quantile (quantile.second));
+           << static_cast<int64_t>(ba::p_square_quantile (quantile.second));
   }
 
   m_file << "," << m_max << "\n";
@@ -138,21 +139,28 @@ std::vector<std::string> Latency::to_strings () const
 
   std::vector<std::string> stats;
 
-  stats.push_back ("percentile latency");
   stats.push_back (
-    (boost::format ("min  %|6t|%1%") % nanoseconds_to_pretty (m_min)).str ());
+      (boost::format ("%s %s") % "percentile" % "latency").str ());
+  stats.push_back (
+      (boost::format ("%s %s") % "----------" % "-------").str ());
+
+  stats.push_back ((boost::format ("%-10s %7s")
+                    % "min"
+                    % nanoseconds_to_pretty (m_min)).str ());
+
+  boost::format fmt ("%-10d %7s");
 
   for (const auto &quantile : m_quantiles)
   {
-    int64_t t = boost::accumulators::p_square_quantile (quantile.second);
+    int64_t t = ba::p_square_quantile (quantile.second);
 
-    stats.push_back (
-      (boost::format ("%1% %|6t|%2%") % quantile.first
-                                      % nanoseconds_to_pretty (t)).str ());
+    stats.push_back ((fmt % quantile.first
+                          % nanoseconds_to_pretty (t)).str ());
   }
 
-  stats.push_back (
-    (boost::format ("max  %|6t|%1%") % nanoseconds_to_pretty (m_max)).str ());
+  stats.push_back ((boost::format ("%-10s %7s")
+                    % "max"
+                    % nanoseconds_to_pretty (m_max)).str ());
 
   return stats;
 }
