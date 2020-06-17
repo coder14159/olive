@@ -13,13 +13,6 @@ using Microseconds = std::chrono::microseconds;
 using Milliseconds = std::chrono::milliseconds;
 using Seconds      = std::chrono::seconds;
 
-/*
- * Return a human readable string describing duration
- */
-std::string nanoseconds_to_pretty (int64_t nanoseconds);
-
-std::string nanoseconds_to_pretty (Nanoseconds nanoseconds);
-
 int64_t nanoseconds_since_epoch (const TimePoint &time_point);
 
 TimePoint timepoint_from_nanoseconds_since_epoch (int64_t nanoseconds);
