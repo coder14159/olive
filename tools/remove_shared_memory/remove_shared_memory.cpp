@@ -9,11 +9,8 @@
 
 namespace ip = boost::interprocess;
 
- int main(int argc, char* argv[]) try
+int main(int argc, char* argv[]) try
 {
-  const int SUCCESS = 0;
-  const int ERROR   = 1;
-
   cxxopts::Options options ("remove_shared_memory",
                             "Delete named shared memory instance");
 
@@ -26,13 +23,13 @@ namespace ip = boost::interprocess;
   if (result.count ("help") != 0)
   {
     std::cout << options.help () << std::endl;
-    return SUCCESS;
+    return EXIT_SUCCESS;
   }
 
   if (result.count ("name") != 1)
   {
     std::cerr << "Set a value for shared memory name\n" << std::endl;
-    return ERROR;
+    return EXIT_FAILURE;
   }
 
   auto name = result["name"].as<std::string> ();
@@ -40,14 +37,14 @@ namespace ip = boost::interprocess;
 
   if (ip::shared_memory_object::remove (name.c_str ()))
   {
-    std::cout << "Shared memory removed. Name: " << name << std::endl;
+    std::cout << "Removed shared memory named '" << name << "'" << std::endl;
   }
   else
   {
-    std::cout << "Shared memory NOT removed. Name: " << name << std::endl;
+    std::cout << "Failed to remove shared memory named '" << name << "'" << std::endl;
   }
 
-  return SUCCESS;
+  return EXIT_SUCCESS;
 }
 catch (const std::exception &e)
 {
