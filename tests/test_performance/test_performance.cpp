@@ -109,7 +109,7 @@ BOOST_AUTO_TEST_CASE (ThroughputOfCircularBuffers)
     timer.stop ();
 
     auto throughput = static_cast<double> (bytes) / (1024.*1024.*1024.)
-                    / to_seconds_floating_point (timer.elapsed ());
+                    / to_seconds (timer.elapsed ());
 
     BOOST_TEST_MESSAGE ("    boost  buffer: "
                         << std::fixed << std::setprecision (3)
@@ -154,7 +154,7 @@ BOOST_AUTO_TEST_CASE (ThroughputOfCircularBuffers)
     timer.stop ();
 
     auto throughput = static_cast<double> (bytes) / (1024.*1024.*1024.)
-                    / to_seconds_floating_point (timer.elapsed ());
+                    / to_seconds (timer.elapsed ());
 
     BOOST_TEST_MESSAGE ("    custom buffer: "
                         << std::fixed << std::setprecision (3)
@@ -209,7 +209,7 @@ double VectorThroughput (size_t bufferSize, size_t batchSize)
   timer.stop ();
 
   return static_cast<double> (bytes) / (1024.*1024.*1024.)
-                / to_seconds_floating_point (timer.elapsed ());
+                / to_seconds (timer.elapsed ());
 };
 
 BOOST_AUTO_TEST_CASE (VectorPerformance)
@@ -383,7 +383,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStream)
 
   auto throughput = stats.throughput ()
                          .summary ()
-                         .megabytes_per_sec (Time::now ());
+                         .megabytes_per_sec (Clock::now ());
 
   BOOST_CHECK (throughput > 100);
 
@@ -391,7 +391,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStream)
                       << (throughput/1024.) << " GB/sec");
 
   rate = stats.throughput ().summary ()
-                            .messages_per_sec (Time::now ());
+                            .messages_per_sec (Clock::now ());
 
   BOOST_TEST_MESSAGE ("rate\t\t" << (rate/1.0e6) << " M messages/sec");
 }
@@ -417,7 +417,7 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStream)
 
   auto throughput = stats.throughput ()
                          .summary ()
-                         .megabytes_per_sec (Time::now ());
+                         .megabytes_per_sec (Clock::now ());
 
   BOOST_CHECK (throughput > 100);
 
@@ -425,7 +425,7 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStream)
                       << (throughput/1024.) << " GB/sec");
 
   rate = stats.throughput ().summary ()
-                            .messages_per_sec (Time::now ());
+                            .messages_per_sec (Clock::now ());
 
   BOOST_TEST_MESSAGE ("rate\t\t" << (rate/1.0e6) << " M messages/sec");
 
@@ -459,7 +459,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamWithPrefetch)
 
   auto throughput = stats.throughput ()
                          .summary ()
-                         .megabytes_per_sec (Time::now ());
+                         .megabytes_per_sec (Clock::now ());
 
   BOOST_CHECK (throughput > 100);
 
@@ -467,7 +467,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamWithPrefetch)
                       << (throughput/1024.) << " GB/sec");
 
   rate = stats.throughput ().summary ()
-                            .messages_per_sec (Time::now ());
+                            .messages_per_sec (Clock::now ());
 
   BOOST_TEST_MESSAGE ("rate\t\t" << (rate/1.0e6) << " M messages/sec");
 
@@ -503,7 +503,7 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStreamWithPrefetch)
 
   auto throughput = stats.throughput ()
                          .summary ()
-                         .megabytes_per_sec (Time::now ());
+                         .megabytes_per_sec (Clock::now ());
 
   BOOST_CHECK (throughput > 100);
 
@@ -511,7 +511,7 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStreamWithPrefetch)
                       << (throughput/1024.) << " GB/sec");
 
   rate = stats.throughput ().summary ()
-                            .messages_per_sec (Time::now ());
+                            .messages_per_sec (Clock::now ());
 
   BOOST_TEST_MESSAGE ("rate " << (rate/1.0e6) << " M messages/sec");
 
@@ -550,7 +550,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamPOD)
 
   auto throughput = stats.throughput ()
                          .summary ()
-                         .megabytes_per_sec (Time::now ());
+                         .megabytes_per_sec (Clock::now ());
 
   BOOST_CHECK (throughput > 100);
 
@@ -559,7 +559,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamPOD)
 
   rate = stats.throughput ()
                          .summary ()
-                         .messages_per_sec (Time::now ());
+                         .messages_per_sec (Clock::now ());
 
   BOOST_TEST_MESSAGE ("rate\t\t" << std::fixed << std::setprecision (3)
                       << (rate/1.0e6) << " M messages/sec");
@@ -595,7 +595,7 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStreamPOD)
 
   auto throughput = stats.throughput ()
                          .summary ()
-                         .megabytes_per_sec (Time::now ());
+                         .megabytes_per_sec (Clock::now ());
 
   BOOST_CHECK (throughput > 100);
 
@@ -604,7 +604,7 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStreamPOD)
 
   rate = stats.throughput ()
                          .summary ()
-                         .messages_per_sec (Time::now ());
+                         .messages_per_sec (Clock::now ());
 
   BOOST_TEST_MESSAGE ("rate\t\t" << std::fixed << std::setprecision (3)
                       << (rate/1.0e6) << " M messages/sec");
@@ -644,7 +644,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamPODWithPrefetch)
 
   auto throughput = stats.throughput ()
                          .summary ()
-                         .megabytes_per_sec (Time::now ());
+                         .megabytes_per_sec (Clock::now ());
 
   BOOST_CHECK (throughput > 100);
 
@@ -652,7 +652,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamPODWithPrefetch)
                       << (throughput/1024.) << " GB/sec");
 
   rate = stats.throughput ().summary ()
-                            .messages_per_sec (Time::now ());
+                            .messages_per_sec (Clock::now ());
 
   BOOST_TEST_MESSAGE ("rate\t\t" << std::fixed << std::setprecision (3)
                       << (rate/1.0e6) << " M messages/sec");
@@ -688,7 +688,7 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStreamPODWithPrefetch)
 
   auto throughput = stats.throughput ()
                          .summary ()
-                         .megabytes_per_sec (Time::now ());
+                         .megabytes_per_sec (Clock::now ());
 
   BOOST_CHECK (throughput > 100);
 
@@ -696,7 +696,7 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStreamPODWithPrefetch)
                       << (throughput/1024.) << " GB/sec");
 
   rate = stats.throughput ().summary ()
-                            .messages_per_sec (Time::now ());
+                            .messages_per_sec (Clock::now ());
 
   BOOST_TEST_MESSAGE ("rate\t\t" << std::fixed << std::setprecision (3)
                       << (rate/1e6) << " M messages/sec");
@@ -827,7 +827,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceSinkStreamInSharedMemory)
 
   auto megabytes_per_sec = stats.throughput ()
                          .summary ()
-                         .megabytes_per_sec (Time::now ());
+                         .megabytes_per_sec (Clock::now ());
 
   BOOST_CHECK (megabytes_per_sec > 500);
 
@@ -836,7 +836,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceSinkStreamInSharedMemory)
 
   auto messages_per_sec = stats.throughput ()
                          .summary ()
-                         .messages_per_sec (Time::now ());
+                         .messages_per_sec (Clock::now ());
 
   BOOST_TEST_MESSAGE ("rate\t\t" << std::fixed << std::setprecision (3)
                       << (messages_per_sec/1.0e6) << " M messages/sec");
@@ -862,7 +862,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceSinkStreamInSharedMemoryPrefetch)
 
   auto megabytes_per_sec = stats.throughput ()
                          .summary ()
-                         .megabytes_per_sec (Time::now ());
+                         .megabytes_per_sec (Clock::now ());
 
   BOOST_CHECK (megabytes_per_sec > 1000);
 
@@ -871,7 +871,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceSinkStreamInSharedMemoryPrefetch)
 
   auto messages_per_sec = stats.throughput ()
                          .summary ()
-                         .messages_per_sec (Time::now ());
+                         .messages_per_sec (Clock::now ());
 
   BOOST_TEST_MESSAGE ("rate\t\t" << std::fixed << std::setprecision (3)
                       << (messages_per_sec/1.0e6) << " M messages/sec");
@@ -884,7 +884,7 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceSinkStreamInSharedMemory)
     return;
   }
 
-  spmc::ScopedLogLevel log (error);
+  spmc::ScopedLogLevel log (info);
 
   PerformanceStats stats;
   stats.throughput ().summary ().enable (true);
@@ -898,7 +898,7 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceSinkStreamInSharedMemory)
 
   auto megabytes_per_sec = stats.throughput ()
                          .summary ()
-                         .megabytes_per_sec (Time::now ());
+                         .megabytes_per_sec (Clock::now ());
 
   BOOST_CHECK (megabytes_per_sec > 100);
 
@@ -907,7 +907,7 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceSinkStreamInSharedMemory)
 
   auto messages_per_sec = stats.throughput ()
                          .summary ()
-                         .messages_per_sec (Time::now ());
+                         .messages_per_sec (Clock::now ());
 
   BOOST_TEST_MESSAGE ("rate\t\t" << std::fixed << std::setprecision (3)
                       << (messages_per_sec/1.0e6) << " M messages/sec");

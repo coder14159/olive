@@ -252,7 +252,7 @@ BOOST_AUTO_TEST_CASE (SPMCQueuePushPod)
 
   Payload payloadIn = { 100, 'z' };
 
-  auto time = nanoseconds_since_epoch (Time::now ());
+  auto time = nanoseconds_since_epoch (Clock::now ());
 
   Header  headerIn  = { 1, 2, sizeof (Payload), 3, time };
 
@@ -286,7 +286,7 @@ BOOST_AUTO_TEST_CASE (SlowConsumer)
   headerProducer.type = 2;
   headerProducer.size = 5;
   headerProducer.seqNum = 1;
-  headerProducer.timestamp = nanoseconds_since_epoch (Time::now ());
+  headerProducer.timestamp = nanoseconds_since_epoch (Clock::now ());
 
   std::vector<uint8_t> payloadProducer = { 0, 1, 2, 3, 4 };
 
@@ -336,7 +336,7 @@ BOOST_AUTO_TEST_CASE (SlowConsumerPrefetch)
   headerIn.type = 2;
   headerIn.size = payloadSize;
   headerIn.seqNum = 1;
-  headerIn.timestamp = nanoseconds_since_epoch (Time::now ());
+  headerIn.timestamp = nanoseconds_since_epoch (Clock::now ());
 
   std::vector<uint8_t> payloadIn (payloadSize);
   std::iota (std::begin (payloadIn), std::end (payloadIn), 1);
@@ -387,7 +387,7 @@ BOOST_AUTO_TEST_CASE (ConsumerPrefetchSmallerThanMessageSize)
   headerIn.type = 2;
   headerIn.size = payloadSize;
   headerIn.seqNum = 1;
-  headerIn.timestamp = nanoseconds_since_epoch (Time::now ());
+  headerIn.timestamp = nanoseconds_since_epoch (Clock::now ());
 
   std::vector<uint8_t> payloadIn (payloadSize);
   std::iota (std::begin (payloadIn), std::end (payloadIn), 1);
@@ -432,7 +432,7 @@ BOOST_AUTO_TEST_CASE (SlowConsumerNoMessageDrops)
   headerProducer.type = 2;
   headerProducer.size = 5;
   headerProducer.seqNum = 1;
-  headerProducer.timestamp = nanoseconds_since_epoch (Time::now ());
+  headerProducer.timestamp = nanoseconds_since_epoch (Clock::now ());
 
   std::vector<uint8_t> payloadProducer = { 1, 2, 3, 4, 5 };
 
@@ -512,7 +512,7 @@ public:
       while (!m_stop)
       {
         header.seqNum    = ++seqNum;
-        header.timestamp = nanoseconds_since_epoch (Time::now ());
+        header.timestamp = nanoseconds_since_epoch (Clock::now ());
 
         while (!queue.push (header, m_data))
         { }
@@ -593,6 +593,8 @@ public:
       {
         std::cerr << "Client exception caught: " << e.what () << std::endl;
 
+        m_exceptions.push_back (std::string (e.what ()));
+
         m_queue.unregister_consumer ();
       }
     });
@@ -614,6 +616,8 @@ public:
   const LatencyStats    &latencyStats ()    const { return m_latencyStats;    }
   const ThroughputStats &throughputStats () const { return m_throughputStats; }
 
+  std::vector<std::string> exceptions () const { return m_exceptions; }
+
 private:
   Queue &m_queue;
 
@@ -628,6 +632,7 @@ private:
   ThroughputStats m_throughputStats;
   LatencyStats    m_latencyStats;
 
+  std::vector<std::string> m_exceptions;
 };
 
 using DefaultServer = Server<SPMCQueue<std::allocator<uint8_t>>>;
@@ -648,7 +653,7 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerSingleConsumer)
 
   std::this_thread::sleep_for (Seconds (5));
 
-  auto now = Time::now ();
+  auto now = Clock::now ();
 
   BOOST_CHECK_EQUAL (client.data ().size (), server.data ().size ());
   for (size_t i = 0; i < server.data ().size (); ++i)
@@ -689,7 +694,7 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerAllowDrops)
   // allow the clients to initialise
   std::this_thread::sleep_for (Milliseconds (10));
 
-  uint32_t throughput = 1e6;
+  uint32_t throughput = 2e6;
   DefaultServer server (queue, messageSize, throughput);
 
   BOOST_TEST_MESSAGE ("server throughput:\t" << throughput);
@@ -697,16 +702,16 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerAllowDrops)
 
   std::this_thread::sleep_for (Seconds (3));
 
-  auto now = Time::now ();
+  auto stopped = Clock::now ();
 
-  auto print = [&now] (const Throughput& stats) {
+  auto print = [&stopped] (const Throughput& stats) {
     BOOST_TEST_MESSAGE ("  dropped:\t\t" << stats.dropped ());
     BOOST_TEST_MESSAGE ("  M msgs/s:\t\t"
                    << std::fixed << std::setprecision (2)
-                   << stats.messages_per_sec (now) / 1.0e6);
+                   << stats.messages_per_sec (stopped) / 1.0e6);
     BOOST_TEST_MESSAGE ("  MB/s throughput:\t"
                         << std::fixed << std::setprecision (0)
-                        << stats.megabytes_per_sec (now));
+                        << stats.megabytes_per_sec (stopped));
   };
 
   server.stop ();
@@ -717,7 +722,8 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerAllowDrops)
 
     // test throughput against a relatively conservative value
     BOOST_CHECK (
-      (client->throughputStats ().summary ().messages_per_sec (now) / 1.0e6) > .99);
+      (static_cast<double> (client->throughputStats ().summary ()
+                                .messages_per_sec (stopped)) / 1.0e6) > .99);
     BOOST_TEST_MESSAGE ("client");
     print (client->throughputStats ().summary ());
   }
@@ -756,16 +762,16 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerNoMesssageDropsAllowed)
 
   std::this_thread::sleep_for (Seconds (5));
 
-  auto now  = Time::now ();
+  auto now  = Clock::now ();
 
   auto print = [&now] (const Throughput& stats) {
     BOOST_TEST_MESSAGE (" dropped:\t\t" << stats.dropped ());
     BOOST_TEST_MESSAGE (" M msgs/s:\t\t"
-                   << std::fixed << std::setprecision (2)
-                   << stats.messages_per_sec (now) / 1.0e6);
+                          << std::fixed << std::setprecision (2)
+                          << stats.messages_per_sec (now) / 1.0e6);
     BOOST_TEST_MESSAGE (" MB/s throughput:\t"
-                        << std::fixed << std::setprecision (0)
-                        << stats.megabytes_per_sec (now));
+                          << std::fixed << std::setprecision (0)
+                          << stats.megabytes_per_sec (now));
   };
 
   server.stop ();
@@ -776,7 +782,7 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerNoMesssageDropsAllowed)
 
     // test throughput against a relatively conservative value
     BOOST_CHECK ((client->throughputStats ().summary ()
-                            .messages_per_sec (now) / 1.0e6) > .99);
+                            .messages_per_sec (now) / 1.0e6) > .9);
     BOOST_TEST_MESSAGE ("client");
 
     print (client->throughputStats ().summary ());
@@ -808,22 +814,20 @@ BOOST_AUTO_TEST_CASE (TooManyConsumers)
   size_t messageSize  = 128;
   uint32_t throughput = 1e6;
 
+  // Add the maximum number of clients
   clients.push_back (std::move (std::make_unique<ClientType>(queue, messageSize)));
   clients.push_back (std::move (std::make_unique<ClientType>(queue, messageSize)));
 
   Server<QueueType> server (queue, messageSize, throughput);
 
-  BOOST_TEST_MESSAGE ("server throughput:\t" << throughput);
-  BOOST_TEST_MESSAGE ("message size:\t\t"    << messageSize);
+  BOOST_TEST_MESSAGE ("Expected server throughput:\t" << throughput);
+  BOOST_TEST_MESSAGE ("Expected message size:\t\t"    << messageSize);
 
   // allow the clients to initialise
-  std::this_thread::sleep_for (Milliseconds (5));
+  std::this_thread::sleep_for (Seconds (1));
 
-  int exceptions_caught = 0;
-  try
   {
     BOOST_TEST_MESSAGE ("Add one client too many");
-
     /*
      * An exception should be thrown when registering more clients than the
      * queue is configured to accept.
@@ -833,45 +837,35 @@ BOOST_AUTO_TEST_CASE (TooManyConsumers)
      */
     ClientType client (queue, messageSize);
 
-    std::this_thread::sleep_for (Seconds (10));
+    std::this_thread::sleep_for (Seconds (1));
 
-    BOOST_TEST_MESSAGE ("'Too many clients' exception should have been thrown");
+    BOOST_CHECK_MESSAGE (client.exceptions ().size () == 1,
+        "An expected exception was not thrown");
   }
-  catch (const std::exception &e)
-  {
-    ++exceptions_caught;
-  }
-
-  BOOST_CHECK_MESSAGE (exceptions_caught == 1,
-      "The expected 'Too many clients' exception was not thrown");
 
   // stop one of the clients to create room for a new client to be added
+  BOOST_TEST_MESSAGE ("Stop one of the clients, to free space for a new client");
   clients.resize (clients.size () -1);
 
   std::this_thread::sleep_for (Milliseconds (10));
 
-  try
-  {
-    BOOST_TEST_MESSAGE ("Add a client");
-
-    ClientType client (queue, messageSize);
-
-    std::this_thread::sleep_for (Milliseconds (10));
-  }
-  catch (const std::exception &e)
-  {
-    BOOST_CHECK_MESSAGE (false,
-        "An unexpected exception was caught: " << e.what ());
-  }
+  BOOST_TEST_MESSAGE ("Create and add a new client");
+  ClientType client (queue, messageSize);
 
   std::this_thread::sleep_for (Milliseconds (10));
 
+  BOOST_CHECK (client.exceptions ().empty ());
+
+  std::this_thread::sleep_for (Milliseconds (10));
 
   BOOST_TEST_MESSAGE ("Stop all clients");
+
   for (auto &client : clients)
   {
     client->stop ();
   }
+
+  BOOST_TEST_MESSAGE ("Stop server");
 
   server.stop ();
 }
@@ -881,29 +875,37 @@ BOOST_AUTO_TEST_CASE (TooManyConsumers)
  */
 BOOST_AUTO_TEST_CASE (RestartClient)
 {
+  spmc::ScopedLogLevel log (info);
+
   using QueueType = SPMCQueue<std::allocator<uint8_t>>;
   QueueType queue (500);
 
-  size_t   messageSize = 68; // sizeof (header) + messageSize = 100 bytes
+  size_t   messageSize = 68;
   uint32_t throughput = 1000;
 
   /*
    * Restart the server a few times. The client should detect the restart, reset
    * and consume the new data.
    */
-
   Server<QueueType> server (queue, messageSize, throughput);
 
-  for (int i = 0; i < 5; ++i)
+  for (int i = 0; i < 2; ++i)
   {
-    Client<QueueType> client (queue, messageSize);
+    double clientThroughput = 0;
+    {
+      Client<QueueType> client (queue, messageSize);
 
-    // allow the clients to initialise and receive some data
-    std::this_thread::sleep_for (Seconds (1));
+      /*
+       * Allow the clients to initialise and receive some data.
+       * Sleep for more than one second so there is no chance of the throughput
+       * calc rounding number of seconds down to zero
+       */
+      std::this_thread::sleep_for (Milliseconds (1500));
 
-    auto clientThroughput = client.throughputStats ()
-                                  .summary ()
-                                  .messages_per_sec (Time::now ());
+      clientThroughput = client.throughputStats ()
+                               .summary ()
+                               .messages_per_sec (Clock::now ());
+    }
 
     BOOST_TEST_MESSAGE ("Client throughput=" << clientThroughput);
     BOOST_CHECK (clientThroughput > (throughput * 0.80));
@@ -912,7 +914,7 @@ BOOST_AUTO_TEST_CASE (RestartClient)
 
 
 /*
- * Server restart without client restart needs further work
+ * TODO: Server restart without client restart needs further work
  */
 BOOST_AUTO_TEST_CASE (RestartServer)
 {
@@ -939,7 +941,7 @@ BOOST_AUTO_TEST_CASE (RestartServer)
 
     auto clientThroughput = client.throughputStats ()
                                   .summary ()
-                                  .messages_per_sec (Time::now ());
+                                  .messages_per_sec (Clock::now ());
 
     BOOST_TEST_MESSAGE ("Client throughput=" << clientThroughput);
     BOOST_CHECK (clientThroughput > (throughput * 0.80));
@@ -948,7 +950,6 @@ BOOST_AUTO_TEST_CASE (RestartServer)
   }
 }
 
-#if FIXME
 BOOST_AUTO_TEST_CASE (SinkStreamInSharedMemory)
 {
   using namespace boost;
@@ -1050,4 +1051,3 @@ BOOST_AUTO_TEST_CASE (SinkStreamInSharedMemory)
 
   producer.join ();
 }
-#endif
