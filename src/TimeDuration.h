@@ -1,10 +1,9 @@
 #ifndef IPC_TIME_DURATION_H
 #define IPC_TIME_DURATION_H
 
-#include "Time.h"
+#include "Chrono.h"
 
 #include <ctime>
-#include <chrono>
 #include <limits>
 #include <string>
 
@@ -46,15 +45,7 @@ bool operator== (TimeDuration lhs, TimeDuration rhs)
 }
 
 /*
- * Return a human readable string describing duration
- */
-std::string nanoseconds_to_pretty (int64_t nanoseconds);
-
-std::string nanoseconds_to_pretty (Nanoseconds nanoseconds);
-
-
-/*
- * Cast TimeDuration to a floating point value
+ * Cast TimeDuration to floating point time duration values
  */
 inline
 double to_seconds (TimeDuration duration)
@@ -77,4 +68,3 @@ double to_microseconds (TimeDuration duration)
 } // namespace spmc
 
 #endif // IPC_TIME_DURATION_H
-

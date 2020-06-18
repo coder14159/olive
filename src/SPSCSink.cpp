@@ -1,15 +1,15 @@
 #include "Assert.h"
-#include "Logger.h"
+#include "Chrono.h"
 #include "SPSCSink.h"
 #include "detail/SharedMemory.h"
 
+#include <boost/lockfree/spsc_queue.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
-
 #include <atomic>
 
 namespace bi = boost::interprocess;
 
-namespace ipc {
+namespace spmc {
 
 SPSCSink::SPSCSink (const std::string &memoryName,
                     const std::string &objectName,
@@ -26,9 +26,11 @@ SPSCSink::SPSCSink (const std::string &memoryName,
   m_queue = m_memory.find_or_construct<SharedMemory::SPSCQueue>
                                   (objectName.c_str())(queueSize, m_allocator);
 
-  ASSERT_SS (m_queue != nullptr,
-             "shared memory object initialisation failed: " << objectName);
+  assert_expr (m_queue != nullptr, [&objectName]() {
+               std::cerr << "shared memory object initialisation failed: "
+                         << objectName << std::endl; });
 }
+
 
 void SPSCSink::stop ()
 {
@@ -45,7 +47,7 @@ void SPSCSink::next (const std::vector<uint8_t> &data)
     Header header;
     header.size      = data.size ();
     header.seqNum    = m_sequenceNumber;
-    header.timestamp = spmc::Time::now ().serialise ();
+    header.timestamp = Clock::now ().time_since_epoch ().count ();
 
     if (send (reinterpret_cast <uint8_t*> (&header), sizeof (Header)))
     {

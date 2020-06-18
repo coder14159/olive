@@ -1,8 +1,7 @@
 #ifndef IPC_SPSC_SINKS_H
 
-#include "detail/SharedMemory.h"
 #include "SPSCSink.h"
-#include "spmc_time.h"
+#include "detail/SharedMemory.h"
 
 #include <atomic>
 #include <string>
@@ -11,22 +10,31 @@
 namespace spmc {
 
 /*
- * Use SPSCSink to put data into the shared memory queue.
+ * Use SPSCSinks to manage pussing data into multiple SPSC queues for shared
+ * memory interprocess communication.
  *
- * Currently in prototype for testing.
+ * TODO: complete and create tests for this prototype
  */
 class SPSCSinks
 {
 public:
   SPSCSinks (const std::string &memoryName, size_t queueSize);
 
+  ~SPSCSinks ();
+
+  /*
+   * Stop servicing the internal queues in preparation for shutdown
+   */
+  void stop ();
+
   /*
    * Send a data packet to the shared memory queue
    */
   void next (const std::vector<uint8_t> &data);
 
-  void stop ();
-
+  /*
+   * Return the shared memory name for the queue
+   */
   std::string name () const { return m_name; }
 
 private:
@@ -37,6 +45,9 @@ private:
 
   std::string m_name;
 
+  /*
+   * Client communication channels
+   */
   SharedMemory::SPSCQueue *m_requests = { nullptr };
   SharedMemory::SPSCQueue *m_response = { nullptr };
 
@@ -44,7 +55,7 @@ private:
 
   std::thread m_thread;
 
-  std::vector<std::unique_ptr<SharedMemory::SPSCSink>> m_sinks;
+  std::vector<std::unique_ptr<SPSCSink>> m_sinks;
 
   std::atomic<bool> m_stop = { false };
 

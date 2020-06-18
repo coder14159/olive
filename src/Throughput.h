@@ -1,7 +1,7 @@
 #ifndef IPC_THROUGHPUT_H
 #define IPC_THROUGHPUT_H
 
-#include "Time.h"
+#include "Chrono.h"
 #include "Timer.h"
 
 #include <fstream>

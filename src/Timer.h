@@ -1,15 +1,13 @@
 #ifndef IPC_TIMER_H
 #define IPC_TIMER_H
 
-#include "Time.h"
+#include "Chrono.h"
 #include "TimeDuration.h"
-
-#include <chrono>
 
 namespace spmc {
 
 /*
- * Timer class
+ * A stopwatch timer class
  */
 class Timer
 {

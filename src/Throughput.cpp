@@ -1,5 +1,4 @@
 #include "Throughput.h"
-#include "Time.h"
 #include "detail/SharedMemory.h"
 
 #include <boost/filesystem.hpp>
@@ -183,16 +182,18 @@ std::vector<std::string> Throughput::to_strings () const
     return {};
   }
 
-  std::vector<std::string> stats;
-
   auto now = Clock::now ();
 
+  std::vector<std::string> stats;
+
   stats.push_back (
-    (boost::format ("MB/s:     %.3f") % megabytes_per_sec (now)).str ());
+    (boost::format ("%-13s %.3f MB/sec %.3f msgs/sec")
+            % "throughput:"
+            % megabytes_per_sec (now)
+            % (messages_per_sec (now) / 1.0e6)).str ());
+
   stats.push_back (
-    (boost::format ("M msgs/s: %.3f") % (messages_per_sec (now) / 1.0e6)).str ());
-  stats.push_back (
-    (boost::format ("dropped:  %d") % m_dropped).str ());
+    (boost::format ("%-13s %d") % "msgs dropped:" % m_dropped).str ());
 
   return stats;
 }

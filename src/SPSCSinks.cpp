@@ -1,9 +1,8 @@
 #include "Logger.h"
-#include "detail/SharedMemory.h"
 #include "SPSCSink.h"
 
-#include "patch/lockfree/spsc_queue.hpp"
-#include <boost/interprocess/managed_shared_memory.hpp>
+#include "detail/SharedMemory.h"
+
 #include <atomic>
 
 namespace bi = boost::interprocess;
@@ -20,7 +19,7 @@ SPSCSinks::SPSCSinks (const std::string &memoryName)
   auto requestQueueName = memoryName + ":requests";
 
   size_t queueSize = 1024;
-  
+
   // construct the request queue within the shared memory
   m_requests = m_memory.construct<SharedMemory::SPSCQueue>
                                     (requestQueueName.c_str())
@@ -32,9 +31,9 @@ SPSCSinks::SPSCSinks (const std::string &memoryName)
   ipc::logger ().info () << "constructed " << objectName;
 
   m_thread = std::thread ([this] () {
-    
+
     auto requests = *m_requests;
-    
+
     while (!m_stop)
     {
       if (requests.empty ())
@@ -43,16 +42,24 @@ SPSCSinks::SPSCSinks (const std::string &memoryName)
       }
       else
       {
-        
+
       }
     }
-  
+
   });
 }
+
+SPSCSinks::~SPSCSinks ()
+{
+  stop ();
+}
+
 
 void SPSCSinks::stop ()
 {
   m_stop = true;
+
+  m_thread.join ();
 }
 
 void SPSCSinks::next (const std::vector<uint8_t> &data)

@@ -3,8 +3,6 @@
 
 #include "LatencyStats.h"
 #include "ThroughputStats.h"
-#include "Time.h"
-
 
 namespace spmc {
 
