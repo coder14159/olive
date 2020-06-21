@@ -2,9 +2,6 @@ include Makefile.include
 
 .DEFAULT_GOAL := all
 
-# TODO remove this line, add the commented out one below and delete need for
-# myheader.h to have the src directory prefix
-# INCLUDE_DIRS	+= -I$(ROOT_DIR)
 INCLUDE_DIRS	+= -I$(ROOT_DIR)src
 
 CXXFLAGS		+= $(INCLUDE_DIRS)
@@ -20,14 +17,13 @@ LIB_BOOST_UNIT_TEST  := -lboost_unit_test_framework
 LIB_FILE_NAME = libspmc.a
 
 LIB_SRC_CPP_FILES += src/CpuBind.cpp
+LIB_SRC_CPP_FILES += src/Chrono.cpp
 LIB_SRC_CPP_FILES += src/Latency.cpp
 LIB_SRC_CPP_FILES += src/LatencyStats.cpp
 LIB_SRC_CPP_FILES += src/Logger.cpp
 LIB_SRC_CPP_FILES += src/PerformanceStats.cpp
 LIB_SRC_CPP_FILES += src/SignalCatcher.cpp
-LIB_SRC_CPP_FILES += src/SPMCSink.cpp
-LIB_SRC_CPP_FILES += src/SPSCStream.cpp
-LIB_SRC_CPP_FILES += src/Time.cpp
+LIB_SRC_CPP_FILES += src/Throttle.cpp
 LIB_SRC_CPP_FILES += src/Timer.cpp
 LIB_SRC_CPP_FILES += src/TimeDuration.cpp
 LIB_SRC_CPP_FILES += src/Throughput.cpp
@@ -96,19 +92,26 @@ $(BIN_DIR)/test_stats: $(BIN_DIR) Makefile tests/test_stats/test_stats.cpp $(LIB
 # Build all binaries
 all:	$(BIN_DIR)/spmc_client \
 		$(BIN_DIR)/spmc_server \
+		$(BIN_DIR)/spsc_server \
+		$(BIN_DIR)/spsc_client \
 		$(BIN_DIR)/remove_shared_memory \
 		$(BIN_DIR)/test_performance \
 		$(BIN_DIR)/test_spmcqueue \
 		$(BIN_DIR)/test_stats \
-		$(BIN_DIR)/test_allocator \
-		$(BIN_DIR)/spsc_client \
-		$(BIN_DIR)/spsc_server
+		$(BIN_DIR)/test_allocator
 
 clean:
 	rm -rf build/$(PROCESSOR)$(BUILD_SUFFIX)
 
+define run_test
+	@echo "[$1]"
+	@$(BIN_DIR)/$1
+endef
+
 test:
-	$(BIN_DIR)/test_performance --log_level=message
-	$(BIN_DIR)/test_spmcqueue
+	$(call run_test,test_allocator)
+	$(call run_test,test_performance)
+	$(call run_test,test_spmcqueue)
+	$(call run_test,test_stats)
 
 .PHONY: all
