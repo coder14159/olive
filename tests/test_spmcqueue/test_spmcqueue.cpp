@@ -3,6 +3,7 @@
 #include "Assert.h"
 
 #include "Buffer.h"
+#include "Chrono.h"
 #include "LatencyStats.h"
 #include "Logger.h"
 #include "PerformanceStats.h"
@@ -31,8 +32,28 @@
 #define SPMC_DEBUG_ASSERT
 
 using namespace spmc;
-
 using namespace boost::log::trivial;
+using namespace std::literals::chrono_literals;
+
+/*
+ * Override time to run each performance test from the environment variable
+ * "TIMEOUT" which should contain a value in seconds.
+ */
+TimeDuration get_test_duration ()
+{
+  Nanoseconds duration (100ms);
+
+  if (getenv ("TIMEOUT") != nullptr)
+  {
+    double seconds = std::atof (getenv ("TIMEOUT"));
+
+    int64_t ns = seconds * 1e9;
+
+    duration = Nanoseconds (ns);
+  }
+
+  return std::chrono::duration_cast<Nanoseconds> (duration);
+}
 
 BOOST_AUTO_TEST_CASE (BasicBufferTests)
 {
@@ -591,8 +612,6 @@ public:
       }
       catch (const std::exception &e)
       {
-        std::cerr << "Client exception caught: " << e.what () << std::endl;
-
         m_exceptions.push_back (std::string (e.what ()));
 
         m_queue.unregister_consumer ();
@@ -651,7 +670,7 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerSingleConsumer)
   DefaultClient client (queue, messageSize);
   DefaultServer server (queue, messageSize, throughput);
 
-  std::this_thread::sleep_for (Seconds (5));
+  std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
 
   auto now = Clock::now ();
 
@@ -663,7 +682,7 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerSingleConsumer)
 
   // test throughput against a relatively conservative value
   auto &summary = client.throughputStats ().summary ();
-  BOOST_CHECK (summary.messages () > 1e6);
+  BOOST_CHECK (summary.messages () > 100);
   BOOST_CHECK (summary.dropped () == 0);
 
   BOOST_TEST_MESSAGE ("messages dropped:\t" << summary.dropped ());
@@ -700,7 +719,7 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerAllowDrops)
   BOOST_TEST_MESSAGE ("server throughput:\t" << throughput);
   BOOST_TEST_MESSAGE ("message size:\t\t"    << messageSize);
 
-  std::this_thread::sleep_for (Seconds (3));
+  std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
 
   auto stopped = Clock::now ();
 
@@ -760,7 +779,7 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerNoMesssageDropsAllowed)
   BOOST_TEST_MESSAGE ("server throughput:\t" << throughput);
   BOOST_TEST_MESSAGE ("message size:\t\t"    << messageSize);
 
-  std::this_thread::sleep_for (Seconds (5));
+  std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
 
   auto now  = Clock::now ();
 
@@ -824,7 +843,7 @@ BOOST_AUTO_TEST_CASE (TooManyConsumers)
   BOOST_TEST_MESSAGE ("Expected message size:\t\t"    << messageSize);
 
   // allow the clients to initialise
-  std::this_thread::sleep_for (Seconds (1));
+  std::this_thread::sleep_for (Milliseconds (100));
 
   {
     BOOST_TEST_MESSAGE ("Add one client too many");
@@ -837,10 +856,15 @@ BOOST_AUTO_TEST_CASE (TooManyConsumers)
      */
     ClientType client (queue, messageSize);
 
-    std::this_thread::sleep_for (Seconds (1));
+    std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
 
     BOOST_CHECK_MESSAGE (client.exceptions ().size () == 1,
-        "An expected exception was not thrown");
+                         "An expected exception was not thrown");
+
+    std::string message = "Failed to register a no-drop consumer";
+
+    BOOST_CHECK_MESSAGE (client.exceptions ().front () == message,
+                         "Invalid exception description");
   }
 
   // stop one of the clients to create room for a new client to be added
@@ -937,7 +961,7 @@ BOOST_AUTO_TEST_CASE (RestartServer)
   {
     Server<QueueType> server (queue, messageSize, throughput);
     // allow the clients to initialise and receive some data
-    std::this_thread::sleep_for (Seconds (2));
+    std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
 
     auto clientThroughput = client.throughputStats ()
                                   .summary ()

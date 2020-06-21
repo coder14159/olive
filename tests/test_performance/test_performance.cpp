@@ -13,6 +13,7 @@
 #include <boost/container/static_vector.hpp>
 #include <boost/log/trivial.hpp>
 
+#include <cstdlib>
 #include <ext/numeric>
 #include <iomanip>
 #include <iostream>
@@ -30,6 +31,26 @@ using namespace std::chrono_literals;
 using namespace boost::log::trivial;
 
 using namespace spmc;
+
+/*
+ * Override time to run each performance test from the environment variable
+ * "TIMEOUT" which should contain a value in seconds.
+ */
+TimeDuration get_test_duration ()
+{
+  Nanoseconds duration (100ms);
+
+  if (getenv ("TIMEOUT") != nullptr)
+  {
+    double seconds = std::atof (getenv ("TIMEOUT"));
+
+    int64_t ns = seconds * 1e9;
+
+    duration = Nanoseconds (ns);
+  }
+
+  return std::chrono::duration_cast<Nanoseconds> (duration);
+}
 
 BOOST_AUTO_TEST_CASE (TestTimeDuration)
 {
@@ -65,7 +86,7 @@ BOOST_AUTO_TEST_CASE (ThroughputOfCircularBuffers)
     return;
   }
 
-  TimeDuration duration (Nanoseconds (Seconds (5)));
+  auto duration = get_test_duration ();
 
   auto stress_boost_circular_buffer = [&duration] (
     size_t bufferSize, size_t messageSize) -> double
@@ -85,7 +106,7 @@ BOOST_AUTO_TEST_CASE (ThroughputOfCircularBuffers)
 
     for (int i = 0; ; ++i)
     {
-      if ((i % 1000000) == 0 && duration < timer.elapsed ())
+      if ((i % 1000) == 0 && duration < timer.elapsed ())
       {
         timer.elapsed ().pretty ();
         break;
@@ -134,7 +155,7 @@ BOOST_AUTO_TEST_CASE (ThroughputOfCircularBuffers)
 
     for (int i = 0; ; ++i)
     {
-      if ((i % 1000000) == 0 && duration < timer.elapsed ())
+      if ((i % 1000) == 0 && duration < timer.elapsed ())
       {
         timer.elapsed ().pretty ();
         break;
@@ -187,13 +208,13 @@ double VectorThroughput (size_t bufferSize, size_t batchSize)
   uint64_t i = 0;
   uint64_t bytes = 0;
 
-  TimeDuration duration (Seconds (2));
+  auto duration = get_test_duration ();
 
   Timer timer;
 
   while (true)
   {
-    if ((i % 1000000) == 0 && duration < timer.elapsed ())
+    if ((i % 1000) == 0 && duration < timer.elapsed ())
     {
       break;
     }
@@ -297,7 +318,7 @@ void sink_stream_in_single_process (
     }
   });
 
-  std::this_thread::sleep_for (Seconds (2));
+  std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
 
   stop = true;
 
@@ -334,7 +355,7 @@ void sink_stream_in_single_process_pod (
     }
   });
 
-  std::this_thread::sleep_for (Milliseconds (5));
+  std::this_thread::sleep_for (5ms);
 
   auto consumer = std::thread ([&stop, &stream, &stats] () {
 
@@ -352,7 +373,7 @@ void sink_stream_in_single_process_pod (
     }
   });
 
-  std::this_thread::sleep_for (Seconds (2));
+  std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
 
   stop = true;
 
@@ -530,13 +551,6 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamPOD)
     return;
   }
 
-  auto duration = Seconds (2);
-
-  if (getenv ("TIMEOUT") != nullptr)
-  {
-    duration = Seconds (atoi (getenv ("TIMEOUT")));
-  }
-
   spmc::ScopedLogLevel log (error);
 
   size_t capacity = 2048000;
@@ -572,13 +586,6 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStreamPOD)
   if (getenv ("NOTIMING") != nullptr)
   {
     return;
-  }
-
-  auto duration = Seconds (2);
-
-  if (getenv ("TIMEOUT") != nullptr)
-  {
-    duration = Seconds (atoi (getenv ("TIMEOUT")));
   }
 
   spmc::ScopedLogLevel log (error);
@@ -624,13 +631,6 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamPODWithPrefetch)
     return;
   }
 
-  auto duration = Seconds (2);
-
-  if (getenv ("TIMEOUT") != nullptr)
-  {
-    duration = Seconds (atoi (getenv ("TIMEOUT")));
-  }
-
   spmc::ScopedLogLevel log (error);
 
   size_t capacity = 2048000;
@@ -665,13 +665,6 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStreamPODWithPrefetch)
   if (getenv ("NOTIMING") != nullptr)
   {
     return;
-  }
-
-  auto duration = Seconds (2);
-
-  if (getenv ("TIMEOUT") != nullptr)
-  {
-    duration = Seconds (atoi (getenv ("TIMEOUT")));
   }
 
   spmc::ScopedLogLevel log (error);
@@ -717,13 +710,6 @@ void sink_stream_in_shared_memory (
 {
   using namespace boost;
   using namespace boost::interprocess;
-
-  auto duration = Seconds (2);
-
-  if (getenv ("TIMEOUT") != nullptr)
-  {
-    duration = Seconds (atoi (getenv ("TIMEOUT")));
-  }
 
   std::string name = "SinkStreamInSharedMemory:Perf";
 
@@ -794,7 +780,7 @@ void sink_stream_in_shared_memory (
     }
   });
 
-  std::this_thread::sleep_for (Seconds (2));
+  std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
 
   stream.stop ();
   sink.stop ();
@@ -884,7 +870,7 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceSinkStreamInSharedMemory)
     return;
   }
 
-  spmc::ScopedLogLevel log (info);
+  spmc::ScopedLogLevel log (error);
 
   PerformanceStats stats;
   stats.throughput ().summary ().enable (true);
@@ -940,7 +926,8 @@ BOOST_AUTO_TEST_CASE (ThreadIdentity)
       }
     });
 
-    std::this_thread::sleep_for (Seconds (2));
+    std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
+
     stop = true;
     test_thread_id.join ();
 
@@ -968,7 +955,8 @@ BOOST_AUTO_TEST_CASE (ThreadIdentity)
       }
     });
 
-    std::this_thread::sleep_for (Seconds (2));
+    std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
+
     stop = true;
     test_thread_specific.join ();
 
@@ -997,7 +985,8 @@ BOOST_AUTO_TEST_CASE (ThreadIdentity)
       }
     });
 
-    std::this_thread::sleep_for (Seconds (2));
+    std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
+
     stop = true;
     test_thread_local.join ();
     BOOST_TEST_MESSAGE ("thread_local count=" << thread_local_count);
@@ -1020,7 +1009,8 @@ BOOST_AUTO_TEST_CASE (ThreadIdentity)
       }
     });
 
-    std::this_thread::sleep_for (Seconds (2));
+    std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
+
     stop = true;
     test_bare.join ();
 
