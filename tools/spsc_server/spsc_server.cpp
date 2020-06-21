@@ -142,12 +142,12 @@ void server (const std::string& name,
 
   while (!g_stop)
   {
-    throttle.throttle ();
-
     for (size_t i = 0; i < sinks.size (); ++i)
     {
       sinks[i]->next (message);
     }
+
+    throttle.throttle ();
   }
 }
 
