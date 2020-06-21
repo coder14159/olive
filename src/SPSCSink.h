@@ -1,9 +1,14 @@
 #ifndef IPC_SPSC_SINK_H
 
+#include "Assert.h"
+#include "Chrono.h"
 #include "detail/SharedMemory.h"
+
+#include <boost/interprocess/managed_shared_memory.hpp>
 
 #include <atomic>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace spmc {
@@ -27,9 +32,9 @@ public:
 
   std::string name () const { return m_name; }
 
-private:
+// private:
 
-  bool send (const uint8_t* data, size_t size);
+//   bool send (const uint8_t* data, size_t size);
 
 private:
   std::string m_name;
@@ -47,5 +52,7 @@ private:
 };
 
 }
+
+#include "SPSCSink.inl"
 
 #endif // IPC_SPSC_SINK_H

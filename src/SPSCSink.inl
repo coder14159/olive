@@ -1,15 +1,8 @@
-#include "Assert.h"
-#include "Chrono.h"
-#include "SPSCSink.h"
-#include "detail/SharedMemory.h"
-
-#include <boost/lockfree/spsc_queue.hpp>
-#include <boost/interprocess/managed_shared_memory.hpp>
-#include <atomic>
-
-namespace bi = boost::interprocess;
-
 namespace spmc {
+
+namespace bi = ::boost::interprocess;
+
+using namespace ::std::literals::chrono_literals;
 
 SPSCSink::SPSCSink (const std::string &memoryName,
                     const std::string &objectName,
@@ -39,24 +32,49 @@ void SPSCSink::stop ()
 
 void SPSCSink::next (const std::vector<uint8_t> &data)
 {
-  bool success = false;
-  while (!success && !m_stop)
+  ++m_sequenceNumber;
+
+  Header header;
+
+  header.size      = data.size ();
+  header.seqNum    = m_sequenceNumber;
+  header.timestamp = Clock::now ().time_since_epoch ().count ();
+
+  auto &queue = *m_queue;
+
+  /*
+   * Push the data packet onto the shared queue if there is available space
+   */
+  size_t packetSize = sizeof (Header) + header.size;
+
+  long waitCounter = 0;
+
+  while (packetSize > queue.write_available ())
   {
-    ++m_sequenceNumber;
+    /*
+     * Wait for space to become available
+     */
+    ++waitCounter;
 
-    Header header;
-    header.size      = data.size ();
-    header.seqNum    = m_sequenceNumber;
-    header.timestamp = Clock::now ().time_since_epoch ().count ();
-
-    if (send (reinterpret_cast <uint8_t*> (&header), sizeof (Header)))
+    if (waitCounter == 100000)
     {
-      send (data.data (), data.size ());
-      success = true;
+      std::this_thread::sleep_for (1ns);
+
+      if (m_stop)
+      {
+        return;
+      }
+
+      waitCounter = 0;
     }
   }
+
+  queue.push (reinterpret_cast <uint8_t*> (&header), sizeof (Header));
+
+  queue.push (data.data (), header.size);
 }
 
+#if 0
 bool SPSCSink::send (const uint8_t *data, size_t size)
 {
   bool ret = false;
@@ -79,5 +97,5 @@ bool SPSCSink::send (const uint8_t *data, size_t size)
 
   return ret;
 }
-
+#endif
 }
