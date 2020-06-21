@@ -1,11 +1,16 @@
 #ifndef IPC_SPSC_STREAM_H
 
+#include "Assert.h"
 #include "Buffer.h"
+#include "Logger.h"
 #include "detail/SharedMemory.h"
 
 #include <boost/interprocess/managed_shared_memory.hpp>
+#include <boost/log/trivial.hpp>
 
 #include <atomic>
+#include <iomanip>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -47,6 +52,8 @@ private:
 
 };
 
-}
+} // namespace spmc
+
+#include "SPSCStream.inl"
 
 #endif // IPC_SPSC_STREAM_H
