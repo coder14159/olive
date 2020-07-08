@@ -3,8 +3,31 @@
 
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 
 namespace spmc {
+
+template<typename ExceptionType>
+void check (const char *expr_str, bool expr, const std::string &message)
+{
+  if (!expr)
+  {
+    std::stringstream ss;
+
+    ss << expr_str << "\nCheck failed: " << message;
+
+    throw ExceptionType (ss.str ());
+  }
+}
+
+#define CHECK_SS(expr, message) \
+{ \
+  if (expr) { return; } \
+  \
+  std::stringstream ss; \
+  ss << message; \
+  check<std::logic_error> (#expr, expr, ss.str ().c_str ()); \
+}
 
 /*
  * If assert expression is false, invoke the lambda function then abort
