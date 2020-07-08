@@ -324,7 +324,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
   {
     /*
      * If a the consumer is configured to allow message drops and the producer
-     * has wrapped the buffer and begun overwritting the data just copied,
+     * has wrapped the buffer and begun overwriting the data just copied,
      * reset the consumer to point to the most recent data.
      */
     consumed = m_committed;
