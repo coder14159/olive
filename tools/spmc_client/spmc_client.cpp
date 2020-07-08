@@ -99,13 +99,30 @@ int main(int argc, char* argv[]) try
     stream.stop ();
   });
 
+
   PerformanceStats stats (directory);
 
-  stats.throughput ().summary () .enable (throughputStats);
-  stats.throughput ().interval ().enable (throughputStats && intervalStats);
+  if (latencyStats)
+    stats.latency ().start ();
 
-  stats.latency ().summary () .enable (latencyStats);
-  stats.latency ().interval ().enable (latencyStats && intervalStats);
+  if (!latencyStats)
+  {
+    stats.latency ().interval ().stop ();
+
+    if (!intervalStats)
+    {
+      stats.latency ().summary ().stop ();
+    }
+  }
+  if (!throughputStats)
+  {
+    stats.throughput ().interval ().stop ();
+
+    if (!intervalStats)
+    {
+      stats.throughput ().summary ().stop ();
+    }
+  }
 
   bind_to_cpu (cpu);
 
@@ -124,7 +141,7 @@ int main(int argc, char* argv[]) try
 
     if (stream.next (header, data))
     {
-      stats.update (sizeof (Header), data.size (), header.seqNum,
+      stats.update (sizeof (Header) + data.size (), header.seqNum,
                     timepoint_from_nanoseconds_since_epoch (header.timestamp));
 
       if (test)

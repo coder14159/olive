@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) try
 
   auto name            = options.required<std::string> ("name");
   auto directory       = options.value<std::string> ("directory", "");
-  auto cpu             = options.value<int> ("cpu", -1);
+  auto cpu             = options.value<int>    ("cpu", -1);
   auto prefetchCache   = options.value<size_t> ("prefetchcache", 0);
   auto intervalStats   = options.value<bool>   ("intervalstats", false);
   auto latencyStats    = options.value<bool>   ("latencystats", false);
@@ -98,11 +98,28 @@ int main(int argc, char* argv[]) try
 
   PerformanceStats stats (directory);
 
-  stats.throughput ().summary () .enable (throughputStats);
-  stats.throughput ().interval ().enable (throughputStats && intervalStats);
+  if (latencyStats)
+    stats.latency ().start ();
 
-  stats.latency ().summary () .enable (latencyStats);
-  stats.latency ().interval ().enable (latencyStats && intervalStats);
+  if (!latencyStats)
+  {
+    stats.latency ().interval ().stop ();
+
+    if (!intervalStats)
+    {
+      stats.latency ().summary ().stop ();
+    }
+  }
+  if (!throughputStats)
+  {
+    stats.throughput ().interval ().stop ();
+
+    if (!intervalStats)
+    {
+      stats.throughput ().summary ().stop ();
+    }
+  }
+
 
   bind_to_cpu (cpu);
 
@@ -121,7 +138,7 @@ int main(int argc, char* argv[]) try
 
     if (stream.next (header, data))
     {
-      stats.update (sizeof (Header), data.size (), header.seqNum,
+      stats.update (sizeof (Header) + data.size (), header.seqNum,
                     timepoint_from_nanoseconds_since_epoch (header.timestamp));
       if (test)
       {

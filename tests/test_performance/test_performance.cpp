@@ -398,7 +398,6 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStream)
   size_t prefetch = 0;
 
   PerformanceStats stats;
-  stats.throughput ().summary ().enable (true);
 
   sink_stream_in_single_process (capacity, stats, rate, prefetch);
 
@@ -431,8 +430,6 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStream)
   size_t prefetch = 0;
 
   PerformanceStats stats;
-  stats.throughput ().summary ().enable (true);
-  stats.latency ().summary ().enable (true);
 
   sink_stream_in_single_process (capacity, stats, rate, prefetch);
 
@@ -474,7 +471,6 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamWithPrefetch)
   size_t prefetch = 1024;
 
   PerformanceStats stats;
-  stats.throughput ().summary ().enable (true);
 
   sink_stream_in_single_process (capacity, stats, rate, prefetch);
 
@@ -517,8 +513,6 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStreamWithPrefetch)
   size_t prefetch = 1024;
 
   PerformanceStats stats;
-  stats.throughput ().summary ().enable (true);
-  stats.latency ().summary ().enable (true);
 
   sink_stream_in_single_process (capacity, stats, rate, prefetch);
 
@@ -558,7 +552,6 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamPOD)
   size_t prefetch = 1024;
 
   PerformanceStats stats;
-  stats.throughput ().summary ().enable (true);
 
   sink_stream_in_single_process_pod<char[128]> (capacity, stats, rate, prefetch);
 
@@ -595,8 +588,6 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStreamPOD)
   size_t prefetch = 0;
 
   PerformanceStats stats;
-  stats.throughput ().summary ().enable (true);
-  stats.latency ().summary ().enable (true);
 
   sink_stream_in_single_process_pod<char[128]> (capacity, stats, rate, prefetch);
 
@@ -638,7 +629,6 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamPODWithPrefetch)
   size_t prefetch = 1024;
 
   PerformanceStats stats;
-  stats.throughput ().summary ().enable (true);
 
   sink_stream_in_single_process_pod<char[128]> (capacity, stats, rate, prefetch);
 
@@ -674,8 +664,6 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStreamPODWithPrefetch)
   size_t prefetch = 1024;
 
   PerformanceStats stats;
-  stats.throughput ().summary ().enable (true);
-  stats.latency ().summary ().enable (true);
 
   sink_stream_in_single_process_pod<char[128]> (capacity, stats, rate, prefetch);
 
@@ -803,7 +791,6 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceSinkStreamInSharedMemory)
   spmc::ScopedLogLevel log (error);
 
   PerformanceStats stats;
-  stats.throughput ().summary ().enable (true);
 
   size_t capacity = 2048000;
   uint32_t rate   = 0;
@@ -838,7 +825,6 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceSinkStreamInSharedMemoryPrefetch)
   spmc::ScopedLogLevel log (error);
 
   PerformanceStats stats;
-  stats.throughput ().summary ().enable (true);
 
   size_t capacity = 2048000;
   uint32_t rate   = 0;
@@ -873,8 +859,6 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceSinkStreamInSharedMemory)
   spmc::ScopedLogLevel log (error);
 
   PerformanceStats stats;
-  stats.throughput ().summary ().enable (true);
-  stats.latency ().summary ().enable (true);
 
   size_t capacity = 20480;
   uint32_t rate   = 1e6;

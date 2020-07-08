@@ -22,8 +22,6 @@ BOOST_AUTO_TEST_CASE(ThroughputStatsUpdates)
 
   PerformanceStats stats;
 
-  stats.throughput ().summary ().enable (true);
-
   auto start = Clock::now ();
 
   for (int i = 1;; ++i)
@@ -56,8 +54,8 @@ BOOST_AUTO_TEST_CASE(LatencyStatsUpdateIsFast)
   {
     TempDir ()
     {
-      m_path  = fs::temp_directory_path () + fs::path ("/")
-              + fs::unique_path ("%%%%-%%%%-%%%%-%%%%");
+      m_path  = fs::temp_directory_path ()
+              / fs::unique_path ("%%%%-%%%%-%%%%-%%%%");
 
       fs::create_directory (m_path);
     }
@@ -71,14 +69,11 @@ BOOST_AUTO_TEST_CASE(LatencyStatsUpdateIsFast)
     fs::path m_path;
   };
 
-  std::vector<int> payload;
-  payload.resize (128);
+  std::vector<int> payload (128);
 
   TempDir dir;
 
   PerformanceStats stats (dir.path ());
-
-  stats.latency ().summary ().enable (true);
 
   auto start = Clock::now ();
 

@@ -575,12 +575,6 @@ public:
     m_data (dataSize, 0),
     m_latencyStats (100)
   {
-    m_latencyStats.interval ().enable (true);
-    m_latencyStats.summary ().enable (true);
-
-    m_throughputStats.interval ().enable (true);
-    m_throughputStats.summary ().enable (true);
-
     m_thread = std::thread ([this] () {
 
       try
@@ -995,8 +989,6 @@ BOOST_AUTO_TEST_CASE (SinkStreamInSharedMemory)
   } cleanup (name);
 
   PerformanceStats stats;
-  stats.throughput ().summary ().enable (true);
-  stats.latency ().summary ().enable (true);
 
   /*
    * Message and queue sizes in bytes
