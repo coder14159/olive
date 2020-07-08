@@ -13,18 +13,31 @@ namespace spmc {
 /*
  * Computes message throughput and persist data to file
  *
- * Default behaviour is to do nothing unless the enabled () method is called
+ * Default behaviour is to do nothing unless the enable () method is called
+ *
+ * Not thread synchronised.
  */
 class Throughput
 {
 public:
 
+  /*
+   * Compute throughput values which can be requested via member function calls
+   */
   Throughput ();
 
   /*
-   * If a path is set, persist throughput statistics to file
+   * Computes throughput information and writes data to disk in csv format
    */
-  void path (const std::string &directory, const std::string &name);
+  Throughput (const std::string &directory, const std::string &filename);
+
+  void stop ();
+
+  bool is_stopped () const;
+  /*
+   * Persist throughput statistics to file if a path is set
+   */
+  void write (const std::string &directory, const std::string &filename);
   /*
    * Update byte count for throughput calculation
    *
@@ -41,6 +54,7 @@ public:
    * Reset statistics
    */
   void reset ();
+#if 0
   /*
    * Throughput computation is disabled by default
    */
@@ -49,7 +63,7 @@ public:
    * return true if statistics calculation is enabled
    */
   bool enabled () const;
-
+#endif
   uint64_t messages () const { return m_messages; }
   uint64_t dropped ()  const { return m_dropped;  }
   uint64_t bytes ()    const { return m_bytes;    }
@@ -63,7 +77,7 @@ public:
   std::string to_string () const;
 
   /*
-   * Return throughput strings since start or last reset
+   * Return list of strings for describing throughput since start or last reset
    */
   std::vector<std::string> to_strings () const;
 
@@ -72,7 +86,6 @@ public:
   Throughput &write_data ();
 
 private:
-  bool           m_enabled    = false;
 
   uint64_t       m_header     = 0;
   uint64_t       m_payload    = 0;
@@ -84,7 +97,8 @@ private:
   Timer m_timer;
 
   std::ofstream  m_file;
-  std::string    m_path;
+
+  bool m_stop = false;
 };
 
 }

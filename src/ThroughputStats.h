@@ -11,16 +11,27 @@ namespace spmc {
 class ThroughputStats
 {
 public:
+  /*
+   * Compute throughput statistics
+   */
+  ThroughputStats ();
 
-  ThroughputStats () {}
+  /*
+   * Compute throughput statistics and store them to disk when write ()
+   * method is called
+   */
+  ThroughputStats (const std::string &directory);
+
   ~ThroughputStats ();
+
+  /*
+   * Write throughput data to file if enabled
+   */
+  void write ();
 
   void next (uint64_t bytes, uint64_t seqNum);
 
   void next (uint64_t header, uint64_t payload, uint64_t seqNum);
-
-  // set directory to output throughput files
-  void output_directory (const std::string &directory);
 
   Throughput&       interval ()       { return m_interval;  }
   const Throughput& interval () const { return m_interval;  }

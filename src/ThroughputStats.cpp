@@ -1,18 +1,28 @@
 #include "ThroughputStats.h"
 
+#include <boost/filesystem.hpp>
+
+namespace fs = boost::filesystem;
+
 namespace spmc {
+
+ThroughputStats::ThroughputStats ()
+{ }
+
+ThroughputStats::ThroughputStats (const std::string &directory)
+: m_interval (directory, "throughput-interval.csv")
+, m_summary (directory, "throughput-summary.csv")
+{ }
 
 ThroughputStats::~ThroughputStats ()
 {
-  m_interval.write_data ();
-  m_summary .write_data ();
+  write ();
 }
 
-
-void ThroughputStats::output_directory (const std::string &directory)
+void ThroughputStats::write ()
 {
-  m_interval.path (directory, "throughput-interval.csv");
-  m_summary .path (directory, "throughput-summary.csv");
+  m_interval.write_data ();
+  m_summary .write_data ();
 }
 
 void ThroughputStats::next (uint64_t bytes, uint64_t seqNum)

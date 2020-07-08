@@ -4,11 +4,10 @@
 #include "Latency.h"
 
 #include <boost/lockfree/spsc_queue.hpp>
-// TODO is the current spsc queue patched?
-// #include "patch/lockfree/spsc_queue.hpp"
 
 #include <atomic>
 #include <chrono>
+#include <mutex>
 #include <string>
 #include <thread>
 
@@ -22,9 +21,21 @@ class LatencyStats
 public:
 
   LatencyStats ();
-  LatencyStats (size_t queueSize);
+
+  /*
+   * Output latency statistis values to file in the named directory
+   */
+  LatencyStats (const std::string &directory);
+
+  /*
+   * Set the data queue size and output latency statistis values to file in the
+   * named directory
+   */
+  LatencyStats (size_t queueSize, const std::string &directory = "");
 
   ~LatencyStats ();
+
+  void start ();
 
   void stop ();
 
@@ -34,10 +45,7 @@ public:
    * Thread safe method to reset the interval, while data is being pushed into
    * the latency stats objects
    */
-  void reset_interval ();
-
-  // set directory to output latency files
-  void output_directory (const std::string &directory);
+  void interval_reset ();
 
   const Latency& interval () const { return m_interval;  }
   const Latency& summary ()  const { return m_summary;   }
@@ -47,9 +55,9 @@ public:
 
 private:
 
-  void service ();
+  const uint64_t DEFAULT_QUEUE_SIZE = 10;
 
-  boost::lockfree::spsc_queue<int64_t> m_queue;
+  boost::lockfree::spsc_queue<int64_t> m_queue { DEFAULT_QUEUE_SIZE };
 
   /*
    * The steady_clock is monotonic (never moves backwards)
@@ -64,6 +72,7 @@ private:
   std::atomic<bool> m_stop  = { false };
 
   std::thread m_thread;
+  std::mutex  m_mutex;
 
 };
 

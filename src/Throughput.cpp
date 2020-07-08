@@ -1,50 +1,49 @@
+#include "Assert.h"
 #include "Throughput.h"
 #include "detail/SharedMemory.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
+#include <boost/log/trivial.hpp>
 
 #include <iostream>
 #include <iomanip>
+
+namespace fs = boost::filesystem;
 
 namespace spmc {
 
 Throughput::Throughput ()
 { }
 
-void Throughput::enable (bool enable)
+Throughput::Throughput (const std::string &directory,
+                        const std::string &filename)
 {
-  namespace fs = boost::filesystem;
-
-  if (!m_enabled && enable && !m_path.empty ())
+  if (!directory.empty () && !fs::exists (directory))
   {
-    if (!fs::exists (m_path))
-    {
-      fs::create_directories (fs::path (m_path));
-
-      m_file.open (m_path);
-
-      write_header ();
-    }
-    else
-    {
-      m_file.open (m_path.c_str (), std::ios::app|std::ios_base::out);
-    }
-
-    assert (m_file);
+    CHECK_SS (fs::create_directories (directory),
+              "Failed to create directory: " << directory);
   }
 
-  m_enabled = enable;
+  ASSERT(!filename.empty (), "Empty throughput filename");
+
+  fs::path path = fs::path (directory) / fs::path (filename);
+
+  m_file.open (path.string (), std::ios::app|std::ios_base::out);
+
+  CHECK_SS(!m_file.fail (), "Failed to open file: " << filename);
+
+  write_header ();
 }
 
-bool Throughput::enabled () const
+void Throughput::stop ()
 {
-  return m_enabled;
+  m_stop = true;
 }
 
-void Throughput::path (const std::string &directory, const std::string &name)
+bool Throughput::is_stopped () const
 {
-  m_path = directory + "/" + name;
+  return m_stop;
 }
 
 void Throughput::reset ()
@@ -68,7 +67,7 @@ void Throughput::write_header ()
 
 Throughput &Throughput::write_data ()
 {
-  if (!m_file.is_open () || !m_enabled)
+  if (!m_file || !m_file.is_open () || !m_bytes || !m_messages)
   {
     return *this;
   }
@@ -88,11 +87,6 @@ Throughput &Throughput::write_data ()
 
 void Throughput::next (uint64_t header, uint64_t payload, uint64_t seqNum)
 {
-  if (!m_enabled)
-  {
-    return;
-  }
-
   m_payload += payload;
 
   next (header + payload, seqNum);
@@ -100,7 +94,7 @@ void Throughput::next (uint64_t header, uint64_t payload, uint64_t seqNum)
 
 void Throughput::next (uint64_t bytes, uint64_t seqNum)
 {
-  if (!m_enabled)
+  if (m_stop)
   {
     return;
   }
@@ -159,10 +153,6 @@ uint32_t Throughput::messages_per_sec (TimePoint time) const
 
 std::string Throughput::to_string () const
 {
-  if (!m_enabled)
-  {
-    return "";
-  }
   std::stringstream stats;
 
   auto now = Clock::now ();
@@ -177,17 +167,12 @@ std::string Throughput::to_string () const
 
 std::vector<std::string> Throughput::to_strings () const
 {
-  if (!m_enabled)
-  {
-    return {};
-  }
-
   auto now = Clock::now ();
 
   std::vector<std::string> stats;
 
   stats.push_back (
-    (boost::format ("%-13s %.3f MB/sec %.3f msgs/sec")
+    (boost::format ("%-13s %.3f MB/sec %.3f M msgs/sec")
             % "throughput:"
             % megabytes_per_sec (now)
             % (messages_per_sec (now) / 1.0e6)).str ());
