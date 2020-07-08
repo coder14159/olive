@@ -149,10 +149,6 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::consumed (uint64_t bytes, size
     std::lock_guard<Mutex> g (m_mutex);
     --m_consumerCount;
   }
-
-  BOOST_LOG_TRIVIAL(trace) << "index=" << index
-      << " m_consumed[index]=" << m_consumed[index]
-      << " m_consumerCount="   << m_consumerCount;
 }
 
 } // namespace spmc {
