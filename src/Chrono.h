@@ -15,6 +15,7 @@ using Nanoseconds  = std::chrono::nanoseconds;
 using Microseconds = std::chrono::microseconds;
 using Milliseconds = std::chrono::milliseconds;
 using Seconds      = std::chrono::seconds;
+// using Minutes      = std::chrono::minutes;
 
 /*
  * Functions returning a human readable duration string
