@@ -74,7 +74,7 @@ struct Consumer
   static constexpr uint64_t Stopped       = std::numeric_limits<uint64_t>::max () - 1;
 };
 
-static constexpr size_t MAX_NO_DROP_CONSUMERS_DEFAULT = 64;
+static constexpr size_t MAX_NO_DROP_CONSUMERS_DEFAULT = 4;
 
 static constexpr size_t CACHE_LINE_SIZE = BOOST_LOCKFREE_CACHELINE_BYTES;
 
