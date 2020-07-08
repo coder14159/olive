@@ -18,6 +18,9 @@ else
 	CXXFLAGS 		+= -O3
 endif
 
+# -fno-omit-frame-pointer.. only used for for profiling
+# CXXFLAGS  += -fno-omit-frame-pointer
+
 PROCESSOR	:= $(shell uname -m)
 BASE_DIR 	:= $(CURDIR)
 BIN_DIR		:= build/$(PROCESSOR)$(BUILD_SUFFIX)/bin
