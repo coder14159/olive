@@ -1,3 +1,5 @@
+#include "Assert.h"
+#include "Logger.h"
 #include "LatencyStats.h"
 #include "TimeDuration.h"
 
@@ -8,69 +10,79 @@
 #include <algorithm>
 
 namespace ba = boost::accumulators;
+namespace fs = boost::filesystem;
 
 namespace spmc {
+namespace {
 
-Latency::Latency ()
+std::map<float, Latency::Quantile> empty_quantiles ()
 {
-  m_quantiles[1]     = Quantile (ba::quantile_probability = 0.01);
-  m_quantiles[5]     = Quantile (ba::quantile_probability = 0.05);
-  m_quantiles[25]    = Quantile (ba::quantile_probability = 0.25);
-  m_quantiles[50]    = Quantile (ba::quantile_probability = 0.50);
-  m_quantiles[75]    = Quantile (ba::quantile_probability = 0.70);
-  m_quantiles[80]    = Quantile (ba::quantile_probability = 0.80);
-  m_quantiles[90]    = Quantile (ba::quantile_probability = 0.90);
-  m_quantiles[95]    = Quantile (ba::quantile_probability = 0.95);
-  m_quantiles[99]    = Quantile (ba::quantile_probability = 0.99);
-  m_quantiles[99.5]  = Quantile (ba::quantile_probability = 0.995);
-  m_quantiles[99.6]  = Quantile (ba::quantile_probability = 0.996);
-  m_quantiles[99.7]  = Quantile (ba::quantile_probability = 0.997);
-  m_quantiles[99.8]  = Quantile (ba::quantile_probability = 0.998);
-  m_quantiles[99.9]  = Quantile (ba::quantile_probability = 0.999);
-  m_quantiles[99.95] = Quantile (ba::quantile_probability = 0.9995);
-  m_quantiles[99.99] = Quantile (ba::quantile_probability = 0.9999);
+  std::map<float, Latency::Quantile> quantiles;
 
-  m_empty = m_quantiles;
+  quantiles[1]     = Latency::Quantile (ba::quantile_probability = 0.01);
+  quantiles[5]     = Latency::Quantile (ba::quantile_probability = 0.05);
+  quantiles[25]    = Latency::Quantile (ba::quantile_probability = 0.25);
+  quantiles[50]    = Latency::Quantile (ba::quantile_probability = 0.50);
+  quantiles[75]    = Latency::Quantile (ba::quantile_probability = 0.70);
+  quantiles[80]    = Latency::Quantile (ba::quantile_probability = 0.80);
+  quantiles[90]    = Latency::Quantile (ba::quantile_probability = 0.90);
+  quantiles[95]    = Latency::Quantile (ba::quantile_probability = 0.95);
+  quantiles[99]    = Latency::Quantile (ba::quantile_probability = 0.99);
+  quantiles[99.5]  = Latency::Quantile (ba::quantile_probability = 0.995);
+  quantiles[99.6]  = Latency::Quantile (ba::quantile_probability = 0.996);
+  quantiles[99.7]  = Latency::Quantile (ba::quantile_probability = 0.997);
+  quantiles[99.8]  = Latency::Quantile (ba::quantile_probability = 0.998);
+  quantiles[99.9]  = Latency::Quantile (ba::quantile_probability = 0.999);
+  quantiles[99.95] = Latency::Quantile (ba::quantile_probability = 0.9995);
+  quantiles[99.99] = Latency::Quantile (ba::quantile_probability = 0.9999);
+
+  return quantiles;
 }
 
-void Latency::enable (bool enable)
-{
-  if (!m_enabled && enable && !m_path.empty ())
-  {
-    if (!boost::filesystem::exists (m_path))
-    {
-      m_file.open (m_path);
+} // namespace {
 
-      write_header ();
-    }
-    else
-    {
-      m_file.open (m_path.c_str (), std::ios::app|std::ios_base::out);
-    }
+Latency::Latency ()
+: m_empty (empty_quantiles ())
+, m_quantiles (empty_quantiles ())
+{ }
+
+Latency::Latency (const std::string &directory, const std::string &filename)
+: m_empty (empty_quantiles ())
+, m_quantiles (empty_quantiles ())
+, m_directory (directory)
+{
+  if (!m_directory.empty () && !fs::exists (m_directory))
+  {
+    CHECK_SS (fs::create_directories (m_directory),
+              "Failed to create directory: " << m_directory);
+
+    BOOST_LOG_TRIVIAL(info) << "created directory: " << m_directory;
+
+    auto file_path = fs::path (m_directory) / fs::path (filename);
+    m_file.open (file_path.string ());
+
+    CHECK_SS (m_file.is_open (), "Failed to open file: " + file_path.string ());
+
+    BOOST_LOG_TRIVIAL(info) << "opened file: " << file_path.string ();
+
+    write_header ();
 
     assert (m_file);
   }
-
-  m_enabled = enable;
 }
 
-bool Latency::enabled () const
+Latency::~Latency ()
 {
-  return m_enabled;
+  stop ();
 }
 
-void Latency::path (const std::string &directory, const std::string &name)
+void Latency::stop ()
 {
-  m_path = directory + "/" + name;
+  m_stop = true;
 }
 
 void Latency::reset ()
 {
-  if (!m_enabled)
-  {
-    return;
-  }
-
   m_quantiles = m_empty;
   m_min       = std::numeric_limits<int64_t>::max ();
   m_max       = std::numeric_limits<int64_t>::min ();
@@ -78,7 +90,7 @@ void Latency::reset ()
 
 void Latency::latency (int64_t nanoseconds)
 {
-  if (!m_enabled)
+  if (m_stop)
   {
     return;
   }
@@ -111,11 +123,11 @@ void Latency::write_header ()
   m_file << ",100\n";
 }
 
-void Latency::write_data ()
+Latency &Latency::write_data ()
 {
-  if (!m_file.is_open () || !m_enabled)
+  if (!m_file.is_open () || m_stop)
   {
-    return;
+    return *this;
   }
 
   m_file << m_min;
@@ -127,15 +139,12 @@ void Latency::write_data ()
   }
 
   m_file << "," << m_max << "\n";
+
+  return *this;
 }
 
 std::vector<std::string> Latency::to_strings () const
 {
-  if (!m_enabled)
-  {
-    return {};
-  }
-
   std::vector<std::string> stats;
 
   stats.push_back (

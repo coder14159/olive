@@ -25,20 +25,28 @@ public:
                 boost::accumulators::stats<
                   boost::accumulators::tag::p_square_quantile>>;
 public:
-  Latency ();
 
   /*
-   * Latency measurement is disabled by default
+   * Computes latency information
    */
-  void enable (bool enable);
+  Latency ();
+
+  ~Latency ();
+
   /*
-   * returns true if statistics calculation is enabled
+   * Compute latency data and persists it to file in the named directory
    */
-  bool enabled () const;
+  Latency (const std::string &directory, const std::string &filename);
+
   /*
-   * Set a directory and file name in which to output latency files
+   * Stop latency computation
    */
-  void path (const std::string &directory, const std::string &name);
+  void stop ();
+
+  /*
+   * Return true if latency calculation has been stopped
+   */
+  bool is_stopped () const { return m_stop; }
 
   /*
    * Return a vector of human human readable strings for representing each
@@ -47,36 +55,55 @@ public:
   std::vector<std::string> to_strings () const;
 
   /*
-   * Reset the internal latency stats. Not thread safe.
-   */
-  void reset ();
-
-  /*
    * Add a latency value for statistics calculation
    */
   void latency (int64_t nanoseconds);
 
+  /*
+   * Return map of latency values for a pre-determined set of quantiles
+   */
   const std::map<float, Quantile>& quantiles () const { return m_quantiles; }
 
+  /*
+   * Minimum latency value
+   */
   int64_t min () const { return m_min; }
+  /*
+   * Masximum latency value
+   */
   int64_t max () const { return m_max; }
 
-  void write_data ();
+  /*
+   * Write quantile values to disk
+   */
+  Latency &write_data ();
+
+  /*
+   * Reset the the latency the values
+   * Called on receipt of a RESET_INTERVAL token on the latency queue
+   *
+   * This should only be called from the same context as the thread calling
+   * the Latency::write () method
+   */
+  void reset ();
 
 private:
+
+  void init_quantiles ();
 
   void init_file ();
 
   void write_header ();
 
 private:
+  const std::map<float, Quantile> m_empty; // empty quantiles used for resetting
   std::map<float, Quantile> m_quantiles;
-  std::map<float, Quantile> m_empty; // empty quantiles used for resetting
+  std::string               m_directory;
   std::string               m_path;
   std::ofstream             m_file;
-  bool                      m_enabled = false;
-  int64_t                   m_min = std::numeric_limits<int64_t>::max ();
-  int64_t                   m_max = std::numeric_limits<int64_t>::min ();
+  bool                      m_stop = false;
+  int64_t                   m_min  = std::numeric_limits<int64_t>::max ();
+  int64_t                   m_max  = std::numeric_limits<int64_t>::min ();
 };
 
 } // namespace spmc
