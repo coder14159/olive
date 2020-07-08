@@ -146,7 +146,7 @@ void client (zmq::context_t &context, int highWaterMark, bool test, bool tcp,
           // reset stats?
         }
 
-        stats.update (sizeof (Frame), frame->size,
+        stats.update (sizeof (Frame) + frame->size,
                       frame->seqNum,
                       Time::deserialise (frame->timestamp));
 
