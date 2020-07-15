@@ -146,7 +146,7 @@ private:
   /*
    * True is message drops are permitted for a consumer
    */
-  bool     m_messageDropsAllowed = false;
+  bool m_messageDropsAllowed = false;
 
 };
 

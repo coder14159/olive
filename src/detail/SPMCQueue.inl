@@ -571,7 +571,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
 
   bool ret = false;
 
-  auto  &consumed  = consumer.consumed ();
+  auto &consumed  = consumer.consumed ();
 
   /*
    * Acquire the committed data variable to ensure the data stored in the queue
