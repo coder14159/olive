@@ -21,9 +21,6 @@ std::atomic<bool> g_stop = { false };
 
 CxxOptsHelper parse (int argc, char* argv[])
 {
-  std::string oneKB = std::to_string (1024);
-  std::string oneGB = std::to_string (1024*1024*1024);
-
   cxxopts::Options cxxopts ("spsc_server",
         "Message consumer for shared memory performance testing");
 
@@ -98,28 +95,11 @@ int main(int argc, char* argv[]) try
 
   PerformanceStats stats (directory);
 
-  if (latencyStats)
-    stats.latency ().start ();
+  stats.latency ().summary ().enable (latencyStats);
+  stats.throughput ().summary ().enable (throughputStats);
 
-  if (!latencyStats)
-  {
-    stats.latency ().interval ().stop ();
-
-    if (!intervalStats)
-    {
-      stats.latency ().summary ().stop ();
-    }
-  }
-  if (!throughputStats)
-  {
-    stats.throughput ().interval ().stop ();
-
-    if (!intervalStats)
-    {
-      stats.throughput ().summary ().stop ();
-    }
-  }
-
+  stats.latency ().interval ().enable (latencyStats && intervalStats);
+  stats.throughput ().interval ().enable (throughputStats && intervalStats);
 
   bind_to_cpu (cpu);
 

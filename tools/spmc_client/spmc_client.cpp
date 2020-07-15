@@ -99,30 +99,13 @@ int main(int argc, char* argv[]) try
     stream.stop ();
   });
 
-
   PerformanceStats stats (directory);
 
-  if (latencyStats)
-    stats.latency ().start ();
+  stats.latency ().summary ().enable (latencyStats);
+  stats.latency ().interval ().enable (intervalStats && latencyStats);
 
-  if (!latencyStats)
-  {
-    stats.latency ().interval ().stop ();
-
-    if (!intervalStats)
-    {
-      stats.latency ().summary ().stop ();
-    }
-  }
-  if (!throughputStats)
-  {
-    stats.throughput ().interval ().stop ();
-
-    if (!intervalStats)
-    {
-      stats.throughput ().summary ().stop ();
-    }
-  }
+  stats.throughput ().summary ().enable (throughputStats);
+  stats.throughput ().interval ().enable (intervalStats && throughputStats);
 
   bind_to_cpu (cpu);
 
@@ -167,8 +150,6 @@ int main(int argc, char* argv[]) try
       }
     }
   }
-
-  BOOST_LOG_TRIVIAL (info) << "exit shared memory spmc_client";
 
   return EXIT_SUCCESS;
 }
