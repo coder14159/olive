@@ -25,8 +25,10 @@ CxxOptsHelper parse (int argc, char* argv[])
 
   cxxopts.add_options ()
     ("h,help", "Measure inter-CPU latency")
+    ("p,pause", "Time in nanoseconds to pause between each ping (default: 100)",
+      cxxopts::value<int64_t> ())
     ("t,timeout", "Time to run the test in seconds (default: 2 sec)",
-      cxxopts::value<int> ());
+      cxxopts::value<int64_t> ());
 
   CxxOptsHelper options (cxxopts.parse (argc, argv));
 
@@ -52,25 +54,26 @@ int main(int argc, char* argv[]) try
     std::cout << "stopping.." << std::endl;
   });
 
+  auto ns_since_epoch = [] () {
+    return std::chrono::duration_cast<Nanoseconds> (
+        Clock::now ().time_since_epoch ()).count ();
+  };
+
   auto options = parse (argc, argv);
 
-  Seconds timeout = Seconds (options.value<int> ("timeout", 2));
+  auto sleep = Nanoseconds (options.value<int64_t> ("pause", 100));
+
+  auto timeout = Seconds (options.value<int64_t> ("timeout", 2));
+
+  int64_t zero_ns {0};
+
+  std::atomic<int64_t> start_nanos { zero_ns };
 
   Latency latency;
 
   Timer timer;
 
-  auto ns_since_epoch = [] () {
-    return std::chrono::duration_cast<Nanoseconds> (
-        Clock::now ().time_since_epoch ());
-  };
-
-  Nanoseconds zero_ns {0};
-
   timer.start ();
-
-  Nanoseconds start_ping = zero_ns;
-
   /*
    * Assign a value to timestamp
    */
@@ -80,16 +83,13 @@ int main(int argc, char* argv[]) try
 
     while (!stop)
     {
-      if (start_ping == zero_ns)
+      if (start_nanos == zero_ns)
       {
-        start_ping = ns_since_epoch ();
-
-        // std::atomic_thread_fence (std::memory_order_release);
-        std::atomic_thread_fence (std::memory_order_relaxed);
+        start_nanos = ns_since_epoch ();
       }
-      else
+      else if (sleep.count () > 0)
       {
-        // std::this_thread::sleep_for (5ms);
+        std::this_thread::sleep_for (sleep);
       }
 
       if (to_seconds (timer.elapsed ()) > timeout.count ())
@@ -111,20 +111,13 @@ int main(int argc, char* argv[]) try
 
     while (!stop)
     {
-      // std::atomic_thread_fence (std::memory_order_relaxed);
-      std::atomic_thread_fence (std::memory_order_acquire);
-
-      if (start_ping != zero_ns)
+      if (start_nanos != zero_ns)
       {
-        latency.latency ((ns_since_epoch () - start_ping).count ());
+        latency.latency (ns_since_epoch () - start_nanos);
 
         ++count;
 
-        start_ping = zero_ns;
-
-        std::atomic_thread_fence (std::memory_order_release);
-        // std::atomic_thread_fence (std::memory_order_relaxed);
-
+        start_nanos = zero_ns;
       }
     }
   });
