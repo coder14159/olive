@@ -26,8 +26,6 @@ SPMCStream<QueueType>::SPMCStream (const std::string &memoryName,
   {
     m_queue.cache_size (prefetchSize);
   }
-
-  BOOST_LOG_TRIVIAL(info) << "SPMCStream constructed " << queueName;
 }
 
 template <typename QueueType>
