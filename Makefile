@@ -1,3 +1,5 @@
+.PHONY:	all test bin_dir clean mytest
+
 include Makefile.include
 
 .DEFAULT_GOAL := all
@@ -45,6 +47,17 @@ $(LIB_OBJ_FILES): | $(LIB_DIR)/.obj/src/detail
 $(LIB_DIR)/.obj/src/detail:
 	mkdir -p $(LIB_DIR)/.obj/src/detail
 
+# Build all binaries
+all:	$(BIN_DIR)/spmc_client \
+		$(BIN_DIR)/spmc_server \
+		$(BIN_DIR)/spsc_server \
+		$(BIN_DIR)/spsc_client \
+		$(BIN_DIR)/remove_shared_memory \
+		$(BIN_DIR)/test_performance \
+		$(BIN_DIR)/test_spmcqueue \
+		$(BIN_DIR)/test_stats \
+		$(BIN_DIR)/test_allocator
+
 # Create bin directory if required using "order-only prerequisites" syntax
 bin_dir: | $(BIN_DIR)
 $(BIN_DIR):
@@ -76,6 +89,9 @@ $(BIN_DIR)/spsc_server: $(BIN_DIR) Makefile tools/spsc_server/spsc_server.cpp $(
 $(BIN_DIR)/remove_shared_memory: $(BIN_DIR) Makefile tools/remove_shared_memory/remove_shared_memory.cpp $(LIB_FILE_PATH)
 	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $(BIN_DIR)/remove_shared_memory tools/remove_shared_memory/remove_shared_memory.cpp $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
 
+$(BIN_DIR)/ping_pong: $(BIN_DIR) Makefile tools/ping_pong/ping_pong.cpp $(LIB_FILE_PATH)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $(BIN_DIR)/ping_pong tools/ping_pong/ping_pong.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_FILESYSTEM)
+
 # Build tests
 $(BIN_DIR)/test_allocator: $(BIN_DIR) Makefile tests/test_allocator/test_allocator.cpp $(LIB_FILE_PATH)
 	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -o $(BIN_DIR)/test_allocator tests/test_allocator/test_allocator.cpp -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_THREAD) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
@@ -88,17 +104,6 @@ $(BIN_DIR)/test_spmcqueue: $(BIN_DIR) Makefile tests/test_spmcqueue/test_spmcque
 
 $(BIN_DIR)/test_stats: $(BIN_DIR) Makefile tests/test_stats/test_stats.cpp $(LIB_FILE_PATH)
 	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -o $(BIN_DIR)/test_stats tests/test_stats/test_stats.cpp -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_THREAD) $(LIB_BOOST_FILESYSTEM)
-
-# Build all binaries
-all:	$(BIN_DIR)/spmc_client \
-		$(BIN_DIR)/spmc_server \
-		$(BIN_DIR)/spsc_server \
-		$(BIN_DIR)/spsc_client \
-		$(BIN_DIR)/remove_shared_memory \
-		$(BIN_DIR)/test_performance \
-		$(BIN_DIR)/test_spmcqueue \
-		$(BIN_DIR)/test_stats \
-		$(BIN_DIR)/test_allocator
 
 clean:
 	rm -rf build/$(PROCESSOR)$(BUILD_SUFFIX)
@@ -113,5 +118,3 @@ test:
 	$(call run_test,test_performance)
 	$(call run_test,test_spmcqueue)
 	$(call run_test,test_stats)
-
-.PHONY: all
