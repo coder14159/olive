@@ -1,4 +1,5 @@
 #include "TimeDuration.h"
+#include "Latency.h"
 
 #include <chrono>
 #include <string>
