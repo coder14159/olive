@@ -37,9 +37,4 @@ void ThroughputStats::next (uint64_t header, uint64_t payload, uint64_t seqNum)
   m_summary .next (header, payload, seqNum);
 }
 
-void ThroughputStats::reset_interval ()
-{
-  m_interval.write_data ().reset ();
-}
-
 } // namespace spmc

@@ -1,7 +1,6 @@
 #include "Assert.h"
 #include "Logger.h"
 #include "LatencyStats.h"
-#include "TimeDuration.h"
 
 #include <boost/cstdint.hpp>
 #include <boost/filesystem.hpp>
@@ -13,8 +12,49 @@ namespace ba = boost::accumulators;
 namespace fs = boost::filesystem;
 
 namespace spmc {
-namespace {
 
+std::string nanoseconds_to_pretty (int64_t nanoseconds)
+{
+  if (nanoseconds == std::numeric_limits<int64_t>::max ())
+  {
+    return "-";
+  }
+  else if (nanoseconds == std::numeric_limits<int64_t>::min ())
+  {
+    return "-";
+  }
+  else if (nanoseconds < 1e3)
+  {
+    return (boost::str (boost::format ("%3d ns") % nanoseconds));
+  }
+  else if (nanoseconds < 1e6)
+  {
+    double usecs = static_cast<double> (nanoseconds) / 1.0e3;
+    return (boost::str (boost::format ("%3.0f us") % usecs));
+  }
+  else if (nanoseconds < 1e9)
+  {
+    double msecs = static_cast<double> (nanoseconds) / 1.0e6;
+    return (boost::str (boost::format ("%3.0f ms") % msecs));
+  }
+  else if (nanoseconds < (1e9*60))
+  {
+    double secs = static_cast<double> (nanoseconds) / 1.0e9*60;
+    return (boost::str (boost::format ("%3.0f s") % secs));
+  }
+  else
+  {
+    double mins = static_cast<double> (nanoseconds) / (1e9*60);
+    return (boost::str (boost::format ("%3.0f min") % mins));
+  }
+}
+
+std::string nanoseconds_to_pretty (Nanoseconds nanoseconds)
+{
+  return nanoseconds_to_pretty (nanoseconds.count ());
+}
+
+namespace {
 std::map<float, Latency::Quantile> empty_quantiles ()
 {
   std::map<float, Latency::Quantile> quantiles;
@@ -74,6 +114,14 @@ Latency::Latency (const std::string &directory, const std::string &filename)
 Latency::~Latency ()
 {
   stop ();
+}
+
+void Latency::enable (bool enable)
+{
+  if (!enable)
+  {
+    stop ();
+  }
 }
 
 void Latency::stop ()
@@ -143,8 +191,18 @@ Latency &Latency::write_data ()
   return *this;
 }
 
+std::string Latency::to_string () const
+{
+  return nanoseconds_to_pretty (min ()) + ":" + nanoseconds_to_pretty (max ());
+}
+
 std::vector<std::string> Latency::to_strings () const
 {
+  if (m_stop)
+  {
+    return {};
+  }
+
   std::vector<std::string> stats;
 
   stats.push_back (

@@ -7,14 +7,13 @@
 
 #include <atomic>
 #include <chrono>
-#include <mutex>
 #include <string>
 #include <thread>
 
 namespace spmc {
 
 /*
- * Helper class for latency interval and summary logging
+ * Class for logging of latency values
  */
 class LatencyStats
 {
@@ -35,10 +34,6 @@ public:
 
   ~LatencyStats ();
 
-  void start ();
-
-  void stop ();
-
   void next (std::chrono::steady_clock::time_point time);
 
   /*
@@ -52,6 +47,12 @@ public:
 
   Latency&       interval () { return m_interval;  }
   Latency&       summary ()  { return m_summary;   }
+
+private:
+
+  void start ();
+
+  void stop ();
 
 private:
 
@@ -69,10 +70,9 @@ private:
   Latency m_summary;
   Latency m_interval;
 
-  std::atomic<bool> m_stop  = { false };
+  std::atomic<bool> m_stop    = { false };
 
   std::thread m_thread;
-  std::mutex  m_mutex;
 
 };
 

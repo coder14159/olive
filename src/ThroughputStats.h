@@ -39,8 +39,6 @@ public:
   Throughput&       summary ()        { return m_summary;   }
   const Throughput& summary ()  const { return m_summary;   }
 
-  void reset_interval ();
-
 private:
   Throughput m_interval;
   Throughput m_summary;

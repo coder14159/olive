@@ -13,6 +13,66 @@ namespace fs = boost::filesystem;
 
 namespace spmc {
 
+std::string
+throughput_to_pretty (uint64_t bytes, TimeDuration duration)
+{
+  if (bytes == 0)
+  {
+    return " - ";
+  }
+
+  double bytes_per_second = bytes / to_seconds (duration);
+
+  constexpr double KB = 1024.;
+  constexpr double MB = 1024. * 1024.;
+  constexpr double GB = 1024. * 1024. *1024.;
+
+  if (bytes_per_second > GB)
+  {
+    return (boost::format ("%4.1f GB/s") % (bytes_per_second/GB)).str ();
+  }
+  else if (bytes_per_second > MB)
+  {
+    return (boost::format ("%4.1f MB/s") % (bytes_per_second/MB)).str ();
+  }
+  else if (bytes_per_second > KB)
+  {
+    return (boost::format ("%4.1f KB/s") % (bytes_per_second/KB)).str ();
+  }
+
+  return (boost::format ("%4d bytes/s") % bytes_per_second).str ();
+}
+
+std::string
+message_throughput_to_pretty (uint64_t messages, TimeDuration duration)
+{
+  if (messages == 0)
+  {
+    return " - ";
+  }
+
+  double messages_per_second = messages / to_seconds (duration);
+
+  constexpr double K = 1.0e3;
+  constexpr double M = 1.0e6;
+  constexpr double G = 1.0e9;
+
+  if (messages_per_second > G)
+  {
+    return (boost::format ("%4.1f G msgs/s") % (messages_per_second/G)).str ();
+  }
+  else if (messages_per_second > M)
+  {
+    return (boost::format ("%4.1f M msgs/s") % (messages_per_second/M)).str ();
+  }
+  else if (messages_per_second > K)
+  {
+    return (boost::format ("%4.1f K msgs/s") % (messages_per_second/K)).str ();
+  }
+
+  return (boost::format ("%4d msgs/s") % messages_per_second).str ();
+}
+
 Throughput::Throughput ()
 { }
 
@@ -34,6 +94,14 @@ Throughput::Throughput (const std::string &directory,
   CHECK_SS(!m_file.fail (), "Failed to open file: " << filename);
 
   write_header ();
+}
+
+void Throughput::enable (bool enable)
+{
+  if (!enable)
+  {
+    stop ();
+  }
 }
 
 void Throughput::stop ()
@@ -67,7 +135,7 @@ void Throughput::write_header ()
 
 Throughput &Throughput::write_data ()
 {
-  if (!m_file || !m_file.is_open () || !m_bytes || !m_messages)
+  if (!m_file || !m_file.is_open () || !m_bytes || !m_messages || m_stop)
   {
     return *this;
   }
@@ -153,34 +221,12 @@ uint32_t Throughput::messages_per_sec (TimePoint time) const
 
 std::string Throughput::to_string () const
 {
-  std::stringstream stats;
+  auto elapsed = m_timer.elapsed ();
 
-  auto now = Clock::now ();
+  auto throughput = throughput_to_pretty (m_bytes, elapsed)
+                  + " " + message_throughput_to_pretty (m_messages, elapsed);
 
-  stats << megabytes_per_sec (now) << " MB/s "
-      << std::fixed << std::setprecision (3)
-      << messages_per_sec (now) / 1.0e6 << " M msgs/sec "
-      << m_dropped << " msgs dropped";
-
-  return stats.str ();
-}
-
-std::vector<std::string> Throughput::to_strings () const
-{
-  auto now = Clock::now ();
-
-  std::vector<std::string> stats;
-
-  stats.push_back (
-    (boost::format ("%-13s %.3f MB/sec %.3f M msgs/sec")
-            % "throughput:"
-            % megabytes_per_sec (now)
-            % (messages_per_sec (now) / 1.0e6)).str ());
-
-  stats.push_back (
-    (boost::format ("%-13s %d") % "msgs dropped:" % m_dropped).str ());
-
-  return stats;
+  return throughput;
 }
 
 } // namespace spmc

@@ -1,15 +1,23 @@
 #ifndef IPC_LATENCY_H
 #define IPC_LATENCY_H
 
+#include "Chrono.h"
+
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics.hpp>
+#include <boost/lockfree/spsc_queue.hpp>
 
 #include <fstream>
 #include <map>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace spmc {
+
+std::string nanoseconds_to_pretty (int64_t nanoseconds);
+
+std::string nanoseconds_to_pretty (Nanoseconds nanoseconds);
 
 /*
  * Compute latency quantiles and persist statistics to file.
@@ -38,6 +46,8 @@ public:
    */
   Latency (const std::string &directory, const std::string &filename);
 
+  void enable (bool enable);
+
   /*
    * Stop latency computation
    */
@@ -47,6 +57,11 @@ public:
    * Return true if latency calculation has been stopped
    */
   bool is_stopped () const { return m_stop; }
+
+  /*
+   * Return a string representing latency since the start or last reset
+   */
+  std::string to_string () const;
 
   /*
    * Return a vector of human human readable strings for representing each
@@ -69,7 +84,7 @@ public:
    */
   int64_t min () const { return m_min; }
   /*
-   * Masximum latency value
+   * Maximum latency value
    */
   int64_t max () const { return m_max; }
 
@@ -104,6 +119,12 @@ private:
   bool                      m_stop = false;
   int64_t                   m_min  = std::numeric_limits<int64_t>::max ();
   int64_t                   m_max  = std::numeric_limits<int64_t>::min ();
+
+  std::thread m_thread;
+
+  const uint64_t DEFAULT_QUEUE_SIZE = 10;
+
+  boost::lockfree::spsc_queue<int64_t> m_queue { DEFAULT_QUEUE_SIZE };
 };
 
 } // namespace spmc

@@ -20,24 +20,22 @@ PerformanceStats::PerformanceStats (const std::string &directory)
 
 PerformanceStats::~PerformanceStats ()
 {
-  m_latency.stop ();
-
   /*
    * Output message statistics
    */
-  // if (m_throughput.summary ().enabled ())
+  if (!m_throughput.summary ().is_stopped ())
   {
-    for (auto line : m_throughput.summary ().to_strings ())
-    {
-      BOOST_LOG_TRIVIAL(info) << line;
-    }
+    BOOST_LOG_TRIVIAL(info) << m_throughput.summary ().to_string ();
+
+    BOOST_LOG_TRIVIAL(info) << m_throughput.summary ().dropped ()
+                            << " messages dropped";
   }
 
-  // if (m_latency.summary ().enabled ())
+  if (!m_latency.summary ().is_stopped ())
   {
     for (auto line : m_latency.summary ().to_strings ())
     {
-        BOOST_LOG_TRIVIAL(info) << line;
+      BOOST_LOG_TRIVIAL(info) << line;
     }
   }
 }
@@ -49,8 +47,6 @@ void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
 
   m_throughput.next (bytes, seqNum);
 
-  return;
-#if 0
   /*
    * Not critical for the log interval to be perfectly accurate
    */
@@ -62,15 +58,24 @@ void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
 
     if (!m_latency.interval ().is_stopped ())
     {
-      log += " min=" + nanoseconds_to_pretty (m_latency.interval ().min ())
-          +  " max=" + nanoseconds_to_pretty (m_latency.interval ().max ());
+      if (!log.empty ()) { log += "|"; }
+
+      log += m_latency.interval ().to_string ();
 
       m_latency.interval_reset ();
     }
 
     if (!m_throughput.interval ().is_stopped ())
     {
-      log += " " + m_throughput.interval ().to_string ();
+      if (!log.empty ()) { log += "|"; }
+
+      log += m_throughput.interval ().to_string ();
+
+      if (m_throughput.interval ().dropped () > 0)
+      {
+        log += "|dropped: "
+            + std::to_string (m_throughput.interval ().dropped ());
+      }
 
       m_throughput.interval ().write_data ().reset ();
     }
@@ -82,7 +87,6 @@ void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
 
     m_last = timestamp;
   }
-#endif
 }
 
 void PerformanceStats::update (uint64_t header,

@@ -11,6 +11,11 @@
 namespace spmc {
 
 /*
+ * Create a pretty format string for throughput
+ */
+std::string throughput_to_pretty (uint64_t bytes, TimeDuration duration);
+
+/*
  * Computes message throughput and persist data to file
  *
  * Default behaviour is to do nothing unless the enable () method is called
@@ -54,16 +59,12 @@ public:
    * Reset statistics
    */
   void reset ();
-#if 0
+
   /*
    * Throughput computation is disabled by default
    */
   void enable (bool enable);
-  /*
-   * return true if statistics calculation is enabled
-   */
-  bool enabled () const;
-#endif
+
   uint64_t messages () const { return m_messages; }
   uint64_t dropped ()  const { return m_dropped;  }
   uint64_t bytes ()    const { return m_bytes;    }
@@ -76,14 +77,11 @@ public:
    */
   std::string to_string () const;
 
-  /*
-   * Return list of strings for describing throughput since start or last reset
-   */
-  std::vector<std::string> to_strings () const;
-
   void write_header ();
 
   Throughput &write_data ();
+
+public:
 
 private:
 

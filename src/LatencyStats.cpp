@@ -17,13 +17,17 @@ static const int64_t RESET_INTERVAL = -1;
 
 LatencyStats::LatencyStats ()
 : m_queue (DEFAULT_QUEUE_SIZE)
-{ }
+{
+  start ();
+}
 
 LatencyStats::LatencyStats (const std::string &directory)
 : m_queue (DEFAULT_QUEUE_SIZE)
 , m_summary (directory, "latency-summary.csv")
 , m_interval (directory, "latency-interval.csv")
-{ }
+{
+  start ();
+}
 
 LatencyStats::LatencyStats (size_t queueSize, const std::string &directory)
 : m_queue (queueSize)
@@ -38,8 +42,6 @@ LatencyStats::~LatencyStats ()
 
 void LatencyStats::start ()
 {
-  BOOST_LOG_TRIVIAL(info) << "Start latency statistics";
-
   if (m_thread.joinable ())
   {
     BOOST_LOG_TRIVIAL(warning)
@@ -94,22 +96,16 @@ void LatencyStats::start ()
 
     m_interval.write_data ();
     m_summary.write_data ();
-
   });
-
-  BOOST_LOG_TRIVIAL(info) << "End latency statistics";
 }
 
 void LatencyStats::stop ()
 {
-  if (!m_stop)
-  {
-    m_stop = true;
+  m_stop = true;
 
-    if (m_thread.joinable ())
-    {
-      m_thread.join ();
-    }
+  if (m_thread.joinable ())
+  {
+    m_thread.join ();
   }
 }
 
@@ -126,7 +122,7 @@ void LatencyStats::next (std::chrono::steady_clock::time_point time)
    */
   std::chrono::nanoseconds duration_since_sampled (time - m_sampled);
 
-  if (duration_since_sampled < std::chrono::microseconds (5))
+  if (duration_since_sampled < 5us)
   {
     return;
   }

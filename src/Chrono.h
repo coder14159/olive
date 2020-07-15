@@ -15,14 +15,6 @@ using Nanoseconds  = std::chrono::nanoseconds;
 using Microseconds = std::chrono::microseconds;
 using Milliseconds = std::chrono::milliseconds;
 using Seconds      = std::chrono::seconds;
-// using Minutes      = std::chrono::minutes;
-
-/*
- * Functions returning a human readable duration string
- */
-std::string nanoseconds_to_pretty (int64_t nanoseconds);
-
-std::string nanoseconds_to_pretty (Nanoseconds nanoseconds);
 
 /*
  * Helper conversion functions
