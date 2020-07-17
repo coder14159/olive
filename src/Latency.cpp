@@ -39,7 +39,7 @@ std::string nanoseconds_to_pretty (int64_t nanoseconds)
   }
   else if (nanoseconds < (1e9*60))
   {
-    double secs = static_cast<double> (nanoseconds) / 1.0e9*60;
+    double secs = static_cast<double> (nanoseconds) / 1.0e9;
     return (boost::str (boost::format ("%3.0f s") % secs));
   }
   else
