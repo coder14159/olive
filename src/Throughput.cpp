@@ -83,17 +83,26 @@ Throughput::Throughput (const std::string &directory,
   {
     CHECK_SS (fs::create_directories (directory),
               "Failed to create directory: " << directory);
+
+    BOOST_LOG_TRIVIAL(info) << "created directory: " << directory;
   }
 
   ASSERT(!filename.empty (), "Empty throughput filename");
 
-  fs::path path = fs::path (directory) / fs::path (filename);
+  fs::path file_path = fs::path (directory) / fs::path (filename);
 
-  m_file.open (path.string (), std::ios::app|std::ios_base::out);
+  m_file.open (file_path.string (), std::ios::app|std::ios_base::out);
 
-  CHECK_SS(!m_file.fail (), "Failed to open file: " << filename);
+  CHECK_SS(m_file.is_open (), "Failed to open file: " << file_path);
+
+  BOOST_LOG_TRIVIAL(info) << "opened file: " << file_path.string ();
 
   write_header ();
+}
+
+Throughput::~Throughput ()
+{
+  stop ();
 }
 
 void Throughput::enable (bool enable)
@@ -127,7 +136,10 @@ void Throughput::reset ()
 
 void Throughput::write_header ()
 {
-  assert (m_file.is_open ());
+  if (!m_file.is_open ())
+  {
+    return;
+  }
 
   m_file
     << "avg_message_size,megabytes_per_sec,messages_per_sec,messages_dropped\n";
@@ -135,7 +147,7 @@ void Throughput::write_header ()
 
 Throughput &Throughput::write_data ()
 {
-  if (!m_file || !m_file.is_open () || !m_bytes || !m_messages || m_stop)
+  if (!m_file.is_open () || !m_bytes || !m_messages || m_stop)
   {
     return *this;
   }

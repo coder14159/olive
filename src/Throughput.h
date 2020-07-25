@@ -36,6 +36,8 @@ public:
    */
   Throughput (const std::string &directory, const std::string &filename);
 
+  ~Throughput ();
+
   void stop ();
 
   bool is_stopped () const;
