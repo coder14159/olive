@@ -16,6 +16,7 @@ void Throttle::throttle ()
   auto now = Clock::now();
 
   ++m_counter;
+
   auto targetInterval = Seconds(m_counter / m_rate);
   auto actualInterval = now - m_startTime;
 
