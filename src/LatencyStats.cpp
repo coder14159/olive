@@ -87,11 +87,11 @@ void LatencyStats::start ()
           continue;
         }
 
-        m_interval.latency (latency);
+        m_interval.next (latency);
       }
 
 
-      m_summary.latency (latency);
+      m_summary.next (latency);
     }
 
     m_interval.write_data ();
