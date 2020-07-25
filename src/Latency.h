@@ -72,7 +72,7 @@ public:
   /*
    * Add a latency value for statistics calculation
    */
-  void latency (int64_t nanoseconds);
+  void next (int64_t nanoseconds);
 
   /*
    * Return map of latency values for a pre-determined set of quantiles
@@ -113,7 +113,6 @@ private:
 private:
   const std::map<float, Quantile> m_empty; // empty quantiles used for resetting
   std::map<float, Quantile> m_quantiles;
-  std::string               m_directory;
   std::string               m_path;
   std::ofstream             m_file;
   bool                      m_stop = false;

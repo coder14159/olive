@@ -89,26 +89,26 @@ Latency::Latency ()
 Latency::Latency (const std::string &directory, const std::string &filename)
 : m_empty (empty_quantiles ())
 , m_quantiles (empty_quantiles ())
-, m_directory (directory)
 {
-  if (!m_directory.empty () && !fs::exists (m_directory))
+  if (!directory.empty () && !fs::exists (directory))
   {
-    CHECK_SS (fs::create_directories (m_directory),
-              "Failed to create directory: " << m_directory);
+    CHECK_SS (fs::create_directories (directory),
+              "Failed to create directory: " << directory);
 
-    BOOST_LOG_TRIVIAL(info) << "created directory: " << m_directory;
-
-    auto file_path = fs::path (m_directory) / fs::path (filename);
-    m_file.open (file_path.string ());
-
-    CHECK_SS (m_file.is_open (), "Failed to open file: " + file_path.string ());
-
-    BOOST_LOG_TRIVIAL(info) << "opened file: " << file_path.string ();
-
-    write_header ();
-
-    assert (m_file);
+    BOOST_LOG_TRIVIAL(info) << "created directory: " << directory;
   }
+
+  ASSERT(!filename.empty (), "Empty latency filename");
+
+  auto file_path = fs::path (directory) / fs::path (filename);
+
+  m_file.open (file_path.string ());
+
+  CHECK_SS (m_file.is_open (), "Failed to open file: " + file_path.string ());
+
+  BOOST_LOG_TRIVIAL(info) << "opened file: " << file_path.string ();
+
+  write_header ();
 }
 
 Latency::~Latency ()
@@ -136,7 +136,7 @@ void Latency::reset ()
   m_max       = std::numeric_limits<int64_t>::min ();
 }
 
-void Latency::latency (int64_t nanoseconds)
+void Latency::next (int64_t nanoseconds)
 {
   if (m_stop)
   {
@@ -173,7 +173,7 @@ void Latency::write_header ()
 
 Latency &Latency::write_data ()
 {
-  if (!m_file.is_open () || m_stop)
+  if (!m_file || !m_file.is_open () || m_stop)
   {
     return *this;
   }
