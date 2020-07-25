@@ -55,6 +55,11 @@ public:
    */
   bool next (Header &header, std::vector<uint8_t> &data);
 
+  /*
+   * Retrieve the next packet of data, non-blocking
+   */
+  bool next_non_blocking (Header &header, std::vector<uint8_t> &data);
+
 private:
 
   /*

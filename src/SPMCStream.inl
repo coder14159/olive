@@ -75,6 +75,12 @@ bool SPMCStream<QueueType>::next (Header &header, std::vector<uint8_t> &data)
   return success;
 }
 
+template <typename QueueType>
+bool SPMCStream<QueueType>::next_non_blocking (Header &header, std::vector<uint8_t> &data)
+{
+  return receive (header, data);
+}
+
 // TODO function placeholder for receive policies (eg backoff/yield)
 template <typename QueueType>
 bool SPMCStream<QueueType>::receive (Header &header, std::vector<uint8_t> &data)
