@@ -24,13 +24,13 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
 
   SharedMemory::Allocator allocator (m_memory.get_segment_manager ());
 
-  BOOST_LOG_TRIVIAL(info) << "find or construct shared memory object: "
+  BOOST_LOG_TRIVIAL(info) << "Find or construct shared memory object: "
     << queueName << " in named shared memory: " << memoryName;
 
   m_queue = m_memory.find_or_construct<QueueType> (queueName.c_str())
                                                   (capacity, allocator);
   ASSERT_SS (m_queue != nullptr,
-             "shared memory object initialisation failed: " << queueName);
+             "Shared memory object initialisation failed: " << queueName);
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
@@ -41,18 +41,18 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
 {
   namespace bi = boost::interprocess;
 
-  BOOST_LOG_TRIVIAL(info) << "find shared memory object: " << queueName
+  BOOST_LOG_TRIVIAL(info) << "Find shared memory object: " << queueName
                           << " in named shared memory: " << memoryName;
 
   auto memory = m_memory.find<QueueType> (queueName.c_str());
 
   m_queue = memory.first;
   ASSERT_SS (m_queue != nullptr,
-             "shared memory object initialisation failed: " << queueName);
+             "Shared memory object initialisation failed: " << queueName);
 
   // check we have a single queue object, not an array of them
   ASSERT_SS (memory.second == 1,
-             "queue object: " << queueName << " should not be an array");
+             "Queue object: " << queueName << " should not be an array");
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
