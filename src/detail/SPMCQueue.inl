@@ -133,7 +133,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
       uint64_t queueClaim = claim - minConsumed;
 
 #if DELETE_DEBUG_CODE
-      BOOST_LOG_TRIVIAL(debug) << "claimed=" << m_claimed
+      BOOST_LOG_TRIVIAL(debug) << "Claimed=" << m_claimed
                       << " minConsumed=" << m_backPressure.min_consumed ()
                       << " queueClaim="
                       << m_claimed - m_backPressure.min_consumed ();
@@ -181,7 +181,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
   m_committed.fetch_add (committed, std::memory_order_release);
 
 #if DELETE_DEBUG_CODE
-  BOOST_LOG_TRIVIAL(notice) << "producer m_claimed=" << m_claimed
+  BOOST_LOG_TRIVIAL(notice) << "Producer m_claimed=" << m_claimed
                             << " m_committed=" << m_committed
                             << " diff=" << (m_claimed-m_committed);
 #endif
@@ -278,16 +278,16 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::copy_to_buffer (
   if ((index + size) <= m_capacity)
   {
     // input data does not wrap the queue buffer
-    std::uninitialized_copy_n (from, size, buffer + index);
+    std::memcpy (buffer + index, from, size);
   }
   else
   {
     // input data wraps the queue buffer
     size_t spaceToEnd = m_capacity - index;
 
-    std::uninitialized_copy_n (from, spaceToEnd, buffer + index);
+    std::memcpy (buffer + index, from, spaceToEnd);
 
-    std::uninitialized_copy_n (from + spaceToEnd, size - spaceToEnd, buffer);
+    std::memcpy (buffer, from + spaceToEnd, size - spaceToEnd);
   }
 
 }
@@ -306,13 +306,13 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
 
   if (spaceToEnd >= size)
   {
-    std::uninitialized_copy_n (from + index, size, to);
+    std::memcpy (to, from + index, size);
   }
   else
   {
-    std::uninitialized_copy_n (from + index, spaceToEnd, to);
+    std::memcpy (to, from + index, spaceToEnd);
 
-    std::uninitialized_copy_n (from, size - spaceToEnd, to + spaceToEnd);
+    std::memcpy (to + spaceToEnd, from, size - spaceToEnd);
   }
 
   /*
@@ -355,13 +355,13 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
 
   if (spaceToEnd >= size)
   {
-    std::uninitialized_copy_n (from + index, size, to);
+    std::memcpy (to, from + index, size);
   }
   else
   {
-    std::uninitialized_copy_n (from + index, spaceToEnd, to);
+    std::memcpy (to, from + index, spaceToEnd);
 
-    std::uninitialized_copy_n (from, size - spaceToEnd, to + spaceToEnd);
+    std::memcpy (to + spaceToEnd, from, size - spaceToEnd);
   }
 
   /*
@@ -449,7 +449,7 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::initialise_consumer (
   ProducerType &producer,
   ConsumerType &consumer)
 {
-  BOOST_LOG_TRIVIAL (trace) << "initialiseConsumer";
+  BOOST_LOG_TRIVIAL (trace) << "Initialise consumer";
 
   if (consumer.message_drops_allowed ())
   {
@@ -641,7 +641,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   data.resize (data.size () + size);
 
   if (copy_from_buffer (buffer, data.data (), size, consumed,
-                      consumer.message_drops_allowed ()))
+                       consumer.message_drops_allowed ()))
   {
     m_backPressure.consumed (consumed, producer.index ());
 

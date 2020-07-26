@@ -120,16 +120,17 @@ bool Buffer<Allocator>::push (const uint8_t* data, size_t size)
   if ((m_back + size - 1) <= m_capacity)
   {
     // input data does not wrap the buffer
-    std::uninitialized_copy_n (data, size, buffer + m_back - 1);
+    std::memcpy (buffer + m_back - 1, data, size);
+
   }
   else
   {
     // input data wraps the data buffer
     size_t spaceToEnd = m_capacity - m_back + 1;
 
-    std::uninitialized_copy_n (data, spaceToEnd, buffer + m_back - 1);
+    std::memcpy (buffer + m_back - 1, data, spaceToEnd);
 
-    std::uninitialized_copy_n (data + spaceToEnd, size - spaceToEnd, buffer);
+    std::memcpy (buffer, data + spaceToEnd, size - spaceToEnd);
   }
 
   m_back  = (m_back + size) % m_capacity;
@@ -249,13 +250,13 @@ bool Buffer<Allocator>::pop (uint8_t* data, size_t size)
 
   if (spaceToEnd >= size)
   {
-    std::uninitialized_copy_n (buffer + m_front, size, data);
+    std::memcpy (data, buffer + m_front, size);
   }
   else
   {
-    std::uninitialized_copy_n (buffer + m_front, spaceToEnd, data);
+    std::memcpy (data, buffer + m_front, spaceToEnd);
 
-    std::uninitialized_copy_n (buffer, size - spaceToEnd, data + spaceToEnd);
+    std::memcpy (data + spaceToEnd, buffer, size - spaceToEnd);
   }
 
   m_front = (m_front + size) % m_capacity;
@@ -288,14 +289,13 @@ void Buffer<Allocator>::pop (
 
   if (spaceToEnd >= size)
   {
-    std::uninitialized_copy_n (data.data () + index, size, data.data ());
+    std::memcpy (data.data (), data.data () + index, size);
   }
   else
   {
-    std::uninitialized_copy_n (buffer + index, spaceToEnd, data.data ());
+    std::memcpy (data.data (), buffer + index, spaceToEnd);
 
-    std::uninitialized_copy_n (buffer, size - spaceToEnd,
-                               data.data () + spaceToEnd);
+    std::memcpy (data.data () + spaceToEnd, buffer, size - spaceToEnd);
   }
 
   m_size -= size;
