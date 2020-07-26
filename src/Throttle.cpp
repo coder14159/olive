@@ -28,8 +28,8 @@ void Throttle::throttle ()
   }
 
   /*
-    * Periodically reset the counters so that the throttle is better able to cope
-    * with variations in the machines workload.
+    * Periodically reset the counters so that the throttle is better able to
+    * handle variations in workload.
     */
   if ((now - m_startTime) > Seconds(1))
   {
