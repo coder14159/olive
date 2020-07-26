@@ -1,4 +1,5 @@
 #include "Buffer.h"
+#include "Chrono.h"
 #include "Logger.h"
 #include "PerformanceStats.h"
 #include "SPMCSink.h"
@@ -17,6 +18,7 @@
 #include <ext/numeric>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <thread>
 #include <vector>
 
@@ -1005,3 +1007,118 @@ BOOST_AUTO_TEST_CASE (ThreadIdentity)
 
 }
 
+
+BOOST_AUTO_TEST_CASE (MemoryCopy)
+{
+  constexpr size_t max = 204800;
+
+  Seconds timeout {2};
+
+  size_t arrIn[max];
+  size_t arrOut[max];
+
+  size_t loops_uninitialized_copy_n = 0;
+  size_t loops_memcpy = 0;
+  size_t loops_memmove = 0;
+
+  const size_t counter_check = 100;
+
+
+  for (size_t i = 0; i < max; ++i)
+  {
+    arrIn[i] = i;
+  }
+
+  {
+    Timer timer;
+
+    timer.start ();
+
+    size_t counter = 0;
+
+    while (true)
+    {
+
+      ++counter;
+
+      std::uninitialized_copy_n (arrIn, max, arrOut);
+
+      if (counter == counter_check)
+      {
+        counter = 0;
+        ++loops_uninitialized_copy_n;
+
+        if (to_seconds (timer.elapsed ()) > timeout.count ())
+        {
+          break;
+        }
+      }
+    }
+
+    timer.stop ();
+
+    BOOST_TEST_MESSAGE ("loops: " << loops_uninitialized_copy_n
+                        << " std::uninitialized_copy_n");
+  }
+  {
+    Timer timer;
+
+    timer.start ();
+
+    size_t counter = 0;
+
+    while (true)
+    {
+      ++counter;
+
+      std::memcpy (arrOut, arrIn, max);
+
+      if (counter == counter_check)
+      {
+        counter = 0;
+        ++loops_memcpy;
+
+        if (to_seconds (timer.elapsed ()) > timeout.count ())
+        {
+          break;
+        }
+      }
+    }
+
+    timer.stop ();
+
+    BOOST_TEST_MESSAGE ("loops: " << loops_memcpy << " std::memcpy");
+  }
+  {
+    Timer timer;
+
+    timer.start ();
+
+    size_t counter = 0;
+
+    while (true)
+    {
+      ++counter;
+
+      std::memmove (arrOut, arrIn, max);
+
+      if (counter == counter_check)
+      {
+        counter = 0;
+        ++loops_memmove;
+
+        if (to_seconds (timer.elapsed ()) > timeout.count ())
+        {
+          break;
+        }
+      }
+    }
+
+    timer.stop ();
+
+    BOOST_TEST_MESSAGE ("loops: " << loops_memmove << " std::memmove");
+  }
+
+  BOOST_CHECK (loops_memcpy > (loops_uninitialized_copy_n*5));
+  BOOST_CHECK (loops_memmove > (loops_uninitialized_copy_n*5));
+}
