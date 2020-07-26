@@ -19,7 +19,7 @@ namespace bi = boost::interprocess;
 
 namespace {
 
-std::atomic<bool> g_stop = { false };
+std::atomic<bool> g_stop { false };
 
 CxxOptsHelper parse (int argc, char* argv[])
 {
@@ -88,15 +88,17 @@ int main(int argc, char* argv[]) try
   using Stream = SPMCStream<Queue>;
 
   Stream stream (name, name + ":queue", allowDrops, prefetchCache);
+
   /*
    * Handle signals
    */
   SignalCatcher s ({SIGINT, SIGTERM}, [&stream] (int) {
+
     g_stop = true;
 
-    std::cout << "stopping.." << std::endl;
-
     stream.stop ();
+
+    std::cout << "Stop spmc_client..." << std::endl;
   });
 
   PerformanceStats stats (directory);
@@ -114,14 +116,8 @@ int main(int argc, char* argv[]) try
   std::vector<uint8_t> data;
   std::vector<uint8_t> expected;
 
-  while (true)
+  while (!g_stop)
   {
-    if (g_stop)
-    {
-      BOOST_LOG_TRIVIAL (info) << "stopping stream..";
-      break;
-    }
-
     if (stream.next (header, data))
     {
       stats.update (sizeof (Header) + data.size (), header.seqNum,
@@ -141,15 +137,18 @@ int main(int argc, char* argv[]) try
           std::iota (std::begin (expected), std::end (expected), 1);
         }
 
-        ASSERT_SS(expected.size () == data.size (),
-                "expected.size ()=" << expected.size ()
-                << " data.size ()=" << data.size ());
-        ASSERT(expected == data, "unexpected data packet");
+        ASSERT_SS (expected.size () == data.size (),
+                  "expected.size ()=" << expected.size ()
+                  << " data.size ()=" << data.size ());
+
+        ASSERT (expected == data, "unexpected data packet");
 
         data.clear ();
       }
     }
   }
+
+  BOOST_LOG_TRIVIAL (info) << "Exit stream";
 
   return EXIT_SUCCESS;
 }
