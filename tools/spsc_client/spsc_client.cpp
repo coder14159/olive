@@ -112,7 +112,7 @@ int main(int argc, char* argv[]) try
   {
     if (g_stop)
     {
-      BOOST_LOG_TRIVIAL (info) << "stopping stream..";
+      BOOST_LOG_TRIVIAL (info) << "Stopping stream..";
       break;
     }
 
@@ -145,7 +145,7 @@ int main(int argc, char* argv[]) try
     }
   }
 
-  BOOST_LOG_TRIVIAL (info) << "exit shared memory spsc_client";
+  BOOST_LOG_TRIVIAL (info) << "Exit shared memory spsc_client";
 
   return EXIT_SUCCESS;
 }

@@ -94,11 +94,11 @@ void server (const std::string& name,
 
     g_stop = true;
 
-    std::cout << "stopping.." << std::endl;
+    std::cout << "Stopping.." << std::endl;
 
     for (auto &sink : sinks)
     {
-      BOOST_LOG_TRIVIAL (info) << "stop " << sink->name ();
+      BOOST_LOG_TRIVIAL (info) << "Stop " << sink->name ();
 
       sink->stop ();
     }
@@ -107,7 +107,7 @@ void server (const std::string& name,
   // wait for clients to be ready
   SharedMemoryCounter clientsReady (name + ":client:ready", name);
 
-  BOOST_LOG_TRIVIAL (info) << "waiting for " << numClients << " clients..";
+  BOOST_LOG_TRIVIAL (info) << "Waiting for " << numClients << " clients..";
 
   int toConnect = numClients;
 
@@ -121,7 +121,7 @@ void server (const std::string& name,
 
       if (toConnect > 0)
       {
-        BOOST_LOG_TRIVIAL (info) << "waiting for " << toConnect << " clients..";
+        BOOST_LOG_TRIVIAL (info) << "Waiting for " << toConnect << " clients..";
       }
     }
   }
@@ -131,7 +131,7 @@ void server (const std::string& name,
     return;
   }
 
-  BOOST_LOG_TRIVIAL (info) << "start sending data";
+  BOOST_LOG_TRIVIAL (info) << "Start sending data";
 
   // create a reusable test message
   std::vector<uint8_t> message (messageSize, 0);

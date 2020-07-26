@@ -84,7 +84,7 @@ Throughput::Throughput (const std::string &directory,
     CHECK_SS (fs::create_directories (directory),
               "Failed to create directory: " << directory);
 
-    BOOST_LOG_TRIVIAL(info) << "created directory: " << directory;
+    BOOST_LOG_TRIVIAL(info) << "Created directory: " << directory;
   }
 
   ASSERT(!filename.empty (), "Empty throughput filename");
@@ -95,7 +95,7 @@ Throughput::Throughput (const std::string &directory,
 
   CHECK_SS(m_file.is_open (), "Failed to open file: " << file_path);
 
-  BOOST_LOG_TRIVIAL(info) << "opened file: " << file_path.string ();
+  BOOST_LOG_TRIVIAL(info) << "Opened file: " << file_path.string ();
 
   write_header ();
 }

@@ -70,7 +70,7 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer ()
 
   m_hasNonDropConsumers = true;
 
-  BOOST_LOG_TRIVIAL(trace) << "register consumer: index=" << index
+  BOOST_LOG_TRIVIAL(trace) << "Register consumer: index=" << index
                            << " m_maxConsumerIndex=" << m_maxConsumerIndex
                            << " m_consumerCount="    << m_consumerCount;
 
@@ -97,7 +97,7 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::reset_consumers ()
 template<class Mutex, size_t MaxNoDropConsumers>
 void SPMCBackPressure<Mutex, MaxNoDropConsumers>::unregister_consumer (size_t index)
 {
-  BOOST_LOG_TRIVIAL(trace) << "unregister consumer: index=" << index;
+  BOOST_LOG_TRIVIAL(trace) << "Unregister consumer: index=" << index;
 
   if (index != Consumer::UnInitialisedIndex)
   {
