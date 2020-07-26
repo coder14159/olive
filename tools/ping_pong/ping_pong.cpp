@@ -1,11 +1,10 @@
-// #include <boost/interprocess/managed_shared_memory.hpp>
-// #include <boost/log/trivial.hpp>
 #include "Chrono.h"
 #include "CpuBind.h"
 #include "Latency.h"
 #include "Logger.h"
 #include "SignalCatcher.h"
 #include "Timer.h"
+#include "Throttle.h"
 
 #include "detail/CXXOptsHelper.h"
 
@@ -25,8 +24,8 @@ CxxOptsHelper parse (int argc, char* argv[])
 
   cxxopts.add_options ()
     ("h,help", "Measure inter-CPU latency")
-    ("p,pause", "Time in nanoseconds to pause between each ping (default: 100)",
-      cxxopts::value<int64_t> ())
+    ("r,rate", "msgs/sec set rate to 0 for maximum rate (default: 0)",
+      cxxopts::value<uint64_t> ())
     ("t,timeout", "Time to run the test in seconds (default: 2 sec)",
       cxxopts::value<int64_t> ());
 
@@ -65,11 +64,15 @@ int main(int argc, char* argv[]) try
 
   auto timeout = Seconds (options.value<int64_t> ("timeout", 2));
 
+  auto rate = options.value<uint64_t> ("rate", 0);
+
   int64_t zero_ns {0};
 
   std::atomic<int64_t> start_nanos { zero_ns };
 
   Latency latency;
+
+  Throttle throttle (rate);
 
   Timer timer;
 
@@ -87,10 +90,8 @@ int main(int argc, char* argv[]) try
       {
         start_nanos = ns_since_epoch ();
       }
-      else if (sleep.count () > 0)
-      {
-        std::this_thread::sleep_for (sleep);
-      }
+
+      throttle.throttle ();
 
       if (to_seconds (timer.elapsed ()) > timeout.count ())
       {
@@ -113,7 +114,7 @@ int main(int argc, char* argv[]) try
     {
       if (start_nanos != zero_ns)
       {
-        latency.latency (ns_since_epoch () - start_nanos);
+        latency.next (ns_since_epoch () - start_nanos);
 
         ++count;
 
