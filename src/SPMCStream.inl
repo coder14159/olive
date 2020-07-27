@@ -1,3 +1,5 @@
+#include "detail/Utils.h"
+
 #include <boost/log/trivial.hpp>
 
 #include <atomic>
@@ -65,34 +67,39 @@ void SPMCStream<QueueType>::stop ()
 template <typename QueueType>
 bool SPMCStream<QueueType>::next (Header &header, std::vector<uint8_t> &data)
 {
-  bool success = false;
-
-  while (!success && !m_stop)
+  while (SPMC_EXPECT_TRUE (next_non_blocking (header, data) == false))
   {
-    success = receive (header, data);
+    if (m_stop.load (std::memory_order_relaxed))
+    {
+      return false;
+    }
   }
 
-  return success;
+  return true;
 }
 
 template <typename QueueType>
-bool SPMCStream<QueueType>::next_non_blocking (Header &header, std::vector<uint8_t> &data)
+bool SPMCStream<QueueType>::next_non_blocking (Header &header,
+                                               std::vector<uint8_t> &data)
 {
-  return receive (header, data);
+  if (SPMC_EXPECT_TRUE (m_queue.read_available () > sizeof (Header)))
+  {
+    return m_queue.pop (header, data);
+  }
+
+  return false;
 }
 
 // TODO function placeholder for receive policies (eg backoff/yield)
 template <typename QueueType>
 bool SPMCStream<QueueType>::receive (Header &header, std::vector<uint8_t> &data)
 {
-  bool success = false;
-
-  if (m_queue.read_available () > sizeof (Header))
+  if (SPMC_EXPECT_TRUE (m_queue.read_available () > sizeof (Header)))
   {
-    success = m_queue.pop (header, data);
+    return m_queue.pop (header, data);
   }
 
-  return success;
+  return false;
 }
 
 }

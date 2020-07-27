@@ -96,11 +96,11 @@ void server (const std::string& name,
 
   Throttle throttle (rate);
 
-  while (SPMC_COND_EXPECT (!stop, true))
+  while (SPMC_EXPECT_FALSE (stop))
   {
-    throttle.throttle ();
-
     sink.next (message);
+
+    throttle.throttle ();
   }
 }
 

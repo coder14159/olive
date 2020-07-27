@@ -88,7 +88,7 @@ int main(int argc, char* argv[]) try
 
   Stream stream (name, name + ":queue", allowDrops, prefetchCache);
 
-  bool stop { false };
+  bool stop = { false };
 
   /*
    * Handle signals
@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) try
   std::vector<uint8_t> data;
   std::vector<uint8_t> expected;
 
-  while (SPMC_COND_EXPECT (!stop, true))
+  while (SPMC_EXPECT_FALSE (stop))
   {
     if (stream.next (header, data))
     {
