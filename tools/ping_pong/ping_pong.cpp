@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) try
   SignalCatcher s ({SIGINT, SIGTERM}, [&stop] (int) {
     stop = true;
 
-    std::cout << "stopping.." << std::endl;
+    std::cout << "Stopping ping_pong" << std::endl;
   });
 
   auto ns_since_epoch = [] () {
