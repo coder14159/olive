@@ -4,8 +4,8 @@
 #include "SPMCQueue.h"
 #include "SPMCSink.h"
 #include "Throttle.h"
-
 #include "detail/CXXOptsHelper.h"
+#include "detail/Utils.h"
 
 #include <boost/interprocess/managed_shared_memory.hpp>
 
@@ -16,8 +16,6 @@
 
 using namespace spmc;
 namespace bi = boost::interprocess;
-
-std::atomic<bool> g_stop = { false };
 
 CxxOptsHelper parse (int argc, char* argv[])
 {
@@ -73,15 +71,20 @@ void server (const std::string& name,
 
   Sink sink (name, name + ":queue", queueSize);
 
+  bool stop { false };
   /*
    * Handle signals
    */
-  SignalCatcher s ({SIGINT, SIGTERM}, [&sink] (int) {
-    g_stop = true;
+  SignalCatcher s ({SIGINT, SIGTERM}, [&sink, &stop] (int) {
 
-    std::cout << "stopping.." << std::endl;
+    if (!stop)
+    {
+      stop = true;
 
-    sink.stop ();
+      sink.stop ();
+
+      std::cout << "Stopping spmc_server" << std::endl;
+    }
   });
 
   /*
@@ -93,7 +96,7 @@ void server (const std::string& name,
 
   Throttle throttle (rate);
 
-  while (!g_stop)
+  while (SPMC_COND_EXPECT (!stop, true))
   {
     throttle.throttle ();
 

@@ -8,6 +8,7 @@
 #include "SPMCStream.h"
 #include "detail/CXXOptsHelper.h"
 #include "detail/SharedMemory.h"
+#include "detail/Utils.h"
 
 #include <boost/log/trivial.hpp>
 
@@ -18,8 +19,6 @@ using namespace spmc;
 namespace bi = boost::interprocess;
 
 namespace {
-
-std::atomic<bool> g_stop { false };
 
 CxxOptsHelper parse (int argc, char* argv[])
 {
@@ -89,16 +88,21 @@ int main(int argc, char* argv[]) try
 
   Stream stream (name, name + ":queue", allowDrops, prefetchCache);
 
+  bool stop { false };
+
   /*
    * Handle signals
    */
-  SignalCatcher s ({SIGINT, SIGTERM}, [&stream] (int) {
+  SignalCatcher s ({SIGINT, SIGTERM}, [&stream, &stop] (int) {
 
-    g_stop = true;
+    if (!stop)
+    {
+      stop = true;
 
-    stream.stop ();
+      stream.stop ();
 
-    std::cout << "Stop spmc_client..." << std::endl;
+      std::cout << "Stopping spmc_client" << std::endl;
+    }
   });
 
   PerformanceStats stats (directory);
@@ -116,7 +120,7 @@ int main(int argc, char* argv[]) try
   std::vector<uint8_t> data;
   std::vector<uint8_t> expected;
 
-  while (!g_stop)
+  while (SPMC_COND_EXPECT (!stop, true))
   {
     if (stream.next (header, data))
     {
