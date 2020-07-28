@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE (TestTimeDuration)
   BOOST_CHECK (per_call.count () < 200);
 }
 
-BOOST_AUTO_TEST_CASE (ThroughputOfCircularBuffers)
+BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
 {
   if (getenv ("NOTIMING") != nullptr)
   {
@@ -235,7 +235,7 @@ double VectorThroughput (size_t bufferSize, size_t batchSize)
                 / to_seconds (timer.elapsed ());
 };
 
-BOOST_AUTO_TEST_CASE (VectorPerformance)
+BOOST_AUTO_TEST_CASE (VectorThroughput)
 {
   if (getenv ("NOTIMING") != nullptr)
   {
@@ -386,7 +386,7 @@ void sink_stream_in_single_process_pod (
   producer.join ();
 }
 
-BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStream)
+BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiThread)
 {
   if (getenv ("NOTIMING") != nullptr)
   {
@@ -418,7 +418,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStream)
   BOOST_TEST_MESSAGE ("rate\t\t" << (rate/1.0e6) << " M messages/sec");
 }
 
-BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStream)
+BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiThread)
 {
   if (getenv ("NOTIMING") != nullptr)
   {
@@ -455,7 +455,7 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStream)
   }
 }
 
-BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamWithPrefetch)
+BOOST_AUTO_TEST_CASE (ThroughputSinkStreamWithPrefetchMultiThread)
 {
   if (getenv ("NOTIMING") != nullptr)
   {
@@ -498,7 +498,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamWithPrefetch)
   }
 }
 
-BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStreamWithPrefetch)
+BOOST_AUTO_TEST_CASE (LatencySinkStreamWithPrefetchMultiThread)
 {
   if (getenv ("NOTIMING") != nullptr)
   {
@@ -540,7 +540,7 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStreamWithPrefetch)
   }
 }
 
-BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamPOD)
+BOOST_AUTO_TEST_CASE (ThroughputSinkStreamPODMultiThread)
 {
   if (getenv ("NOTIMING") != nullptr)
   {
@@ -576,7 +576,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamPOD)
   BOOST_CHECK (rate > 1e6);
 }
 
-BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStreamPOD)
+BOOST_AUTO_TEST_CASE (LatencySinkStreamPODMultiThread)
 {
   if (getenv ("NOTIMING") != nullptr)
   {
@@ -617,7 +617,7 @@ BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStreamPOD)
   }
 }
 
-BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamPODWithPrefetch)
+BOOST_AUTO_TEST_CASE (ThroughputSinkStreamPODWithPrefetchMultiThread)
 {
   if (getenv ("NOTIMING") != nullptr)
   {
@@ -652,7 +652,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceOfSinkStreamPODWithPrefetch)
   BOOST_CHECK (rate > 1e6);
 }
 
-BOOST_AUTO_TEST_CASE (LatencyPerformanceOfSinkStreamPODWithPrefetch)
+BOOST_AUTO_TEST_CASE (LatencySinkStreamPODWithPrefetchMultiThread)
 {
   if (getenv ("NOTIMING") != nullptr)
   {
@@ -701,7 +701,7 @@ void sink_stream_in_shared_memory (
   using namespace boost;
   using namespace boost::interprocess;
 
-  std::string name = "SinkStreamInSharedMemory:Perf";
+  std::string name = "SinkStreamSharedMemory:Perf";
 
   struct RemoveSharedMemory
   {
@@ -783,7 +783,7 @@ void sink_stream_in_shared_memory (
 
 }
 
-BOOST_AUTO_TEST_CASE (ThroughputPerformanceSinkStreamInSharedMemory)
+BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiProcess)
 {
   if (getenv ("NOTIMING") != nullptr)
   {
@@ -817,7 +817,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceSinkStreamInSharedMemory)
                       << (messages_per_sec/1.0e6) << " M messages/sec");
 }
 
-BOOST_AUTO_TEST_CASE (ThroughputPerformanceSinkStreamInSharedMemoryPrefetch)
+BOOST_AUTO_TEST_CASE (ThroughputSinkStreamWithPrefetchMultiProcess)
 {
   if (getenv ("NOTIMING") != nullptr)
   {
@@ -851,7 +851,7 @@ BOOST_AUTO_TEST_CASE (ThroughputPerformanceSinkStreamInSharedMemoryPrefetch)
                       << (messages_per_sec/1.0e6) << " M messages/sec");
 }
 
-BOOST_AUTO_TEST_CASE (LatencyPerformanceSinkStreamInSharedMemory)
+BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiProcess)
 {
   if (getenv ("NOTIMING") != nullptr)
   {
