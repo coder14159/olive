@@ -32,6 +32,8 @@
 using namespace std::chrono_literals;
 using namespace boost::log::trivial;
 
+namespace ba = boost::accumulators;
+
 using namespace spmc;
 
 /*
@@ -200,8 +202,8 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
   }
 }
 
-template<class Vector>
-double VectorThroughput (size_t bufferSize, size_t batchSize)
+template <class Vector>
+double ThroughputOfVector (size_t bufferSize, size_t batchSize)
 {
   Buffer<std::allocator<uint8_t>> buffer (bufferSize);
   std::vector<uint8_t> in (batchSize);
@@ -248,19 +250,19 @@ BOOST_AUTO_TEST_CASE (VectorThroughput)
     size_t bufferSize = 204800;
 
     double throughput =
-      VectorThroughput<std::vector<uint8_t>> (bufferSize, batchSize);
+      ThroughputOfVector<std::vector<uint8_t>> (bufferSize, batchSize);
     BOOST_TEST_MESSAGE ("Throughput std::vector\t\tsize=" << batchSize << " "
       << std::fixed << std::setprecision (3) << throughput << " GB/s");
 
     throughput =
-      VectorThroughput<small_vector<uint8_t, 1024>> (bufferSize, batchSize);
+      ThroughputOfVector<small_vector<uint8_t, 1024>> (bufferSize, batchSize);
     BOOST_TEST_MESSAGE ("Throughput small_vector\t\tsize=" << batchSize << " "
       << std::fixed << std::setprecision (3) << throughput << " GB/s");
 
     if (batchSize <= 1024)
     {
       throughput =
-        VectorThroughput<static_vector<uint8_t, 1024>> (bufferSize, batchSize);
+        ThroughputOfVector<static_vector<uint8_t, 1024>> (bufferSize, batchSize);
       BOOST_TEST_MESSAGE ("Throughput static_vector\tsize=" << batchSize << " "
         << std::fixed << std::setprecision (3) << throughput << " GB/s");
     }
@@ -275,6 +277,14 @@ BOOST_AUTO_TEST_CASE (VectorThroughput)
 
   BOOST_CHECK (true);
 }
+
+float latency_percentile_usecs (const PerformanceStats &stats, float percentile)
+{
+  float nanoseconds = static_cast<int64_t>(ba::p_square_quantile (
+                          stats.latency ().summary ().quantiles ()
+                               .at (percentile)));
+  return (nanoseconds/1000.);
+};
 
 void sink_stream_in_single_process (
     size_t            capacity,
@@ -441,6 +451,8 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiThread)
 
   BOOST_CHECK (throughput > 100);
 
+  BOOST_CHECK (latency_percentile_usecs (stats, 50.) < 10);
+
   BOOST_TEST_MESSAGE ("throughput\t" << std::setprecision (3)
                       << (throughput/1024.) << " GB/sec");
 
@@ -522,6 +534,8 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamWithPrefetchMultiThread)
                          .summary ()
                          .megabytes_per_sec (Clock::now ());
 
+  BOOST_CHECK (latency_percentile_usecs (stats, 50.) < 10);
+
   BOOST_CHECK (throughput > 100);
 
   BOOST_TEST_MESSAGE ("throughput\t" << std::setprecision (3)
@@ -599,6 +613,8 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamPODMultiThread)
 
   BOOST_CHECK (throughput > 100);
 
+  BOOST_CHECK (latency_percentile_usecs (stats, 50.) < 10);
+
   BOOST_TEST_MESSAGE ("throughput\t" << std::setprecision (3)
                       << (throughput/1024.) << " GB/sec");
 
@@ -675,6 +691,8 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamPODWithPrefetchMultiThread)
 
   BOOST_CHECK (throughput > 100);
 
+  BOOST_CHECK (latency_percentile_usecs (stats, 50.) < 10);
+
   BOOST_TEST_MESSAGE ("throughput\t" << std::setprecision (3)
                       << (throughput/1024.) << " GB/sec");
 
@@ -740,6 +758,7 @@ void sink_stream_in_shared_memory (
     while (!stop)
     {
       sink.next (message);
+
       throttle.throttle ();
     }
   });
@@ -760,8 +779,6 @@ void sink_stream_in_shared_memory (
       {
         stats.update (header.size+sizeof (Header), header.seqNum,
                       TimePoint (Nanoseconds (header.timestamp)));
-
-        message.clear ();
       }
       else
       {
@@ -873,6 +890,8 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiProcess)
                          .megabytes_per_sec (Clock::now ());
 
   BOOST_CHECK (megabytes_per_sec > 100);
+
+  BOOST_CHECK (latency_percentile_usecs (stats, 50.) < 10);
 
   BOOST_TEST_MESSAGE ("throughput\t" << std::setprecision (3)
                       << (megabytes_per_sec/1024.) << " GB/sec");
