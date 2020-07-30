@@ -915,8 +915,8 @@ BOOST_AUTO_TEST_CASE (RestartClient)
 
       /*
        * Allow the clients to initialise and receive some data.
-       * Sleep for more than one second so there is no chance of the throughput
-       * calc rounding number of seconds down to zero
+       * Sleep for more than one second so that the throughput calc does not
+       * round number of seconds down to zero.
        */
       std::this_thread::sleep_for (Milliseconds (1500));
 
