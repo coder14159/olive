@@ -19,9 +19,8 @@ SPSCSink::SPSCSink (const std::string &memoryName,
   m_queue = m_memory.find_or_construct<SharedMemory::SPSCQueue>
                                   (objectName.c_str())(queueSize, m_allocator);
 
-  assert_expr (m_queue != nullptr, [&objectName]() {
-               std::cerr << "shared memory object initialisation failed: "
-                         << objectName << std::endl; });
+  ASSERT_SS(m_queue != nullptr,
+            "shared memory object initialisation failed: " << objectName);
 }
 
 
