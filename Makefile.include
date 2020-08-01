@@ -4,40 +4,46 @@
 
 COMPILER := /usr/bin/g++
 
-CXXFLAGS	+= -g -Wall
-CXXFLAGS	+= -DBOOST_LOG_DYN_LINK
-CXXFLAGS	+= -lrt -lpthread
+CXXFLAGS  += -g -Wall
+CXXFLAGS  += -DBOOST_LOG_DYN_LINK
+CXXFLAGS  += -lrt -lpthread
 
 # _GNU_SOURCE is required for pthreads
-CXXFLAGS	+= -D_GNU_SOURCE
+CXXFLAGS  += -D_GNU_SOURCE
 
 ifdef DEBUG
-	CXXFLAGS 		+= -O0
-	BUILD_SUFFIX	+= .debug
+  CXXFLAGS     += -O0
+  BUILD_SUFFIX += .debug
 else
-	CXXFLAGS 		+= -O3
+  CXXFLAGS     += -O3
 endif
 
 # -fno-omit-frame-pointer.. only used for for profiling
 # CXXFLAGS  += -fno-omit-frame-pointer
 
-PROCESSOR	:= $(shell uname -m)
-BASE_DIR 	:= $(CURDIR)
-BIN_DIR		:= build/$(PROCESSOR)$(BUILD_SUFFIX)/bin
-LIB_DIR		:= build/$(PROCESSOR)$(BUILD_SUFFIX)/lib
+PROCESSOR  := $(shell uname -m)
+BASE_DIR   := $(CURDIR)
+BIN_DIR    := build/$(PROCESSOR)$(BUILD_SUFFIX)/bin
+LIB_DIR    := build/$(PROCESSOR)$(BUILD_SUFFIX)/lib
 
-THIRD_PARTY_DIR		:= /home/ian/thirdparty
+THIRD_PARTY_DIR := /home/ian/thirdparty
 
 # Third party libraries
-BOOST_BASE_DIR		:= $(THIRD_PARTY_DIR)/boost_1_73_0
-BOOST_LIB_DIR		:= $(BOOST_BASE_DIR)/build/lib
-BOOST_HEADER_DIR	:= $(BOOST_BASE_DIR)/build/include
-CXXFLAGS			+= -L$(BOOST_LIB_DIR)
-CXXFLAGS			+= -Wl,-rpath=$(BOOST_LIB_DIR)
+BOOST_BASE_DIR    := $(THIRD_PARTY_DIR)/boost_1_73_0
+BOOST_LIB_DIR     := $(BOOST_BASE_DIR)/build/lib
+BOOST_HEADER_DIR  := $(BOOST_BASE_DIR)/build/include
+CXXFLAGS          += -L$(BOOST_LIB_DIR)
+CXXFLAGS          += -Wl,-rpath=$(BOOST_LIB_DIR)
 
-CXXOPTS_BASE_DIR	:= $(THIRD_PARTY_DIR)/cxxopts-2.2.0
-CXXOPTS_HEADER_DIR	:= $(CXXOPTS_BASE_DIR)/include
+# CxxOpts
+CXXOPTS_BASE_DIR   := $(THIRD_PARTY_DIR)/cxxopts-2.2.0
+CXXOPTS_HEADER_DIR := $(CXXOPTS_BASE_DIR)/include
 
-CXXFLAGS_LIB		:= -fPIC
+CXXFLAGS_LIB := -fPIC
 
-ROOT_DIR	:= $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
+# Valgrind
+VALGRIND_BASE_DIR   := $(THIRD_PARTY_DIR)/valgrind/build/x86_64
+VALGRIND_HEADER_DIR := $(VALGRIND_BASE_DIR)/include
+CXXFLAGS            += -I$(VALGRIND_HEADER_DIR)
+
+ROOT_DIR := $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
