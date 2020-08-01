@@ -47,10 +47,13 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
   auto memory = m_memory.find<QueueType> (queueName.c_str());
 
   m_queue = memory.first;
+
   ASSERT_SS (m_queue != nullptr,
              "Shared memory object initialisation failed: " << queueName);
 
-  // check we have a single queue object, not an array of them
+  /*
+   * check we have a single queue object, not an array of them
+   */
   ASSERT_SS (memory.second == 1,
              "Queue object: " << queueName << " should not be an array");
 }
@@ -164,6 +167,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
 
     /*
      * Make sure the payload is received
+     *
      * TODO Consider adding resilience if the payload is not sent.
      */
     while (m_cache.size () < header.size)
@@ -178,7 +182,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
     return m_queue->pop (header, data, m_producer, m_consumer);
   }
 
-  ASSERT (false, "SPMCQueue::pop () should have returned");
+  UNREACHABLE ("SPMCQueue::pop () should have exited");
 }
 
 } // namespace spmc {
