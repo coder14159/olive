@@ -7,6 +7,7 @@
 #include <boost/format.hpp>
 
 #include <algorithm>
+#include <sstream>
 
 namespace ba = boost::accumulators;
 namespace fs = boost::filesystem;
@@ -92,21 +93,21 @@ Latency::Latency (const std::string &directory, const std::string &filename)
 {
   if (!directory.empty () && !fs::exists (directory))
   {
-    CHECK_SS (fs::create_directories (directory),
-              "Failed to create directory: " << directory);
+    ASSERT_SS (fs::create_directories (directory),
+               "Failed to create directory: " << directory);
 
-    BOOST_LOG_TRIVIAL(info) << "created directory: " << directory;
+    BOOST_LOG_TRIVIAL (info) << "Created directory: " << directory;
   }
 
-  ASSERT(!filename.empty (), "Empty latency filename");
+  ASSERT_SS (!filename.empty (), "Empty latency filename");
 
-  auto file_path = fs::path (directory) / fs::path (filename);
+  fs::path file_path = fs::path (directory) / fs::path (filename);
 
-  m_file.open (file_path.string ());
+  m_file.open (file_path.string (), std::ios::app|std::ios_base::out);
 
-  CHECK_SS (m_file.is_open (), "Failed to open file: " + file_path.string ());
+  ASSERT_SS (m_file.is_open (), "Failed to open file: " + file_path.string ());
 
-  BOOST_LOG_TRIVIAL(info) << "opened file: " << file_path.string ();
+  BOOST_LOG_TRIVIAL (debug) << "Opened latency file: " << file_path.string ();
 
   write_header ();
 }
@@ -173,7 +174,7 @@ void Latency::write_header ()
 
 Latency &Latency::write_data ()
 {
-  if (!m_file || !m_file.is_open () || m_stop)
+  if (!m_file || !m_file.is_open ())
   {
     return *this;
   }
