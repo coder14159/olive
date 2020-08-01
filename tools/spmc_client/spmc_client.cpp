@@ -1,5 +1,3 @@
-#define SPMC_ENABLE_ASSERTS 1
-
 #include "Assert.h"
 #include "CpuBind.h"
 #include "Logger.h"
