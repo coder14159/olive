@@ -107,7 +107,7 @@ Latency::Latency (const std::string &directory, const std::string &filename)
 
   ASSERT_SS (m_file.is_open (), "Failed to open file: " + file_path.string ());
 
-  BOOST_LOG_TRIVIAL (debug) << "Opened latency file: " << file_path.string ();
+  BOOST_LOG_TRIVIAL (info) << "Latency file: " << file_path.string ();
 
   write_header ();
 }

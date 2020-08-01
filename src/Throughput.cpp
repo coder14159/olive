@@ -95,7 +95,7 @@ Throughput::Throughput (const std::string &directory,
 
   ASSERT_SS (m_file.is_open (), "Failed to open file: " << file_path.string ());
 
-  BOOST_LOG_TRIVIAL (debug) << "Opened throughput file: " << file_path.string ();
+  BOOST_LOG_TRIVIAL (info) << "Throughput file: " << file_path.string ();
 
   write_header ();
 }
