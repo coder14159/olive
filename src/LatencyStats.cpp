@@ -33,7 +33,9 @@ LatencyStats::LatencyStats (size_t queueSize, const std::string &directory)
 : m_queue (queueSize)
 , m_summary (directory, "latency-summary.csv")
 , m_interval (directory, "latency-interval.csv")
-{ }
+{
+  start ();
+}
 
 LatencyStats::~LatencyStats ()
 {
