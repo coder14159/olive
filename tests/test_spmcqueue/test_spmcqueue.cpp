@@ -1,7 +1,3 @@
-#define SPMC_ENABLE_ASSERTS 1
-
-#include "Assert.h"
-
 #include "Buffer.h"
 #include "Chrono.h"
 #include "LatencyStats.h"
@@ -28,8 +24,6 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE SPMCQueueTests
 #include <boost/test/unit_test.hpp>
-
-#define SPMC_DEBUG_ASSERT
 
 using namespace spmc;
 using namespace boost::log::trivial;
@@ -106,8 +100,8 @@ BOOST_AUTO_TEST_CASE (BasicBufferTests)
       buffer.push (in.data (), in.size ());
       buffer.pop (out, in.size ());
 
-      BOOST_CHECK (out.size () == in.size ());
-      BOOST_CHECK (out == in);
+      BOOST_CHECK_EQUAL (out.size (), in.size ());
+      BOOST_CHECK (in == out);
     }
   }
   { // Wrap the buffer size a multiple of data
@@ -123,8 +117,8 @@ BOOST_AUTO_TEST_CASE (BasicBufferTests)
       buffer.push (in.data (), in.size ());
       buffer.pop (out, in.size ());
 
-      BOOST_CHECK (out.size () == in.size ());
-      BOOST_CHECK (out == in);
+      BOOST_CHECK_EQUAL (out.size (), in.size ());
+      BOOST_CHECK (in == out);
     }
   }
   { // resize
@@ -159,8 +153,8 @@ BOOST_AUTO_TEST_CASE (BufferPopStruct)
   buffer.push (in);
   buffer.pop (out);
 
-  BOOST_CHECK (in.a == out.a);
-  BOOST_CHECK (in.b == out.b);
+  BOOST_CHECK_EQUAL (in.a, out.a);
+  BOOST_CHECK_EQUAL (in.b, out.b);
 }
 
 BOOST_AUTO_TEST_CASE (BufferConsumesFromSPSCQueue)
@@ -284,12 +278,12 @@ BOOST_AUTO_TEST_CASE (SPMCQueuePushPod)
   Header headerOut;
 
   BOOST_CHECK (queue.pop (headerOut, data));
-  BOOST_CHECK (headerIn.version == headerOut.version);
+  BOOST_CHECK_EQUAL (headerIn.version, headerOut.version);
 
   Payload *payloadOut = reinterpret_cast<Payload*> (data.data ());
 
-  BOOST_CHECK (payloadIn.i == payloadOut->i);
-  BOOST_CHECK (payloadIn.c == payloadOut->c);
+  BOOST_CHECK_EQUAL (payloadIn.i, payloadOut->i);
+  BOOST_CHECK_EQUAL (payloadIn.c, payloadOut->c);
 
 }
 
@@ -495,11 +489,11 @@ BOOST_AUTO_TEST_CASE (SlowConsumerNoMessageDrops)
   ++headerProducer.seqNum;
   BOOST_CHECK_EQUAL (queue.push (headerProducer, payloadProducer), false);
 
-  BOOST_CHECK_EQUAL (queue.pop (header, payload), true);
+  BOOST_CHECK (queue.pop (header, payload));
   BOOST_CHECK (payloadProducer == payload);
 
   headerProducer.seqNum = 123;
-  BOOST_CHECK_EQUAL (queue.push (headerProducer, payloadProducer), true);
+  BOOST_CHECK (queue.push (headerProducer, payloadProducer));
   BOOST_CHECK (payloadProducer == payload);
 
   // no message drops enabled so pops the next unconsumed message
@@ -677,7 +671,7 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerSingleConsumer)
   // test throughput against a relatively conservative value
   auto &summary = client.throughputStats ().summary ();
   BOOST_CHECK (summary.messages () > 100);
-  BOOST_CHECK (summary.dropped () == 0);
+  BOOST_CHECK_EQUAL (summary.dropped (), 0);
 
   BOOST_TEST_MESSAGE ("messages dropped:\t" << summary.dropped ());
 
@@ -893,7 +887,7 @@ BOOST_AUTO_TEST_CASE (TooManyConsumers)
  */
 BOOST_AUTO_TEST_CASE (RestartClient)
 {
-  spmc::ScopedLogLevel log (info);
+  spmc::ScopedLogLevel log (error);
 
   using QueueType = SPMCQueue<std::allocator<uint8_t>>;
   QueueType queue (500);
@@ -1049,7 +1043,7 @@ BOOST_AUTO_TEST_CASE (SinkStreamInSharedMemory)
         stats.update (header.size, header.seqNum,
                       TimePoint (Nanoseconds (header.timestamp)));
 
-        BOOST_ASSERT (count == header.seqNum); // no message drops
+        BOOST_CHECK_EQUAL (count, header.seqNum); // no message drops
 
         BOOST_CHECK (message == expected);
       }
