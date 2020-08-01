@@ -38,12 +38,6 @@ BOOST_AUTO_TEST_CASE(ThroughputStatsUpdates)
                     .megabytes_per_sec (Clock::now ()) > 100);
 }
 
-boost::filesystem::path
-operator+ (boost::filesystem::path left, boost::filesystem::path right)
-{
-  return boost::filesystem::path(left) += right;
-}
-
 BOOST_AUTO_TEST_CASE(LatencyStatsUpdateIsFast)
 {
   spmc::ScopedLogLevel log (warning);
@@ -57,7 +51,7 @@ BOOST_AUTO_TEST_CASE(LatencyStatsUpdateIsFast)
       m_path  = fs::temp_directory_path ()
               / fs::unique_path ("%%%%-%%%%-%%%%-%%%%");
 
-      fs::create_directory (m_path);
+      fs::create_directories (m_path);
     }
 
     ~TempDir () { fs::remove_all (m_path); }
@@ -102,4 +96,6 @@ BOOST_AUTO_TEST_CASE(LatencyStatsUpdateIsFast)
   }
 
   BOOST_CHECK (fs::exists (dir.path ()));
+  BOOST_CHECK (fs::exists (dir.path () / fs::path ("latency-interval.csv")));
+  BOOST_CHECK (fs::exists (dir.path () / fs::path ("latency-summary.csv")));
 }
