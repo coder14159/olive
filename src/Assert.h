@@ -37,6 +37,8 @@ namespace spmc {
 
 #endif
 
+#define UNREACHABLE(message) { throw (message); }
+
 } // namespace spmc
 
 #endif // IPC_ASSERT_H
