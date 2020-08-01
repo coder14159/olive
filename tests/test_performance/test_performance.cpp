@@ -25,8 +25,6 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE SPMCTestPerformance
 
-#define SPMC_DEBUG_ASSERT
-
 #include <boost/test/unit_test.hpp>
 
 using namespace std::chrono_literals;
