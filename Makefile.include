@@ -6,6 +6,7 @@ COMPILER := /usr/bin/g++
 
 CXXFLAGS  += -g -Wall
 CXXFLAGS  += -DBOOST_LOG_DYN_LINK
+CXXFLAGS  += -DENABLE_ASSERTS=1
 CXXFLAGS  += -lrt -lpthread
 
 # _GNU_SOURCE is required for pthreads
