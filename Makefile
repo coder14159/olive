@@ -84,14 +84,14 @@ $(LIB_DIR)/.obj/src/detail:
 
 # Build all binaries
 all:	$(BIN_DIR)/spmc_client \
-		$(BIN_DIR)/spmc_server \
-		$(BIN_DIR)/spsc_server \
-		$(BIN_DIR)/spsc_client \
-		$(BIN_DIR)/remove_shared_memory \
-		$(BIN_DIR)/test_performance \
-		$(BIN_DIR)/test_spmcqueue \
-		$(BIN_DIR)/test_stats \
-		$(BIN_DIR)/test_allocator
+			$(BIN_DIR)/spmc_server \
+			$(BIN_DIR)/spsc_server \
+			$(BIN_DIR)/spsc_client \
+			$(BIN_DIR)/remove_shared_memory \
+			$(BIN_DIR)/test_performance \
+			$(BIN_DIR)/test_spmcqueue \
+			$(BIN_DIR)/test_stats \
+			$(BIN_DIR)/test_allocator
 
 # Create bin directory if required using "order-only prerequisites" syntax
 bin_dir: | $(BIN_DIR)
