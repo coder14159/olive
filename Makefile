@@ -18,20 +18,55 @@ LIB_BOOST_UNIT_TEST  := -lboost_unit_test_framework
 # SPMC library target
 LIB_FILE_NAME = libspmc.a
 
-LIB_SRC_CPP_FILES += src/CpuBind.cpp
+LIB_SRC_CPP_FILES += src/Assert.h
+LIB_SRC_CPP_FILES += src/Buffer.h
+LIB_SRC_CPP_FILES += src/Buffer.inl
 LIB_SRC_CPP_FILES += src/Chrono.cpp
+LIB_SRC_CPP_FILES += src/Chrono.h
+LIB_SRC_CPP_FILES += src/CpuBind.cpp
+LIB_SRC_CPP_FILES += src/CpuBind.h
 LIB_SRC_CPP_FILES += src/Latency.cpp
+LIB_SRC_CPP_FILES += src/Latency.h
 LIB_SRC_CPP_FILES += src/LatencyStats.cpp
+LIB_SRC_CPP_FILES += src/LatencyStats.h
 LIB_SRC_CPP_FILES += src/Logger.cpp
+LIB_SRC_CPP_FILES += src/Logger.h
 LIB_SRC_CPP_FILES += src/PerformanceStats.cpp
+LIB_SRC_CPP_FILES += src/PerformanceStats.h
 LIB_SRC_CPP_FILES += src/SignalCatcher.cpp
+LIB_SRC_CPP_FILES += src/SignalCatcher.h
+LIB_SRC_CPP_FILES += src/SPMCQueue.h
+LIB_SRC_CPP_FILES += src/SPMCQueue.inl
+LIB_SRC_CPP_FILES += src/SPMCSink.h
+LIB_SRC_CPP_FILES += src/SPMCSink.inl
+LIB_SRC_CPP_FILES += src/SPMCStream.h
+LIB_SRC_CPP_FILES += src/SPMCStream.inl
+LIB_SRC_CPP_FILES += src/SPSCSink.h
+LIB_SRC_CPP_FILES += src/SPSCSink.inl
+# LIB_SRC_CPP_FILES += src/SPSCSinks.cpp
+# LIB_SRC_CPP_FILES += src/SPSCSinks.h
+LIB_SRC_CPP_FILES += src/SPSCStream.h
+LIB_SRC_CPP_FILES += src/SPSCStream.inl
 LIB_SRC_CPP_FILES += src/Throttle.cpp
-LIB_SRC_CPP_FILES += src/Timer.cpp
-LIB_SRC_CPP_FILES += src/TimeDuration.cpp
+LIB_SRC_CPP_FILES += src/Throttle.h
 LIB_SRC_CPP_FILES += src/Throughput.cpp
+LIB_SRC_CPP_FILES += src/Throughput.h
 LIB_SRC_CPP_FILES += src/ThroughputStats.cpp
-LIB_SRC_CPP_FILES += src/detail/SPMCQueue.cpp
+LIB_SRC_CPP_FILES += src/ThroughputStats.h
+LIB_SRC_CPP_FILES += src/TimeDuration.cpp
+LIB_SRC_CPP_FILES += src/TimeDuration.h
+LIB_SRC_CPP_FILES += src/Timer.cpp
+LIB_SRC_CPP_FILES += src/Timer.h
+LIB_SRC_CPP_FILES += src/detail/CXXOptsHelper.h
 LIB_SRC_CPP_FILES += src/detail/SharedMemoryCounter.cpp
+LIB_SRC_CPP_FILES += src/detail/SharedMemoryCounter.h
+LIB_SRC_CPP_FILES += src/detail/SharedMemory.h
+LIB_SRC_CPP_FILES += src/detail/SPMCBackPressure.h
+LIB_SRC_CPP_FILES += src/detail/SPMCBackPressure.inl
+LIB_SRC_CPP_FILES += src/detail/SPMCQueue.cpp
+LIB_SRC_CPP_FILES += src/detail/SPMCQueue.h
+LIB_SRC_CPP_FILES += src/detail/SPMCQueue.inl
+LIB_SRC_CPP_FILES += src/detail/Utils.h
 
 LIB_FILE_PATH := $(LIB_DIR)/$(LIB_FILE_NAME)
 
@@ -102,7 +137,7 @@ $(BIN_DIR)/test_performance: $(BIN_DIR) Makefile tests/test_performance/test_per
 $(BIN_DIR)/test_spmcqueue: $(BIN_DIR) Makefile tests/test_spmcqueue/test_spmcqueue.cpp $(LIB_FILE_PATH)
 	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -o $(BIN_DIR)/test_spmcqueue tests/test_spmcqueue/test_spmcqueue.cpp -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_THREAD) $(LIB_BOOST_FILESYSTEM)
 
-$(BIN_DIR)/test_stats: $(BIN_DIR) Makefile tests/test_stats/test_stats.cpp $(LIB_FILE_PATH)
+$(BIN_DIR)/test_stats: $(BIN_DIR) Makefile tests/test_stats/test_stats.cpp $(LIB_FILE_PATH) $(LIB_SRC_CPP_FILES)
 	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -o $(BIN_DIR)/test_stats tests/test_stats/test_stats.cpp -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_THREAD) $(LIB_BOOST_FILESYSTEM)
 
 clean:
@@ -118,3 +153,6 @@ test:
 	$(call run_test,test_performance)
 	$(call run_test,test_spmcqueue)
 	$(call run_test,test_stats)
+
+
+#	suzuki ignus
