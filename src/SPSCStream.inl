@@ -38,7 +38,7 @@ SPSCStream::SPSCStream (const std::string &name, size_t prefetchCache)
                                         queueName.c_str())(1, *m_allocator);
 
   ASSERT_SS (m_queue != nullptr,
-    "Failed to create shared memory queue: " << queueNam);
+    "Failed to create shared memory queue: " << queueName);
 
   BOOST_LOG_TRIVIAL(info) << "SPSCStream constructed " << queueName;
 
