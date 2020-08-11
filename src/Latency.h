@@ -54,9 +54,14 @@ public:
   void stop ();
 
   /*
-   * Return true if latency calculation has been stopped
+   * Return true if latency calculation is stopped
    */
   bool is_stopped () const { return m_stop; }
+
+  /*
+   * Return true if latency calculation is not stopped
+   */
+  bool is_running () const { return (m_stop == false); }
 
   /*
    * Return a string representing latency since the start or last reset
@@ -72,7 +77,7 @@ public:
   /*
    * Add a latency value for statistics calculation
    */
-  void next (int64_t nanoseconds);
+  void next (Nanoseconds nanoseconds);
 
   /*
    * Return map of latency values for a pre-determined set of quantiles
@@ -82,11 +87,11 @@ public:
   /*
    * Minimum latency value
    */
-  int64_t min () const { return m_min; }
+  Nanoseconds min () const { return m_min; }
   /*
    * Maximum latency value
    */
-  int64_t max () const { return m_max; }
+  Nanoseconds max () const { return m_max; }
 
   /*
    * Write quantile values to disk
@@ -98,7 +103,7 @@ public:
    * Called on receipt of a RESET_INTERVAL token on the latency queue
    *
    * This should only be called from the same context as the thread calling
-   * the Latency::write () method
+   * the Latency::write_xxx () method
    */
   void reset ();
 
@@ -116,8 +121,8 @@ private:
   std::string               m_path;
   std::ofstream             m_file;
   bool                      m_stop = false;
-  int64_t                   m_min  = std::numeric_limits<int64_t>::max ();
-  int64_t                   m_max  = std::numeric_limits<int64_t>::min ();
+  Nanoseconds               m_min  = Nanoseconds::max ();
+  Nanoseconds               m_max  = Nanoseconds::min ();
 
   std::thread m_thread;
 

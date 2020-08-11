@@ -60,15 +60,13 @@ int main(int argc, char* argv[]) try
 
   auto options = parse (argc, argv);
 
-  auto sleep = Nanoseconds (options.value<int64_t> ("pause", 100));
-
   auto timeout = Seconds (options.value<int64_t> ("timeout", 2));
 
   auto rate = options.value<uint64_t> ("rate", 0);
 
-  int64_t zero_ns {0};
+  const int64_t zero = 0;
 
-  std::atomic<int64_t> start_nanos { zero_ns };
+  std::atomic<int64_t> ping_timestamp { zero };
 
   Latency latency;
 
@@ -86,9 +84,9 @@ int main(int argc, char* argv[]) try
 
     while (!stop)
     {
-      if (start_nanos == zero_ns)
+      if (ping_timestamp == zero)
       {
-        start_nanos = ns_since_epoch ();
+        ping_timestamp = ns_since_epoch ();
       }
 
       throttle.throttle ();
@@ -112,21 +110,22 @@ int main(int argc, char* argv[]) try
 
     while (!stop)
     {
-      if (start_nanos != zero_ns)
+      int64_t p = ping_timestamp;
+
+      if (p != zero)
       {
-        latency.next (ns_since_epoch () - start_nanos);
+        Nanoseconds duration (ns_since_epoch () - p);
+        latency.next (duration);
 
         ++count;
 
-        start_nanos = zero_ns;
+        ping_timestamp = zero;
       }
     }
   });
 
   ping.join ();
   pong.join ();
-
-  std::cout << "count: " << count << std::endl;
 
   for (auto s : latency.to_strings ())
   {

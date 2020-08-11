@@ -15,26 +15,16 @@ ThroughputStats::ThroughputStats (const std::string &directory)
 { }
 
 ThroughputStats::~ThroughputStats ()
+{ }
+
+bool ThroughputStats::is_stopped () const
 {
-  write ();
+  return (m_interval.is_stopped () && m_summary.is_stopped ());
 }
 
-void ThroughputStats::write ()
+bool ThroughputStats::is_running () const
 {
-  m_interval.write_data ();
-  m_summary .write_data ();
-}
-
-void ThroughputStats::next (uint64_t bytes, uint64_t seqNum)
-{
-  m_interval.next (bytes, seqNum);
-  m_summary .next (bytes, seqNum);
-}
-
-void ThroughputStats::next (uint64_t header, uint64_t payload, uint64_t seqNum)
-{
-  m_interval.next (header, payload, seqNum);
-  m_summary .next (header, payload, seqNum);
+  return (!m_interval.is_stopped () && !m_summary.is_stopped ());
 }
 
 } // namespace spmc

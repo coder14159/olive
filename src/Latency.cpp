@@ -14,38 +14,38 @@ namespace fs = boost::filesystem;
 
 namespace spmc {
 
-std::string nanoseconds_to_pretty (int64_t nanoseconds)
+std::string nanoseconds_to_pretty (Nanoseconds::rep count)
 {
-  if (nanoseconds == std::numeric_limits<int64_t>::max ())
+  if (count == Nanoseconds::max ().count ())
   {
     return "-";
   }
-  else if (nanoseconds == std::numeric_limits<int64_t>::min ())
+  else if (count == Nanoseconds::min ().count ())
   {
     return "-";
   }
-  else if (nanoseconds < 1e3)
+  else if (count < 1e3)
   {
-    return (boost::str (boost::format ("%3d ns") % nanoseconds));
+    return (boost::str (boost::format ("%3d ns") % count));
   }
-  else if (nanoseconds < 1e6)
+  else if (count < 1e6)
   {
-    double usecs = static_cast<double> (nanoseconds) / 1.0e3;
+    double usecs = static_cast<double> (count) / 1.0e3;
     return (boost::str (boost::format ("%3.0f us") % usecs));
   }
-  else if (nanoseconds < 1e9)
+  else if (count < 1e9)
   {
-    double msecs = static_cast<double> (nanoseconds) / 1.0e6;
+    double msecs = static_cast<double> (count) / 1.0e6;
     return (boost::str (boost::format ("%3.0f ms") % msecs));
   }
-  else if (nanoseconds < (1e9*60))
+  else if (count < (1e9*60))
   {
-    double secs = static_cast<double> (nanoseconds) / 1.0e9;
+    double secs = static_cast<double> (count) / 1.0e9;
     return (boost::str (boost::format ("%3.0f s") % secs));
   }
   else
   {
-    double mins = static_cast<double> (nanoseconds) / (1e9*60);
+    double mins = static_cast<double> (count) / (1e9*60);
     return (boost::str (boost::format ("%3.0f min") % mins));
   }
 }
@@ -91,7 +91,12 @@ Latency::Latency (const std::string &directory, const std::string &filename)
 : m_empty (empty_quantiles ())
 , m_quantiles (empty_quantiles ())
 {
-  if (!directory.empty () && !fs::exists (directory))
+  if (directory.empty () || filename.empty ())
+  {
+    return;
+  }
+
+  if (!fs::exists (directory))
   {
     ASSERT_SS (fs::create_directories (directory),
                "Failed to create directory: " << directory);
@@ -114,6 +119,8 @@ Latency::Latency (const std::string &directory, const std::string &filename)
 
 Latency::~Latency ()
 {
+  write_data ();
+
   stop ();
 }
 
@@ -133,11 +140,11 @@ void Latency::stop ()
 void Latency::reset ()
 {
   m_quantiles = m_empty;
-  m_min       = std::numeric_limits<int64_t>::max ();
-  m_max       = std::numeric_limits<int64_t>::min ();
+  m_min       = Nanoseconds::max ();
+  m_max       = Nanoseconds::min ();
 }
 
-void Latency::next (int64_t nanoseconds)
+void Latency::next (Nanoseconds nanoseconds)
 {
   if (m_stop)
   {
@@ -146,7 +153,7 @@ void Latency::next (int64_t nanoseconds)
 
   for (auto &quantile : m_quantiles)
   {
-    quantile.second (nanoseconds);
+    quantile.second (nanoseconds.count ());
   }
 
   m_min = std::min (m_min, nanoseconds);
@@ -174,12 +181,12 @@ void Latency::write_header ()
 
 Latency &Latency::write_data ()
 {
-  if (!m_file || !m_file.is_open ())
+  if (m_stop || !m_file || !m_file.is_open ())
   {
     return *this;
   }
 
-  m_file << m_min;
+  m_file << m_min.count ();
 
   for (const auto &quantile : m_quantiles)
   {
@@ -187,7 +194,7 @@ Latency &Latency::write_data ()
            << static_cast<int64_t>(ba::p_square_quantile (quantile.second));
   }
 
-  m_file << "," << m_max << "\n";
+  m_file << "," << m_max.count () << "\n";
 
   return *this;
 }

@@ -79,15 +79,16 @@ Throughput::Throughput ()
 Throughput::Throughput (const std::string &directory,
                         const std::string &filename)
 {
-  if (!directory.empty () && !fs::exists (directory))
+  ASSERT (!directory.empty (), "Empty throughput directory name");
+  ASSERT (!filename.empty (), " Empty throughput filename");
+
+  if (!fs::exists (directory))
   {
     ASSERT_SS (fs::create_directories (directory),
               "Failed to create directory: " << directory);
 
     BOOST_LOG_TRIVIAL (info) << "Created directory: " << directory;
   }
-
-  ASSERT(!filename.empty (), "Empty throughput filename");
 
   fs::path file_path = fs::path (directory) / fs::path (filename);
 
@@ -102,6 +103,8 @@ Throughput::Throughput (const std::string &directory,
 
 Throughput::~Throughput ()
 {
+  write_data ();
+
   stop ();
 }
 
@@ -123,20 +126,30 @@ bool Throughput::is_stopped () const
   return m_stop;
 }
 
+bool Throughput::is_running () const
+{
+  return !m_stop;
+}
+
 void Throughput::reset ()
 {
   m_header     = 0;
   m_payload    = 0;
   m_messages   = 0;
-  m_dropped    = 0;
   m_bytes      = 0;
+  m_dropped    = 0;
 
   m_timer.reset ().start ();
 }
 
+void Throughput::dropped (uint64_t dropped)
+{
+  m_dropped += dropped;
+}
+
 void Throughput::write_header ()
 {
-  if (!m_file.is_open ())
+  if (m_stop || !m_file.is_open ())
   {
     return;
   }
@@ -147,20 +160,20 @@ void Throughput::write_header ()
 
 Throughput &Throughput::write_data ()
 {
-  if (!m_file.is_open () || !m_bytes || !m_messages)
+  if (m_stop || !m_file.is_open () || !m_bytes || !m_messages)
   {
     return *this;
   }
 
   auto now = Clock::now ();
 
-  size_t avgPayload = (m_payload > 0) ? (m_payload / m_messages)
-                                      : (m_bytes   / m_messages);
+  size_t avgPayload = (m_payload == 0) ? m_payload
+                                       : (m_bytes  / m_messages);
 
-  m_file << avgPayload  << ","
+  m_file << avgPayload              << ","
          << megabytes_per_sec (now) << ','
          << messages_per_sec (now)  << ','
-         << dropped ()           << '\n';
+         << m_dropped               << '\n';
 
   return *this;
 }
@@ -190,15 +203,6 @@ void Throughput::next (uint64_t bytes, uint64_t seqNum)
   }
   else
   {
-    uint64_t diff = (seqNum - m_seqNum);
-
-    if (diff > 1)
-    {
-      m_dropped += diff;
-    }
-
-    m_seqNum = seqNum;
-
     ++m_messages;
 
     m_bytes += bytes;
@@ -226,17 +230,17 @@ uint32_t Throughput::messages_per_sec (TimePoint time) const
 
   double seconds = to_seconds (m_timer.elapsed ());
 
-  auto thruput = (static_cast<double> (m_messages)/seconds);
+  auto throughput = (static_cast<double> (m_messages)/seconds);
 
-  return thruput;
+  return throughput;
 }
 
 std::string Throughput::to_string () const
 {
   auto elapsed = m_timer.elapsed ();
 
-  auto throughput = throughput_to_pretty (m_bytes, elapsed)
-                  + " " + message_throughput_to_pretty (m_messages, elapsed);
+  auto throughput = throughput_to_pretty (m_bytes, elapsed) + " "
+                  + message_throughput_to_pretty (m_messages, elapsed);
 
   return throughput;
 }

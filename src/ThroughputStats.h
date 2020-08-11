@@ -24,14 +24,18 @@ public:
 
   ~ThroughputStats ();
 
-  /*
-   * Write throughput data to file if enabled
-   */
-  void write ();
+  bool is_stopped () const;
+  bool is_running () const;
 
-  void next (uint64_t bytes, uint64_t seqNum);
+  // /*
+  //  * Write throughput data to file if enabled
+  //  */
+  // void write ();
 
-  void next (uint64_t header, uint64_t payload, uint64_t seqNum);
+  // /*
+  //  * Register bytes consumed and current sequence number to spot dropped packets
+  //  */
+  // void next (uint64_t bytes, uint64_t seqNum);
 
   Throughput&       interval ()       { return m_interval;  }
   const Throughput& interval () const { return m_interval;  }

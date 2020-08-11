@@ -565,9 +565,8 @@ class Client : boost::noncopyable
 {
 public:
   Client (Queue &queue, size_t dataSize)
-  : m_queue (queue),
-    m_data (dataSize, 0),
-    m_latencyStats (100)
+  : m_queue (queue)
+  , m_data (dataSize, 0)
   {
     m_thread = std::thread ([this] () {
 
@@ -585,9 +584,9 @@ public:
         {
           if (m_queue.pop (header, m_data))
           {
-            m_throughputStats.next (sizeof (header) + m_data.size (), header.seqNum);
+            m_throughput.next (sizeof (header) + m_data.size (), header.seqNum);
 
-            m_latencyStats.next (TimePoint (Nanoseconds (header.timestamp)));
+            m_latency.next (Nanoseconds (header.timestamp));
           }
         }
        /*
@@ -620,8 +619,8 @@ public:
 
   const std::vector<uint8_t> &data () const { return m_data; }
 
-  const LatencyStats    &latencyStats ()    const { return m_latencyStats;    }
-  const ThroughputStats &throughputStats () const { return m_throughputStats; }
+  const Latency    &latency ()    const { return m_latency;    }
+  const Throughput &throughput () const { return m_throughput; }
 
   std::vector<std::string> exceptions () const { return m_exceptions; }
 
@@ -636,8 +635,8 @@ private:
 
   std::thread m_thread;
 
-  ThroughputStats m_throughputStats;
-  LatencyStats    m_latencyStats;
+  Throughput m_throughput;
+  Latency    m_latency;
 
   std::vector<std::string> m_exceptions;
 };
@@ -669,7 +668,7 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerSingleConsumer)
   }
 
   // test throughput against a relatively conservative value
-  auto &summary = client.throughputStats ().summary ();
+  auto &summary = client.throughput ();
   BOOST_CHECK (summary.messages () > 100);
   BOOST_CHECK_EQUAL (summary.dropped (), 0);
 
@@ -680,8 +679,7 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerSingleConsumer)
       << "\tM msg/sec");
 
   BOOST_TEST_MESSAGE("throughput:\t" << std::fixed << std::setprecision (0)
-      << client.throughputStats ()
-               .summary ().megabytes_per_sec (now) << "\tMB/sec");
+      << summary.megabytes_per_sec (now) << "\tMB/sec");
 }
 
 BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerAllowDrops)
@@ -729,14 +727,14 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerAllowDrops)
 
     // test throughput against a relatively conservative value
     BOOST_CHECK (
-      (static_cast<double> (client->throughputStats ().summary ()
+      (static_cast<double> (client->throughput ()
                                 .messages_per_sec (stopped)) / 1.0e6) > .99);
     BOOST_TEST_MESSAGE ("client");
-    print (client->throughputStats ().summary ());
+    print (client->throughput ());
   }
 
   BOOST_TEST_MESSAGE("\nlatency stats for one of the clients");
-  for (auto line : clients[0]->latencyStats ().interval ().to_strings ())
+  for (auto line : clients[0]->latency ().to_strings ())
   {
     BOOST_TEST_MESSAGE (line);
   }
@@ -788,15 +786,14 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerNoMesssageDropsAllowed)
     client->stop ();
 
     // test throughput against a relatively conservative value
-    BOOST_CHECK ((client->throughputStats ().summary ()
-                            .messages_per_sec (now) / 1.0e6) > .9);
+    BOOST_CHECK ((client->throughput ().messages_per_sec (now) / 1.0e6) > .9);
     BOOST_TEST_MESSAGE ("client");
 
-    print (client->throughputStats ().summary ());
+    print (client->throughput ());
   }
 
   BOOST_TEST_MESSAGE("\nlatency stats for one of the clients");
-  for (auto line : clients[0]->latencyStats ().summary ().to_strings ())
+  for (auto line : clients[0]->latency ().to_strings ())
   {
     BOOST_TEST_MESSAGE (line);
   }
@@ -914,9 +911,7 @@ BOOST_AUTO_TEST_CASE (RestartClient)
        */
       std::this_thread::sleep_for (Milliseconds (1500));
 
-      clientThroughput = client.throughputStats ()
-                               .summary ()
-                               .messages_per_sec (Clock::now ());
+      clientThroughput = client.throughput ().messages_per_sec (Clock::now ());
     }
 
     BOOST_TEST_MESSAGE ("Client throughput=" << clientThroughput);
@@ -951,8 +946,7 @@ BOOST_AUTO_TEST_CASE (RestartServer)
     // allow the clients to initialise and receive some data
     std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
 
-    auto clientThroughput = client.throughputStats ()
-                                  .summary ()
+    auto clientThroughput = client.throughput ()
                                   .messages_per_sec (Clock::now ());
 
     BOOST_TEST_MESSAGE ("Client throughput=" << clientThroughput);

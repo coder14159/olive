@@ -3,6 +3,11 @@
 
 #include "LatencyStats.h"
 #include "ThroughputStats.h"
+#include "Throughput.h"
+
+#include <boost/lockfree/spsc_queue.hpp>
+
+#include <thread>
 
 namespace spmc {
 
@@ -23,11 +28,12 @@ public:
   void update (uint64_t bytes, uint64_t seqNum, TimePoint timestamp);
 
   /*
-   * Update header size and payload size sent at a time point
+   * Update when receiving a new message
    */
-  void update (uint64_t header, uint64_t payload, uint64_t seqNum,
-               TimePoint timestamp);
+  void update (uint64_t header_size, uint64_t payload_size,
+               uint64_t seqNum, TimePoint timestamp);
 
+  /// POSSIBLE THREAD POBLEMS ACCESSING THESE!!
   const ThroughputStats &throughput () const { return m_throughput; }
         ThroughputStats &throughput ()       { return m_throughput; }
 
@@ -35,13 +41,43 @@ public:
         LatencyStats &latency ()       { return m_latency;    }
 
 private:
+
+  /*
+   * Start the service thread
+   */
+  void start ();
+
+  /*
+   * Stop the service thread
+   */
+  void stop ();
+
+  void log_stats ();
+
+private:
+
   ThroughputStats m_throughput;
 
-  LatencyStats    m_latency;
+  LatencyStats m_latency;
 
-  size_t m_messageSize;
+  TimePoint m_lastIntervalLog;
 
-  TimePoint m_last;
+  TimePoint m_sampled;
+
+  const uint64_t QUEUE_SIZE = 10;
+
+  boost::lockfree::spsc_queue<Clock::duration> m_queue { QUEUE_SIZE };
+
+  std::thread m_thread;
+
+  uint64_t m_bytes = 0;
+
+  uint64_t m_dropped = 0;
+
+  uint64_t m_seqNum = 0;
+
+  std::atomic_bool m_stop { false };
+
 };
 
 } // namespace spmc {
