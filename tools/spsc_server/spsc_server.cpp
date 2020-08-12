@@ -3,14 +3,13 @@
 #include "SignalCatcher.h"
 #include "SPSCSink.h"
 #include "Throttle.h"
+#include "detail/CXXOptsHelper.h"
 #include "detail/SharedMemory.h"
 #include "detail/SharedMemoryCounter.h"
-
+#include "detail/Utils.h"
 
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/lockfree/spsc_queue.hpp>
-
-#include "detail/CXXOptsHelper.h"
 
 #include <atomic>
 #include <chrono>
@@ -90,11 +89,11 @@ void server (const std::string& name,
     sinks.push_back (std::move (sink));
   }
 
-  SignalCatcher s({ SIGINT, SIGTERM }, [&sinks] (int) {
+  bool stop { false };
 
-    g_stop = true;
+  SignalCatcher s({ SIGINT, SIGTERM }, [&sinks, &stop] (int) {
 
-    std::cout << "Stopping.." << std::endl;
+    stop = true;
 
     for (auto &sink : sinks)
     {
@@ -102,7 +101,9 @@ void server (const std::string& name,
 
       sink->stop ();
     }
-  });
+
+    std::cout << "Stopping spsc_server" << std::endl;
+ });
 
   // wait for clients to be ready
   SharedMemoryCounter clientsReady (name + ":client:ready", name);
@@ -140,11 +141,11 @@ void server (const std::string& name,
 
   Throttle throttle (rate);
 
-  while (!g_stop)
+  while (SPMC_EXPECT_FALSE (stop))
   {
-    for (size_t i = 0; i < sinks.size (); ++i)
+    for (auto &sink : sinks)
     {
-      sinks[i]->next (message);
+      sink->next (message);
     }
 
     throttle.throttle ();

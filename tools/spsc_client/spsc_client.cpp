@@ -6,6 +6,7 @@
 #include "SPSCStream.h"
 #include "detail/CXXOptsHelper.h"
 #include "detail/SharedMemory.h"
+#include "detail/Utils.h"
 
 #include <boost/log/trivial.hpp>
 
@@ -16,8 +17,6 @@ using namespace spmc;
 namespace bi = boost::interprocess;
 
 namespace {
-
-std::atomic<bool> g_stop = { false };
 
 CxxOptsHelper parse (int argc, char* argv[])
 {
@@ -82,23 +81,29 @@ int main(int argc, char* argv[]) try
 
   SPSCStream stream (name, prefetchCache);
 
+  bool stop = { false };
+
   /*
    * Handle signals
    */
-  SignalCatcher s ({SIGINT, SIGTERM}, [&stream] (int) {
-    g_stop = true;
+  SignalCatcher s ({SIGINT, SIGTERM}, [&stream, &stop] (int) {
 
-    std::cout << "stopping.." << std::endl;
+    if (!stop)
+    {
+      stop = true;
 
-    stream.stop ();
+      stream.stop ();
+
+      std::cout << "Stopping spsc_client" << std::endl;
+    }
   });
 
   PerformanceStats stats (directory);
 
   stats.latency ().summary ().enable (latencyStats);
-  stats.throughput ().summary ().enable (throughputStats);
-
   stats.latency ().interval ().enable (latencyStats && intervalStats);
+
+  stats.throughput ().summary ().enable (throughputStats);
   stats.throughput ().interval ().enable (throughputStats && intervalStats);
 
   bind_to_cpu (cpu);
@@ -108,14 +113,8 @@ int main(int argc, char* argv[]) try
   std::vector<uint8_t> data;
   std::vector<uint8_t> expected;
 
-  while (true)
+  while (SPMC_EXPECT_FALSE (stop))
   {
-    if (g_stop)
-    {
-      BOOST_LOG_TRIVIAL (info) << "Stopping stream..";
-      break;
-    }
-
     if (stream.next (header, data))
     {
       stats.update (sizeof (Header) + data.size (), header.seqNum,
@@ -145,7 +144,7 @@ int main(int argc, char* argv[]) try
     }
   }
 
-  BOOST_LOG_TRIVIAL (info) << "Exit shared memory spsc_client";
+  BOOST_LOG_TRIVIAL (info) << "Exit stream";
 
   return EXIT_SUCCESS;
 }
