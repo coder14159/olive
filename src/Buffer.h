@@ -16,12 +16,6 @@ namespace spmc {
  *
  * Data pushed into the buffer is expected to be of a size equal to or smaller
  * than the Buffer size.
- *
- * Should be able to avoid % in calc below
- *
- * m_front = (m_front + size) % m_capacity;
- * m_size -= size;
- *
  */
 template <class Allocator>
 class Buffer : private Allocator

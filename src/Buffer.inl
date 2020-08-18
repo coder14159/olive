@@ -133,6 +133,9 @@ bool Buffer<Allocator>::push (const uint8_t* data, size_t size)
     std::memcpy (buffer, data + spaceToEnd, size - spaceToEnd);
   }
 
+  /*
+   * Check: might be faster to avoid the % operation in the calculation below
+   */
   m_back  = (m_back + size) % m_capacity;
   m_size += size;
 
