@@ -67,9 +67,12 @@ uint64_t SPMCQueue<Allocator, MaxNoDropConsumers>::read_available () const
 template <class Allocator, size_t MaxNoDropConsumers>
 void SPMCQueue<Allocator, MaxNoDropConsumers>::cache_size (size_t size)
 {
-  m_cache.capacity (size);
+  if (m_cache.capacity () != size)
+  {
+    m_cache.resize (size);
 
-  m_cacheEnabled = true;
+    m_cacheEnabled = true;
+  }
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
@@ -112,77 +115,75 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
    * Use of the cache is only permitted if no consumers are permitted to drop
    * messages.
    */
-  if (m_cacheEnabled && !m_consumer.message_drops_allowed ())
-  {
-    /*
-     * Use cases to consider
-     * - data size is smaller than header size
-     * - cache size is smaller header size
-     *
-     */
-    if (m_queue->producer_restarted (m_consumer))
-    {
-      BOOST_LOG_TRIVIAL(info)
-        << "Producer restarted. Clear the consumer prefetch cache.";
-      m_cache.clear ();
-    }
-
-    /*
-     * Nothing to do if both cache and queue are empty
-     */
-    if (m_cache.size () < sizeof (Header))
-    {
-      /*
-       * Check that header and payload are available
-       */
-      if (read_available () < sizeof (Header))
-      {
-        return false;
-      }
-
-      if (!m_queue->pop (m_cache, m_producer, m_consumer))
-      {
-        return false;
-      }
-    }
-
-    m_cache.pop (header);
-
-    if (m_cache.capacity () < (header.size + sizeof (Header)))
-    {
-      /*
-       * Disable the cache if a message received is too large to fit
-       */
-      BOOST_LOG_TRIVIAL(info) << "Disable the prefetch cache. "
-                        << "Message size is too large (" << header.size << ")";
-
-      m_cacheEnabled = false;
-
-      m_cache.pop (data, std::min (header.size, m_cache.size ()));
-
-
-      return m_queue->pop (data, header.size - data.size (),
-                           m_producer, m_consumer);
-    }
-
-    /*
-     * Make sure the payload is received
-     *
-     * TODO Consider adding resilience if the payload is not sent.
-     */
-    while (m_cache.size () < header.size)
-    {
-      m_queue->pop (m_cache, m_producer, m_consumer);
-    }
-
-    return m_cache.pop (data, header.size);
-  }
-  else
+  if (!m_cacheEnabled || m_consumer.message_drops_allowed ())
   {
     return m_queue->pop (header, data, m_producer, m_consumer);
   }
 
-  UNREACHABLE ("SPMCQueue::pop () should have exited");
+  /*
+    * Use cases to consider
+    * - data size is smaller than header size
+    * - cache size is smaller header size
+    *
+    */
+  if (m_queue->producer_restarted (m_consumer))
+  {
+    BOOST_LOG_TRIVIAL(info)
+      << "Producer restarted. Clear the consumer prefetch cache.";
+    m_cache.clear ();
+  }
+
+  /*
+    * Nothing to do if both cache and queue are empty
+    */
+  if (m_cache.size () < sizeof (Header))
+  {
+    /*
+      * Check that header and payload are available
+      */
+    if (read_available () < sizeof (Header))
+    {
+      return false;
+    }
+
+    if (!m_queue->pop (m_cache, m_producer, m_consumer))
+    {
+      return false;
+    }
+  }
+
+  m_cache.pop (header);
+
+  if (m_cache.capacity () < (header.size + sizeof (Header)))
+  {
+    /*
+      * Disable the cache if a message received is too large to fit
+      */
+    BOOST_LOG_TRIVIAL(info) << "Disable the prefetch cache. "
+                      << "Message size is too large (" << header.size << ")";
+
+    m_cacheEnabled = false;
+
+    m_cache.pop (data, std::min (header.size, m_cache.size ()));
+
+
+    return m_queue->pop (data, header.size - data.size (),
+                          m_producer, m_consumer);
+  }
+
+  /*
+    * Make sure the payload is received
+    *
+    * TODO Consider adding resilience if the payload is not sent.
+    */
+  while (m_cache.size () < header.size)
+  {
+    m_queue->pop (m_cache, m_producer, m_consumer);
+  }
+
+  return m_cache.pop (data, header.size);
+
+  UNREACHABLE ("SPMCQueue::pop () should have returned");
 }
 
 } // namespace spmc {
