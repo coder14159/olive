@@ -3,7 +3,7 @@ namespace spmc {
 
 namespace bi = boost::interprocess;
 
-SPSCStream::SPSCStream (const std::string &name, size_t prefetchCache)
+SPSCStream::SPSCStream (const std::string &name, size_t prefetchSize)
 {
 	// open an existing shared memory segment
   m_memory = bi::managed_shared_memory (bi::open_only, name.c_str());
@@ -44,9 +44,9 @@ SPSCStream::SPSCStream (const std::string &name, size_t prefetchCache)
 
   ++(*readyCounter);
 
-  if (prefetchCache > 0)
+  if (prefetchSize > 0)
   {
-    m_cache.capacity (prefetchCache);
+    m_cache.resize (prefetchSize);
 
     m_cacheEnabled = true;
   }
