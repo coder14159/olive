@@ -30,7 +30,7 @@ public:
    */
   explicit Buffer (size_t size);
   /*
-   * The Buffer is created in named shared memory
+   * Support creation of the Buffer using named shared memory
    */
   explicit Buffer (size_t size, const Allocator &allocator);
   /*
@@ -44,13 +44,8 @@ public:
   void clear ();
 
   /*
-   * Reset the capacity if the buffer and reset all internal data
-   */
-  void capacity (size_t size);
-
-  /*
-   * Reset the capacity if the buffer.
-   * Non-standard behviour: all internal data is deleted on resize
+   * Reset the capacity of the buffer.
+   * Non-standard behaviour: all internal data is deleted on resize
    */
   void resize (size_t size);
 

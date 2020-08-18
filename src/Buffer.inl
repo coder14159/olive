@@ -34,21 +34,21 @@ void Buffer<Allocator>::clear ()
   m_back  = 1;
 }
 
-template <class Allocator>
-void Buffer<Allocator>::capacity (size_t capacity)
-{
-  auto newBuffer = Allocator::allocate (capacity);
+// template <class Allocator>
+// void Buffer<Allocator>::capacity (size_t capacity)
+// {
+//   auto newBuffer = Allocator::allocate (capacity);
 
-  Allocator::deallocate (m_buffer, m_capacity);
+//   Allocator::deallocate (m_buffer, m_capacity);
 
-  m_buffer = newBuffer;
+//   m_buffer = newBuffer;
 
-  m_capacity = capacity;
+//   m_capacity = capacity;
 
-  m_size  = 0;
-  m_front = 0;
-  m_back  = 1;
-}
+//   m_size  = 0;
+//   m_front = 0;
+//   m_back  = 1;
+// }
 
 template <class Allocator>
 void Buffer<Allocator>::resize (size_t size)
@@ -64,8 +64,6 @@ void Buffer<Allocator>::resize (size_t size)
   m_size  = 0;
   m_front = 0;
   m_back  = 1;
-
-  m_capacity = size;
 }
 
 template <class Allocator>
@@ -280,7 +278,9 @@ void Buffer<Allocator>::pop (
 
   size_t index = consumed % m_capacity;
 
-  // copy the header from the buffer
+  /*
+   * Copy the header from the buffer
+   */
   size_t spaceToEnd = m_capacity - consumed;
 
   /*
