@@ -47,4 +47,6 @@ private:
 
 } // namespace spmc
 
+#include "LatencyStats.inl"
+
 #endif

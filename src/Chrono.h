@@ -25,5 +25,7 @@ TimePoint timepoint_from_nanoseconds_since_epoch (int64_t nanoseconds);
 
 } // namespace spmc
 
+#include "Chrono.inl"
+
 #endif // IPC_CHRONO_H
 

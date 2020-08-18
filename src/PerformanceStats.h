@@ -82,4 +82,6 @@ private:
 
 } // namespace spmc {
 
+#include "PerformanceStats.inl"
+
 #endif

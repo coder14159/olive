@@ -133,4 +133,6 @@ private:
 
 } // namespace spmc
 
+#include "Latency.inl"
+
 #endif
