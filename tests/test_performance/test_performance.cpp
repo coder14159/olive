@@ -40,7 +40,7 @@ using namespace spmc;
  */
 TimeDuration get_test_duration ()
 {
-  Nanoseconds duration (100ms);
+  Nanoseconds duration (1s);
 
   if (getenv ("TIMEOUT") != nullptr)
   {
@@ -267,6 +267,8 @@ BOOST_AUTO_TEST_CASE (VectorThroughput)
     BOOST_TEST_MESSAGE ("---");
   };
 
+  run_test (32);
+  run_test (64);
   run_test (128);
   run_test (512);
   run_test (1024);
@@ -1138,4 +1140,130 @@ BOOST_AUTO_TEST_CASE (MemoryCopy)
 
   BOOST_CHECK (loops_memcpy > (loops_uninitialized_copy_n*5));
   BOOST_CHECK (loops_memmove > (loops_uninitialized_copy_n*5));
+}
+
+void sink_stream_roundtrip_latency_threads (size_t capacity)
+{
+  bool stop = { false };
+
+  auto duration = get_test_duration ();
+
+  BOOST_TEST_MESSAGE ("stream capacity: " << capacity);
+
+  bool allow_drops = false;
+  size_t prefetch_size = 0;
+
+  SPMCSinkThread   sink_ping (capacity);
+  SPMCStreamThread stream_ping (sink_ping.queue (), allow_drops, prefetch_size);
+
+  SPMCSinkThread   sink_pong (capacity);
+  SPMCStreamThread stream_pong (sink_pong.queue (), allow_drops, prefetch_size);
+
+  PerformanceStats stats;
+
+  int warmup = 1000000;
+
+  auto pong = std::thread ([&] () {
+
+    Header header;
+
+    std::vector<uint8_t> payload (1);
+
+    int iterations = 0;
+
+    while (!stop)
+    {
+      ++iterations;
+
+      if (stream_ping.next (header, payload) && iterations > warmup)
+      {
+        stats.update (sizeof (Header), payload.size (), header.seqNum,
+                        TimePoint (Nanoseconds (header.timestamp)));
+      }
+
+      sink_pong.next (payload);
+    }
+
+    BOOST_TEST_MESSAGE ("test iterations: " << (iterations-warmup));
+
+  });
+
+  auto ping = std::thread ([&] () {
+
+    Header header;
+
+    std::vector<uint8_t> payload (1);
+
+    while (!stop)
+    {
+      sink_ping.next (payload);
+
+      stream_pong.next (header, payload);
+    }
+  });
+
+  std::this_thread::sleep_for (duration.nanoseconds ());
+
+  stop = true;
+
+  sink_ping.stop ();
+  sink_pong.stop ();
+
+  stream_ping.stop ();
+  stream_pong.stop ();
+
+  ping.join ();
+  pong.join ();
+
+  auto now = Clock::now ();
+
+  BOOST_TEST_MESSAGE ("throughput (msgs/sec): "
+    << stats.throughput ().summary ().messages_per_sec (now));
+
+  BOOST_TEST_MESSAGE ("throughput (MB/sec): "
+    << stats.throughput ().summary ().megabytes_per_sec (now));
+
+  auto &quantiles = stats.latency ().summary ().quantiles ();
+
+  BOOST_CHECK (quantiles.empty () == false);
+
+  auto median = static_cast<int64_t> (
+                  boost::accumulators::p_square_quantile (quantiles.at (50)));
+
+  auto ninetieth = static_cast<int64_t> (
+                  boost::accumulators::p_square_quantile (quantiles.at (90)));
+
+  /*
+   * Check latency expectations
+   */
+  BOOST_CHECK (Nanoseconds (median) < Nanoseconds (500));
+
+  BOOST_CHECK (Nanoseconds (ninetieth) < Microseconds (1));
+
+  BOOST_TEST_MESSAGE ("latency percentiles");
+
+  for (auto &line : stats.latency ().summary ().to_strings ())
+  {
+    BOOST_TEST_MESSAGE (line);
+  }
+}
+
+/*
+ * Test round trip latencies for in-process sink/stream models are reasonable
+ */
+BOOST_AUTO_TEST_CASE (RoundtripLatency)
+{
+  spmc::ScopedLogLevel log (error);
+
+  if (getenv ("NOTIMING") != nullptr)
+  {
+    return;
+  }
+
+  std::vector<size_t> capacities { 100, 1000, 10000, 10000 };
+
+  for (auto capacity : capacities)
+  {
+    sink_stream_roundtrip_latency_threads (capacity);
+  }
 }
