@@ -79,6 +79,11 @@ Throughput::Throughput ()
 Throughput::Throughput (const std::string &directory,
                         const std::string &filename)
 {
+  if (directory.empty () || filename.empty ())
+  {
+    return;
+  }
+
   ASSERT (!directory.empty (), "Empty throughput directory name");
   ASSERT (!filename.empty (), " Empty throughput filename");
 
