@@ -18,7 +18,13 @@ std::vector<std::string> log_levels ();
 class ScopedLogLevel
 {
 public:
-  ScopedLogLevel (boost::log::trivial::severity_level level) : m_level (level)
+  ScopedLogLevel (boost::log::trivial::severity_level level)
+  : m_level (get_log_level ())
+  {
+    set_log_level (level);
+  }
+  ScopedLogLevel (const std::string &level)
+  : m_level (get_log_level ())
   {
     set_log_level (level);
   }
