@@ -62,6 +62,8 @@ public:
 
 private:
 
+  void init (bool allowMessageDrops, size_t prefetchSize);
+
   /*
    * Pull data from the shared queue.
    *

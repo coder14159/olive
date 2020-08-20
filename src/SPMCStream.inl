@@ -18,16 +18,7 @@ SPMCStream<QueueType>::SPMCStream (const std::string &memoryName,
 : m_queueObj (std::make_unique<QueueType> (memoryName, queueName)),
   m_queue (*m_queueObj)
 {
-
-  if (allowMessageDrops)
-  {
-    m_queue.allow_message_drops ();
-  }
-
-  if (prefetchSize > 0)
-  {
-    m_queue.cache_size (prefetchSize);
-  }
+  init (allowMessageDrops, prefetchSize);
 }
 
 template <typename QueueType>
@@ -36,15 +27,7 @@ SPMCStream<QueueType>::SPMCStream (QueueType &queue,
                         size_t prefetchSize)
 : m_queue (queue)
 {
-  if (allowMessageDrops)
-  {
-    m_queue.allow_message_drops ();
-  }
-
-  if (prefetchSize > 0)
-  {
-    m_queue.cache_size (prefetchSize);
-  }
+  init (allowMessageDrops, prefetchSize);
 }
 
 template <typename QueueType>
@@ -56,6 +39,20 @@ SPMCStream<QueueType>::~SPMCStream ()
   }
 
   m_queue.unregister_consumer ();
+}
+
+template <typename QueueType>
+void SPMCStream<QueueType>::init (bool allowMessageDrops, size_t prefetchSize)
+{
+  if (allowMessageDrops)
+  {
+    m_queue.allow_message_drops ();
+  }
+
+  if (prefetchSize > 0)
+  {
+    m_queue.cache_size (prefetchSize);
+  }
 }
 
 template <typename QueueType>
