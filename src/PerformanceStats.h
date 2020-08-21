@@ -72,8 +72,6 @@ private:
 
   uint64_t m_bytes = 0;
 
-  uint64_t m_dropped = 0;
-
   uint64_t m_seqNum = 0;
 
   std::atomic_bool m_stop { false };

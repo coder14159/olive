@@ -158,10 +158,12 @@ void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
 
   if (SPMC_EXPECT_TRUE (m_seqNum > 0))
   {
-    if (SPMC_EXPECT_FALSE ((seqNum - m_seqNum) == 1))
+    auto diff = seqNum - m_seqNum;
+
+    if (SPMC_EXPECT_FALSE (diff == 1))
     {
-      m_throughput.interval ().dropped (seqNum - m_seqNum);
-      m_throughput.summary ().dropped (seqNum - m_seqNum);
+      m_throughput.interval ().dropped (diff);
+      m_throughput.summary ().dropped (diff);
     }
   }
 
