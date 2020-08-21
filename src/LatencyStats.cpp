@@ -24,9 +24,7 @@ LatencyStats::LatencyStats (const std::string &directory)
 { }
 
 LatencyStats::~LatencyStats ()
-{
-
-}
+{ }
 
 bool LatencyStats::is_stopped () const
 {
