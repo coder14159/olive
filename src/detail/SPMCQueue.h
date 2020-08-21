@@ -206,7 +206,7 @@ public:
    * The queue should be larger than the data size + header size
    */
   template <typename Header>
-  bool push (const Header &header, const std::vector<uint8_t> &data);
+  bool push (const Header &header, const std::vector<uint8_t> &data, uint8_t *buffer);
 
   /*
    * Push data into the queue, always succeeds unless no drops is enabled
@@ -215,7 +215,7 @@ public:
    * The queue should be larger than the data size + header size
    */
   template <typename Header>
-  bool push (const Header &header, const uint8_t *data, size_t size);
+  bool push (const Header &header, const uint8_t *data, size_t size, uint8_t *buffer);
 
   /*
    * Push POD data into the queue, always succeeds unless no drops is enabled
@@ -224,7 +224,7 @@ public:
    * The queue should be larger than the data size + header size
    */
   template <typename Header, typename Data>
-  bool push (const Header &header, const Data &data);
+  bool push (const Header &header, const Data &data, uint8_t *buffer);
 
   /*
    * Pop data out of the queue, header and data must popped in a single call
@@ -233,31 +233,37 @@ public:
   bool pop (Header               &header,
             std::vector<uint8_t> &data,
             ProducerType         &producer,
-            ConsumerType         &consumer);
+            ConsumerType         &consumer,
+            const uint8_t        *buffer);
 
   /*
    * Prefetch a chunk of data for caching in a fast circular buffer
    */
   template <typename BufferType>
-  bool pop (BufferType   &chunk,
-            ProducerType &producer,
-            ConsumerType &consumer);
+  bool pop (BufferType    &chunk,
+            ProducerType  &producer,
+            ConsumerType  &consumer,
+            const uint8_t *buffer);
   /*
    * Append queue data to a data chunk
    */
   bool pop (std::vector<uint8_t> &chunk,
             size_t                size,
             ProducerType         &producer,
-            ConsumerType         &consumer);
+            ConsumerType         &consumer,
+            const uint8_t        *buffer);
   /*
    * Unregister a consumer thread / process
    */
   void unregister_consumer (size_t index);
 
   /*
-   * Return true if the produce has restarted
+   * Return true if the producer has restarted
    */
   bool producer_restarted (const ConsumerType &consumer) const;
+
+
+  uint8_t *buffer_ptr () const { return &*m_buffer; }
 
 private:
 

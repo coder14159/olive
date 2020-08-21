@@ -119,6 +119,14 @@ private:
             __attribute__ ((aligned (CACHE_LINE_SIZE)));
 
   /*
+   * Local pointer to data buffer shared between producer and consumers.
+   *
+   * Dereferencing the boost shared memory offset pointer has a cost. Therefore
+   * cache the dereferenced pointer in each client.
+   */
+  uint8_t *m_buffer
+            __attribute__ ((aligned (CACHE_LINE_SIZE))) = { nullptr };
+  /*
    * A cache used to store chunks of data taken from the shared queue
    */
   Buffer<std::allocator<uint8_t>> m_cache;

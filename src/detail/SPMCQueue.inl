@@ -9,8 +9,7 @@ template <class Allocator, size_t MaxNoDropConsumers>
 SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (size_t capacity)
 : m_capacity (capacity)
 , m_buffer (Allocator::allocate (capacity))
-{
-}
+{ }
 
 
 template <class Allocator, size_t MaxNoDropConsumers>
@@ -19,8 +18,7 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
 : Allocator  (allocator)
 , m_capacity (capacity)
 , m_buffer (Allocator::allocate (capacity))
-{
-}
+{ }
 
 template <class Allocator, size_t MaxNoDropConsumers>
 SPMCQueue<Allocator, MaxNoDropConsumers>::~SPMCQueue ()
@@ -57,26 +55,29 @@ template <class Allocator, size_t MaxNoDropConsumers>
 template <typename Header, typename Data>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
   const Header &header,
-  const Data   &data)
+  const Data   &data,
+  uint8_t *buffer)
 {
   static_assert (std::is_trivial<Data>::value,
             "data type passed to SPMCQueue::push () must be trivial");
 
-  return push (header, reinterpret_cast<const uint8_t*>(&data), sizeof (Data));
+  return push (header, reinterpret_cast<const uint8_t*>(&data),
+               sizeof (Data), buffer);
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
 template <typename Header>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
   const Header               &header,
-  const std::vector<uint8_t> &data)
+  const std::vector<uint8_t> &data,
+  uint8_t *buffer)
 {
   if (data.empty ())
   {
     return false;
   }
 
-  return push (header, data.data (), data.size ());
+  return push (header, data.data (), data.size (), buffer);
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
@@ -84,7 +85,8 @@ template <typename Header>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
   const Header  &header,
   const uint8_t *data,
-  size_t         size)
+  size_t         size,
+  uint8_t       *buffer)
 {
   assert (size > 0);
 
@@ -105,6 +107,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
    */
   if (header.seqNum == 1)
   {
+    // m_bufferPtr = &*m_buffer;
     m_committed = 0;
     m_claimed   = 0;
     m_backPressure.reset_consumers ();
@@ -163,7 +166,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
    * Get the offset pointer from shared memory. It can be somewhat expensive to
    * retrieve but it is possible to cache the pointer locally.
    */
-  auto buffer = &*m_buffer;
+  // auto buffer = &*m_buffer;
 
   copy_to_buffer (reinterpret_cast<const uint8_t*>(&header), buffer,
                   sizeof (Header));
@@ -195,7 +198,8 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   Header               &header,
   std::vector<uint8_t> &data,
   ProducerType         &producer,
-  ConsumerType         &consumer)
+  ConsumerType         &consumer,
+  const uint8_t        *buffer)
 {
   consumer_checks (producer, consumer);
 
@@ -234,7 +238,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   /*
    * Store a pointer to the shared memory offset location
    */
-  const auto *buffer = &*m_buffer;
+  // const auto *buffer = &*m_buffer;
 
   if (copy_from_buffer (buffer, reinterpret_cast<uint8_t*> (&header),
                         sizeof (Header), consumed,
@@ -451,6 +455,13 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::initialise_consumer (
 {
   BOOST_LOG_TRIVIAL (trace) << "Initialise consumer";
 
+#if 0
+  if (m_bufferPtr == nullptr)
+  {
+    std::cout << "init bufferPtr" << std::endl;
+    m_bufferPtr = &*m_buffer;
+  }
+#endif
   if (consumer.message_drops_allowed ())
   {
     /*
@@ -562,7 +573,8 @@ template <class BufferType>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   BufferType   &cache,
   ProducerType &producer,
-  ConsumerType &consumer)
+  ConsumerType &consumer,
+  const uint8_t *buffer)
 {
   ASSERT (consumer.message_drops_allowed () == false,
           "Consumer message drops facility should not be enabled");
@@ -590,11 +602,6 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
    */
   size_t size = std::min (cache.capacity () - cache.size (), available);
 
-  /*
-   * Store a pointer to the shared memory offset location
-   */
-  auto buffer = &*m_buffer;
-
   if (copy_from_buffer (buffer, cache, size, consumer))
   {
     m_backPressure.consumed (consumed, producer.index ());
@@ -610,7 +617,8 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   std::vector<uint8_t> &data,
   size_t                size,
   ProducerType         &producer,
-  ConsumerType         &consumer)
+  ConsumerType         &consumer,
+  const uint8_t        *buffer)
 {
   ASSERT (consumer.message_drops_allowed () == false,
           "Consumer message drops facility should not be enabled");
@@ -630,10 +638,6 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   auto   committed = m_committed.load (std::memory_order_acquire);
   size_t available = committed - consumed;
 #endif
-  /*
-   * Store a pointer to the shared memory offset location
-   */
-  auto buffer = &*m_buffer;
 
   /*
    * Append to data
