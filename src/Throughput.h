@@ -11,9 +11,16 @@
 namespace spmc {
 
 /*
- * Create a pretty format string for throughput
+ * Create a pretty format string for bytes throughput
  */
-std::string throughput_to_pretty (uint64_t bytes, TimeDuration duration);
+std::string
+throughput_bytes_to_pretty (uint64_t bytes, TimeDuration duration);
+
+/*
+ * Create a pretty format string for message throughput
+ */
+std::string
+throughput_messages_to_pretty (uint64_t bytes, TimeDuration duration);
 
 /*
  * Computes message throughput and persist data to file
@@ -31,6 +38,7 @@ public:
    */
   Throughput ();
 
+  Throughput(const Throughput &&throughput);
   /*
    * Computes throughput information and writes data to disk in csv format
    */
@@ -60,10 +68,6 @@ public:
   void next (uint64_t header, uint64_t payload, uint64_t seqNum);
 
   /*
-   * Update number of messages dropped
-   */
-  void dropped (uint64_t dropped);
-  /*
    * Reset statistics
    */
   void reset ();
@@ -73,14 +77,17 @@ public:
    */
   void enable (bool enable);
 
+  /*
+   * Total number of messages
+   */
   uint64_t messages () const { return m_messages; }
+  /*
+   * Total number of bytes
+   */
   uint64_t bytes ()    const { return m_bytes;    }
-  uint64_t dropped ()  const { return m_dropped;  }
 
-  uint32_t megabytes_per_sec (TimePoint time) const;
-  uint32_t messages_per_sec (TimePoint time) const;
-
-
+  uint32_t megabytes_per_sec () const;
+  uint32_t messages_per_sec () const;
 
   /*
    * Return a throughput string since start or last reset
@@ -98,13 +105,12 @@ private:
   uint64_t       m_messages   = 0;
   uint64_t       m_bytes      = 0;
   uint64_t       m_seqNum     = 0;
-  uint64_t       m_dropped    = 0;
 
   Timer m_timer;
 
-  std::ofstream  m_file;
+  std::ofstream m_file;
 
-  bool m_stop = false;
+  bool m_stop { false };
 };
 
 }
