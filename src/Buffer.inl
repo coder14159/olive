@@ -34,22 +34,6 @@ void Buffer<Allocator>::clear ()
   m_back  = 1;
 }
 
-// template <class Allocator>
-// void Buffer<Allocator>::capacity (size_t capacity)
-// {
-//   auto newBuffer = Allocator::allocate (capacity);
-
-//   Allocator::deallocate (m_buffer, m_capacity);
-
-//   m_buffer = newBuffer;
-
-//   m_capacity = capacity;
-
-//   m_size  = 0;
-//   m_front = 0;
-//   m_back  = 1;
-// }
-
 template <class Allocator>
 void Buffer<Allocator>::resize (size_t size)
 {
