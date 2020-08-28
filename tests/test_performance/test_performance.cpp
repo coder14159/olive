@@ -266,7 +266,7 @@ BOOST_AUTO_TEST_CASE (VectorThroughput)
 
   run_test (32);
   run_test (64);
-  run_test (MESSAGE_SIZE);
+  run_test (128);
   run_test (512);
   run_test (1024);
   run_test (2048);
