@@ -15,46 +15,44 @@ namespace fs = boost::filesystem;
 namespace spmc {
 
 inline
-std::string nanoseconds_to_pretty (Nanoseconds::rep count)
-{
-  if (count == Nanoseconds::max ().count ())
-  {
-    return "-";
-  }
-  else if (count == Nanoseconds::min ().count ())
-  {
-    return "-";
-  }
-  else if (count < 1e3)
-  {
-    return (boost::str (boost::format ("%3d ns") % count));
-  }
-  else if (count < 1e6)
-  {
-    double usecs = static_cast<double> (count) / 1.0e3;
-    return (boost::str (boost::format ("%3.0f us") % usecs));
-  }
-  else if (count < 1e9)
-  {
-    double msecs = static_cast<double> (count) / 1.0e6;
-    return (boost::str (boost::format ("%3.0f ms") % msecs));
-  }
-  else if (count < (1e9*60))
-  {
-    double secs = static_cast<double> (count) / 1.0e9;
-    return (boost::str (boost::format ("%3.0f s") % secs));
-  }
-  else
-  {
-    double mins = static_cast<double> (count) / (1e9*60);
-    return (boost::str (boost::format ("%3.0f min") % mins));
-  }
-}
-
-inline
 std::string nanoseconds_to_pretty (Nanoseconds nanoseconds)
 {
   return nanoseconds_to_pretty (nanoseconds.count ());
+}
+
+inline
+std::string nanoseconds_to_pretty (Nanoseconds::rep nanoseconds)
+{
+  if (nanoseconds == Nanoseconds::max ().count ())
+  {
+    return "-";
+  }
+  else if (nanoseconds == Nanoseconds::min ().count ())
+  {
+    return "-";
+  }
+  else if (nanoseconds < 1e3)
+  {
+    return (boost::str (boost::format ("%4d ns ") % nanoseconds));
+  }
+  else if (nanoseconds < 1e6)
+  {
+    double usecs = static_cast<double> (nanoseconds) / 1.0e3;
+    return (boost::str (boost::format ("%4.0f us ") % usecs));
+  }
+  else if (nanoseconds < 1e9)
+  {
+    double msecs = static_cast<double> (nanoseconds) / 1.0e6;
+    return (boost::str (boost::format ("%4.0f ms ") % msecs));
+  }
+  else if (nanoseconds < (1e9*60))
+  {
+    double secs = static_cast<double> (nanoseconds) / 1.0e9;
+    return (boost::str (boost::format ("%4.0f s ") % secs));
+  }
+
+  double mins = static_cast<double> (nanoseconds) / (1.0e9*60.);
+  return (boost::str (boost::format ("%4.0f mins ") % mins));
 }
 
 namespace {
@@ -215,7 +213,10 @@ Latency &Latency::write_data ()
 inline
 std::string Latency::to_string () const
 {
-  return nanoseconds_to_pretty (min ()) + ":" + nanoseconds_to_pretty (max ());
+  int64_t median = ba::p_square_quantile (m_quantiles.at (50));
+  return nanoseconds_to_pretty (min ()) + ":" +
+         nanoseconds_to_pretty (median) + ":" +
+         nanoseconds_to_pretty (max ());
 }
 
 inline
@@ -229,7 +230,7 @@ std::vector<std::string> Latency::to_strings () const
   std::vector<std::string> stats;
 
   stats.push_back (
-      (boost::format ("%s %s") % "percentile" % "latency").str ());
+      (boost::format ("%s %s") % "Percentile" % "Latency").str ());
   stats.push_back (
       (boost::format ("%s %s") % "----------" % "-------").str ());
 

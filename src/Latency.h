@@ -64,7 +64,8 @@ public:
   bool is_running () const { return (m_stop == false); }
 
   /*
-   * Return a string representing latency since the start or last reset
+   * Return a string representing minimum:median:max latencies since the start
+   * or last reset
    */
   std::string to_string () const;
 
