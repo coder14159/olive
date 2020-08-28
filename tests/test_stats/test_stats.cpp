@@ -35,7 +35,7 @@ BOOST_AUTO_TEST_CASE(ThroughputStatsUpdates)
   }
 
   BOOST_CHECK (stats.throughput ().summary ()
-                    .megabytes_per_sec (Clock::now ()) > 100);
+                    .megabytes_per_sec () > 100);
 }
 
 BOOST_AUTO_TEST_CASE(LatencyStatsUpdateIsFast)
