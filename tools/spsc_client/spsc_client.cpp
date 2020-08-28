@@ -113,7 +113,7 @@ int main(int argc, char* argv[]) try
   std::vector<uint8_t> data;
   std::vector<uint8_t> expected;
 
-  while (SPMC_EXPECT_FALSE (stop))
+  while (SPMC_EXPECT_FALSE (!stop))
   {
     if (stream.next (header, data))
     {

@@ -94,9 +94,18 @@ void server (const std::string& name,
 
   std::iota (std::begin (message), std::end (message), 1);
 
+  /*
+   * TODO:
+   * - If rate is low throttle can send "keep warm" null messages
+   * - Throttle should have a conf
+   *
+   *
+   * eg Throttle throttle (sink, rate);
+   */
   Throttle throttle (rate);
 
-  while (SPMC_EXPECT_FALSE (stop))
+
+  while (SPMC_EXPECT_FALSE (!stop))
   {
     sink.next (message);
 

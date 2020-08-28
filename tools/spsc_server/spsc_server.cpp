@@ -141,7 +141,7 @@ void server (const std::string& name,
 
   Throttle throttle (rate);
 
-  while (SPMC_EXPECT_FALSE (stop))
+  while (SPMC_EXPECT_FALSE (!stop))
   {
     for (auto &sink : sinks)
     {
