@@ -73,7 +73,10 @@ void PerformanceStats::start ()
 
       now = Clock::now ();
 
-      TimeDuration duration (lastLog - now);
+      TimeDuration duration (now - lastLog);
+
+      m_latency.interval ().next (latency_duration);
+      m_latency.summary ().next (latency_duration);
 
       if (duration.nanoseconds () > Seconds (1))
       {
@@ -85,9 +88,6 @@ void PerformanceStats::start ()
 
         lastLog = now;
       }
-
-      m_latency.interval ().next (latency_duration);
-      m_latency.summary ().next (latency_duration);
     }
 
     m_throughput.summary ().write_data ();
