@@ -65,6 +65,12 @@ double to_microseconds (TimeDuration duration)
   return static_cast<double> (duration.nanoseconds ().count ()) / 1.0e3;
 }
 
+inline
+double to_nanoseconds (TimeDuration duration)
+{
+  return static_cast<int64_t> (duration.nanoseconds ().count ());
+}
+
 } // namespace spmc
 
 #endif // IPC_TIME_DURATION_H
