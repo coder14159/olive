@@ -3,7 +3,6 @@
 
 #include "LatencyStats.h"
 #include "ThroughputStats.h"
-#include "Throughput.h"
 
 #include <boost/lockfree/spsc_queue.hpp>
 
@@ -14,6 +13,13 @@ namespace spmc {
 class PerformanceStats
 {
 public:
+  struct Dropped
+  {
+    uint64_t interval = 0;
+    uint64_t summary  = 0;
+  };
+
+public:
   PerformanceStats ();
 
   PerformanceStats (const std::string &path);
@@ -21,6 +27,11 @@ public:
   ~PerformanceStats ();
 
   void output_directory (const std::string &path);
+
+  /*
+   * Messages dropped
+   */
+  const PerformanceStats::Dropped &dropped () const;
 
   /*
    * Update number of bytes sent at a time point
@@ -33,7 +44,6 @@ public:
   void update (uint64_t header_size, uint64_t payload_size,
                uint64_t seqNum, TimePoint timestamp);
 
-  /// POSSIBLE THREAD POBLEMS ACCESSING THESE!!
   const ThroughputStats &throughput () const { return m_throughput; }
         ThroughputStats &throughput ()       { return m_throughput; }
 
@@ -52,9 +62,11 @@ private:
    */
   void stop ();
 
-  void log_stats ();
+  void log_interval_stats ();
 
 private:
+
+  Dropped m_dropped;
 
   ThroughputStats m_throughput;
 
@@ -63,6 +75,8 @@ private:
   TimePoint m_lastIntervalLog;
 
   TimePoint m_sampled;
+
+  TimePoint m_startTime;
 
   const uint64_t QUEUE_SIZE = 10;
 

@@ -51,6 +51,7 @@ void PerformanceStats::start ()
     Clock::duration latency_duration;
 
     TimePoint now = Clock::now ();
+
     TimePoint lastLog = now;
 
     while (!m_stop)
@@ -72,15 +73,15 @@ void PerformanceStats::start ()
 
       now = Clock::now ();
 
-      if ((now - lastLog) > Seconds (1))
+      TimeDuration duration (lastLog - now);
+
+      if (duration.nanoseconds () > Seconds (1))
       {
-        log_stats ();
+        log_interval_stats ();
 
-        m_latency.interval ().write_data ();
-        m_latency.interval ().reset ();
+        m_latency.interval ().write_data ().reset ();
 
-        m_throughput.interval ().write_data ();
-        m_throughput.interval ().reset ();
+        m_throughput.interval ().write_data ().reset ();
 
         lastLog = now;
       }
@@ -94,7 +95,6 @@ void PerformanceStats::start ()
   });
 }
 
-
 inline
 PerformanceStats::~PerformanceStats ()
 {
@@ -106,12 +106,12 @@ PerformanceStats::~PerformanceStats ()
    */
   if (m_throughput.summary ().is_running ())
   {
-    BOOST_LOG_TRIVIAL(info) <<
-      boost::algorithm::trim_left_copy (m_throughput.summary ().to_string ());
-
-    BOOST_LOG_TRIVIAL(info) << m_throughput.summary ().dropped ()
-                            << " messages dropped";
+    namespace ba = boost::algorithm;
+    BOOST_LOG_TRIVIAL(info) << "Throughput: "
+        << ba::trim_left_copy (m_throughput.summary ().to_string ());
   }
+
+  BOOST_LOG_TRIVIAL(info) << "Messages dropped: " << m_dropped.summary;
 
   for (auto line : m_latency.summary ().to_strings ())
   {
@@ -120,7 +120,7 @@ PerformanceStats::~PerformanceStats ()
 }
 
 inline
-void PerformanceStats::log_stats ()
+void PerformanceStats::log_interval_stats ()
 {
   std::string log;
 
@@ -137,13 +137,16 @@ void PerformanceStats::log_stats ()
 
     log += m_throughput.interval ().to_string ();
 
-    if (m_throughput.interval ().dropped () > 0)
-    {
-      log += "|dropped: "
-          + std::to_string (m_throughput.interval ().dropped ());
-    }
-
     m_throughput.interval ().write_data ().reset ();
+  }
+
+  if (m_dropped.interval > 0)
+  {
+    if (!log.empty ()) { log += "|"; }
+
+    log += std::to_string (m_dropped.interval);
+
+    m_dropped.interval = 0;
   }
 
   if (!log.empty ())
@@ -153,26 +156,33 @@ void PerformanceStats::log_stats ()
 }
 
 inline
+const PerformanceStats::Dropped& PerformanceStats::dropped () const
+{
+  return m_dropped;
+}
+
+inline
 void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
                                TimePoint timestamp)
 {
   /*
    * Check for dropped messages
    */
-  m_throughput.interval ().next (bytes, seqNum);
-  m_throughput.summary ().next (bytes, seqNum);
-
-  if (SPMC_EXPECT_TRUE (m_seqNum > 0))
+  if (SPMC_EXPECT_TRUE (m_seqNum > 1))
   {
-    if (SPMC_EXPECT_FALSE ((seqNum - m_seqNum) == 1))
+    auto dropped = seqNum - m_seqNum;
+
+    if (SPMC_EXPECT_FALSE (dropped > 1))
     {
-      m_throughput.interval ().dropped (seqNum - m_seqNum);
-      m_throughput.summary ().dropped (seqNum - m_seqNum);
+      m_dropped.interval += dropped;
+      m_dropped.summary  += dropped;
     }
   }
 
   m_seqNum = seqNum;
 
+  m_throughput.interval ().next (bytes, seqNum);
+  m_throughput.summary ().next (bytes, seqNum);
   /*
    * Sample latency values as requesting a timestamp too often impacts
    * performance
