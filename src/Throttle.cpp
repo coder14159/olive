@@ -8,6 +8,9 @@ Throttle::Throttle (uint32_t rate)
 
 void Throttle::throttle ()
 {
+  /*
+   * No throttling by default
+   */
   if (m_rate == 0)
   {
     return;
