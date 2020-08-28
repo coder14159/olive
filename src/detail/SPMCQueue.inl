@@ -1,3 +1,4 @@
+#include "Utils.h"
 #include <boost/log/trivial.hpp>
 
 #include <cmath>
@@ -277,7 +278,8 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::copy_to_buffer (
    * memory ordering is ok here.
    */
   size_t index =
-          (m_committed.load (std::memory_order_relaxed) + offset) % m_capacity;
+    MODULUS((m_committed.load (std::memory_order_relaxed) + offset), m_capacity);
+
 
   if ((index + size) <= m_capacity)
   {
@@ -303,7 +305,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
 {
   bool success = true;
 
-  size_t index = consumed % m_capacity;
+  size_t index = MODULUS(consumed, m_capacity);
 
   // copy the header from the buffer
   size_t spaceToEnd = m_capacity - index;
@@ -324,7 +326,8 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
    *
    * This is only relevant if the consumer is configured to allow message drops
    */
-  if (messageDropsAllowed && (m_claimed - consumed) > m_capacity)
+  if (SPMC_EXPECT_FALSE (messageDropsAllowed) &&
+      (m_claimed - consumed) > m_capacity)
   {
     /*
      * If a the consumer is configured to allow message drops and the producer
@@ -350,7 +353,8 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
   bool success = true;
 
   auto& consumed = consumer.consumed();
-  size_t index = consumed % m_capacity;
+
+  size_t index = MODULUS(consumed, m_capacity);
 
   /*
    * Copy the header from the buffer
@@ -407,7 +411,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
 
   auto & consumed = consumer.consumed ();
 
-  size_t index = consumed % m_capacity;
+  size_t index = MODULUS(consumed, m_capacity);
 
   /*
    * Copy the header from the buffer
