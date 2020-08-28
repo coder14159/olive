@@ -8,6 +8,7 @@
 #include "TimeDuration.h"
 #include "Timer.h"
 #include "detail/SharedMemory.h"
+#include "detail/Utils.h"
 
 #include <boost/circular_buffer.hpp>
 #include <boost/container/small_vector.hpp>
@@ -16,6 +17,7 @@
 
 #include <cstdlib>
 #include <ext/numeric>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -34,21 +36,21 @@ namespace ba = boost::accumulators;
 
 using namespace spmc;
 
+const size_t MESSAGE_SIZE = 128;
+
 /*
  * Override time to run each performance test from the environment variable
  * "TIMEOUT" which should contain a value in seconds.
  */
 TimeDuration get_test_duration ()
 {
-  Nanoseconds duration (1s);
+  Seconds duration (1s);
 
   if (getenv ("TIMEOUT") != nullptr)
   {
-    double seconds = std::atof (getenv ("TIMEOUT"));
+    int seconds = std::atoi (getenv ("TIMEOUT"));
 
-    int64_t ns = seconds * 1e9;
-
-    duration = Nanoseconds (ns);
+    duration = Seconds (seconds);
   }
 
   return std::chrono::duration_cast<Nanoseconds> (duration);
@@ -66,8 +68,6 @@ BOOST_AUTO_TEST_CASE (TestTimeDuration)
     now = Clock::now ();
   }
 
-  auto elapsed = nanoseconds_to_pretty (now - start);
-
   auto per_call = (Nanoseconds (now - start) / count);
 
   BOOST_TEST_MESSAGE ("Duration Clock::now () per call: "
@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE (TestTimeDuration)
    *
    * Note it is possible to implement a faster clock using the rdtsc instruction
    */
-  BOOST_CHECK (per_call.count () < 200);
+  BOOST_CHECK (per_call < Nanoseconds (200));
 }
 
 BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
   auto duration = get_test_duration ();
 
   auto stress_boost_circular_buffer = [&duration] (
-    size_t bufferSize, size_t messageSize) -> double
+    size_t bufferSize, size_t messageSize) -> Throughput
   {
     BOOST_CHECK (bufferSize > messageSize);
 
@@ -102,7 +102,9 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
     std::vector<uint8_t> out;
     out.reserve (bufferSize);
 
-    uint64_t bytes = 0;
+    uint64_t seqNum = 0;
+
+    Throughput throughput;
 
     Timer timer;
 
@@ -124,25 +126,20 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
       // erase copied data from the buffer
       buffer.erase (buffer.begin (), buffer.begin () + buffer.size ());
 
-      bytes += out.size ();
+      throughput.next (out.size (), ++seqNum);
 
       ++i;
     }
 
     timer.stop ();
 
-    auto throughput = static_cast<double> (bytes) / (1024.*1024.*1024.)
-                    / to_seconds (timer.elapsed ());
-
-    BOOST_TEST_MESSAGE ("    boost  buffer: "
-                        << std::fixed << std::setprecision (3)
-                        << throughput << " GB/s");
+    BOOST_TEST_MESSAGE ("    boost buffer  " << throughput.to_string ());
 
     return throughput;
   };
 
   auto stress_custom_buffer = [&duration] (
-    size_t bufferSize, size_t messageSize) -> double
+    size_t bufferSize, size_t messageSize) -> Throughput
   {
     BOOST_CHECK (bufferSize > messageSize);
 
@@ -151,7 +148,9 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
     Buffer<std::allocator<uint8_t>> buffer (bufferSize);
     std::vector<uint8_t> out (bufferSize);
 
-    uint64_t bytes = 0;
+    uint64_t seqNum = 0;
+
+    Throughput throughput;
 
     Timer timer;
 
@@ -159,7 +158,6 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
     {
       if ((i % 1000) == 0 && duration < timer.elapsed ())
       {
-        timer.elapsed ().pretty ();
         break;
       }
 
@@ -169,19 +167,13 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
       // copy data out of circular buffer
       buffer.pop (out, message.size ());
 
-      bytes += out.size ();
+      throughput.next (out.size (), ++seqNum);
 
       ++i;
     }
 
-    timer.stop ();
+    BOOST_TEST_MESSAGE ("    custom buffer " << throughput.to_string ());
 
-    auto throughput = static_cast<double> (bytes) / (1024.*1024.*1024.)
-                    / to_seconds (timer.elapsed ());
-
-    BOOST_TEST_MESSAGE ("    custom buffer: "
-                        << std::fixed << std::setprecision (3)
-                        << throughput << " GB/s");
     return throughput;
   };
 
@@ -193,28 +185,33 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
     {
       BOOST_TEST_MESSAGE ("  message size: " << messageSize);
 
-      stress_boost_circular_buffer (bufferSize, messageSize);
+      auto boost = stress_boost_circular_buffer (bufferSize, messageSize);
 
-      stress_custom_buffer (bufferSize, messageSize);
+      auto custom = stress_custom_buffer (bufferSize, messageSize);
+
+      BOOST_CHECK (custom.messages_per_sec () > boost.messages_per_sec ());
     }
   }
 }
 
 template <class Vector>
-double ThroughputOfVector (size_t bufferSize, size_t batchSize)
+void ThroughputOfVector (
+    size_t bufferSize, size_t batchSize, const std::string &type)
 {
   Buffer<std::allocator<uint8_t>> buffer (bufferSize);
   std::vector<uint8_t> in (batchSize);
+
   Vector out;
 
-  uint64_t i = 0;
-  uint64_t bytes = 0;
+  uint64_t seqNum = 0;
+
+  Throughput throughput;
 
   auto duration = get_test_duration ();
 
   Timer timer;
 
-  while (true)
+  for (int i = 0; ; ++i)
   {
     if ((i % 1000) == 0 && duration < timer.elapsed ())
     {
@@ -225,15 +222,17 @@ double ThroughputOfVector (size_t bufferSize, size_t batchSize)
 
     out.resize (in.size ());
     buffer.pop (out.data (), in.size ());
-    bytes += out.size ();
+
+    throughput.next (out.size (), ++seqNum);
 
     ++i;
   }
+
   timer.stop ();
 
-  return static_cast<double> (bytes) / (1024.*1024.*1024.)
-                / to_seconds (timer.elapsed ());
-};
+  BOOST_TEST_MESSAGE ("    " << type << "\t"
+      << throughput_bytes_to_pretty (throughput.bytes (), timer.elapsed ()));
+}
 
 BOOST_AUTO_TEST_CASE (VectorThroughput)
 {
@@ -245,31 +244,29 @@ BOOST_AUTO_TEST_CASE (VectorThroughput)
   auto run_test = [] (size_t batchSize) {
     using namespace boost::container;
 
-    size_t bufferSize = 204800;
+    size_t containerSize = 204800;
 
-    double throughput =
-      ThroughputOfVector<std::vector<uint8_t>> (bufferSize, batchSize);
-    BOOST_TEST_MESSAGE ("Throughput std::vector\t\tsize=" << batchSize << " "
-      << std::fixed << std::setprecision (3) << throughput << " GB/s");
+    BOOST_TEST_MESSAGE ("  constainer size: " << containerSize);
 
-    throughput =
-      ThroughputOfVector<small_vector<uint8_t, 1024>> (bufferSize, batchSize);
-    BOOST_TEST_MESSAGE ("Throughput small_vector\t\tsize=" << batchSize << " "
-      << std::fixed << std::setprecision (3) << throughput << " GB/s");
+    BOOST_TEST_MESSAGE ("  batch size: " << batchSize);
+
+
+    ThroughputOfVector<std::vector<uint8_t>> (
+        containerSize, batchSize, "std::vector  ");
+
+    ThroughputOfVector<small_vector<uint8_t, 1024>> (
+        containerSize, batchSize, "small_vector ");
 
     if (batchSize <= 1024)
     {
-      throughput =
-        ThroughputOfVector<static_vector<uint8_t, 1024>> (bufferSize, batchSize);
-      BOOST_TEST_MESSAGE ("Throughput static_vector\tsize=" << batchSize << " "
-        << std::fixed << std::setprecision (3) << throughput << " GB/s");
+      ThroughputOfVector<static_vector<uint8_t, 1024>> (
+          containerSize, batchSize, "static_vector");
     }
-    BOOST_TEST_MESSAGE ("---");
   };
 
   run_test (32);
   run_test (64);
-  run_test (128);
+  run_test (MESSAGE_SIZE);
   run_test (512);
   run_test (1024);
   run_test (2048);
@@ -284,7 +281,7 @@ float latency_percentile_usecs (const PerformanceStats &stats, float percentile)
                           stats.latency ().summary ().quantiles ()
                                .at (percentile)));
   return (nanoseconds/1000.);
-};
+}
 
 void sink_stream_in_single_process (
     size_t            capacity,
@@ -300,8 +297,8 @@ void sink_stream_in_single_process (
   auto producer = std::thread ([&stop, &sink, &rate] () {
     Throttle throttle (rate);
 
-    size_t bbaSize = 128;
-    std::vector<uint8_t> message (bbaSize, 0);
+    size_t message_size = MESSAGE_SIZE;
+    std::vector<uint8_t> message (message_size, 0);
 
     std::iota (std::begin (message), std::end (message), 1);
 
@@ -335,9 +332,9 @@ void sink_stream_in_single_process (
   stop = true;
 
   stream.stop ();
-  consumer.join ();
-
   sink.stop ();
+
+  consumer.join ();
   producer.join ();
 }
 
@@ -389,11 +386,11 @@ void sink_stream_in_single_process_pod (
 
   stop = true;
 
-  stream.stop ();
   consumer.join ();
-
-  sink.stop ();
   producer.join ();
+
+  stream.stop ();
+  sink.stop ();
 }
 
 BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiThread)
@@ -403,7 +400,14 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiThread)
     return;
   }
 
-  spmc::ScopedLogLevel log (error);
+  std::string log_level = "ERROR";
+
+  if (getenv ("LOG_LEVEL") != nullptr)
+  {
+    log_level = getenv ("LOG_LEVEL");
+  }
+
+  spmc::ScopedLogLevel log (log_level);
 
   size_t capacity = 2048000;
   size_t rate     = 0;
@@ -411,21 +415,17 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiThread)
 
   PerformanceStats stats;
 
+  stats.throughput ().summary ().enable (true);
+
   sink_stream_in_single_process (capacity, stats, rate, prefetch);
 
-  auto throughput = stats.throughput ()
-                         .summary ()
-                         .megabytes_per_sec (Clock::now ());
+  auto &throughput = stats.throughput ().summary ();
 
-  BOOST_CHECK (throughput > 100);
+  BOOST_CHECK (throughput.messages_per_sec () > 1e6);
 
-  BOOST_TEST_MESSAGE ("throughput\t" << std::setprecision (3)
-                      << (throughput/1024.) << " GB/sec");
+  BOOST_CHECK (throughput.megabytes_per_sec () > 100);
 
-  rate = stats.throughput ().summary ()
-                            .messages_per_sec (Clock::now ());
-
-  BOOST_TEST_MESSAGE ("rate\t\t" << (rate/1.0e6) << " M messages/sec");
+  BOOST_TEST_MESSAGE (throughput.to_string ());
 }
 
 BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiThread)
@@ -435,7 +435,14 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiThread)
     return;
   }
 
-  spmc::ScopedLogLevel log (error);
+  std::string log_level = "ERROR";
+
+  if (getenv ("LOG_LEVEL") != nullptr)
+  {
+    log_level = getenv ("LOG_LEVEL");
+  }
+
+  spmc::ScopedLogLevel log (log_level);
 
   size_t capacity = 20480;
   size_t rate     = 1e6;
@@ -443,23 +450,19 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiThread)
 
   PerformanceStats stats;
 
+  stats.throughput ().summary ().enable (true);
+
   sink_stream_in_single_process (capacity, stats, rate, prefetch);
 
-  auto throughput = stats.throughput ()
-                         .summary ()
-                         .megabytes_per_sec (Clock::now ());
+  auto &throughput = stats.throughput ().summary ();
 
-  BOOST_CHECK (throughput > 100);
+  BOOST_CHECK (throughput.messages_per_sec () > (rate * 0.9));
+
+  BOOST_CHECK (throughput.megabytes_per_sec () > (rate * MESSAGE_SIZE * 0.9));
+
+  BOOST_TEST_MESSAGE (throughput.to_string ());
 
   BOOST_CHECK (latency_percentile_usecs (stats, 50.) < 10);
-
-  BOOST_TEST_MESSAGE ("throughput\t" << std::setprecision (3)
-                      << (throughput/1024.) << " GB/sec");
-
-  rate = stats.throughput ().summary ()
-                            .messages_per_sec (Clock::now ());
-
-  BOOST_TEST_MESSAGE ("rate\t\t" << (rate/1.0e6) << " M messages/sec");
 
   for (auto &line : stats.latency ().summary ().to_strings ())
   {
@@ -488,21 +491,13 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamWithPrefetchMultiThread)
 
   sink_stream_in_single_process (capacity, stats, rate, prefetch);
 
-  auto throughput = stats.throughput ()
-                         .summary ()
-                         .megabytes_per_sec (Clock::now ());
+  auto &throughput = stats.throughput ().summary ();
 
-  BOOST_CHECK (throughput > 100);
+  BOOST_CHECK (throughput.messages_per_sec () > 1000);
 
-  BOOST_TEST_MESSAGE ("throughput\t" << std::setprecision (3)
-                      << (throughput/1024.) << " GB/sec");
+  BOOST_CHECK (throughput.megabytes_per_sec () > (rate * MESSAGE_SIZE * 0.9));
 
-  rate = stats.throughput ().summary ()
-                            .messages_per_sec (Clock::now ());
-
-  BOOST_TEST_MESSAGE ("rate\t\t" << (rate/1.0e6) << " M messages/sec");
-
-  BOOST_CHECK (rate > 2e6);
+  BOOST_TEST_MESSAGE (throughput.to_string ());
 
   for (auto &line : stats.latency ().summary ().to_strings ())
   {
@@ -522,7 +517,7 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamWithPrefetchMultiThread)
    */
   spmc::ScopedLogLevel log (error);
 
-  size_t capacity = 20480;
+  size_t capacity = 2048000;
   size_t rate     = 1e6;
   size_t prefetch = 1024;
 
@@ -530,23 +525,15 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamWithPrefetchMultiThread)
 
   sink_stream_in_single_process (capacity, stats, rate, prefetch);
 
-  auto throughput = stats.throughput ()
-                         .summary ()
-                         .megabytes_per_sec (Clock::now ());
+  auto &throughput = stats.throughput ().summary ();
+
+  BOOST_CHECK (throughput.messages_per_sec () > 1000);
+
+  BOOST_CHECK (throughput.megabytes_per_sec () > 100);
+
+  BOOST_TEST_MESSAGE (throughput.to_string ());
 
   BOOST_CHECK (latency_percentile_usecs (stats, 50.) < 10);
-
-  BOOST_CHECK (throughput > 100);
-
-  BOOST_TEST_MESSAGE ("throughput\t" << std::setprecision (3)
-                      << (throughput/1024.) << " GB/sec");
-
-  rate = stats.throughput ().summary ()
-                            .messages_per_sec (Clock::now ());
-
-  BOOST_TEST_MESSAGE ("rate " << (rate/1.0e6) << " M messages/sec");
-
-  BOOST_CHECK (rate > 500000);
 
   for (auto &line : stats.latency ().summary ().to_strings ())
   {
@@ -569,25 +556,22 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamPODMultiThread)
 
   PerformanceStats stats;
 
-  sink_stream_in_single_process_pod<char[128]> (capacity, stats, rate, prefetch);
+  sink_stream_in_single_process_pod<char[MESSAGE_SIZE]> (capacity, stats, rate, prefetch);
 
-  auto throughput = stats.throughput ()
-                         .summary ()
-                         .megabytes_per_sec (Clock::now ());
+  auto &throughput = stats.throughput ().summary ();
 
-  BOOST_CHECK (throughput > 100);
+  BOOST_TEST_MESSAGE (throughput.to_string ());
 
-  BOOST_TEST_MESSAGE ("throughput\t" << std::setprecision (3)
-                      << (throughput/1024.) << " GB/sec");
+  BOOST_CHECK (throughput.messages_per_sec () > 1000);
 
-  rate = stats.throughput ()
-                         .summary ()
-                         .messages_per_sec (Clock::now ());
+  BOOST_CHECK (throughput.megabytes_per_sec () > 100);
 
-  BOOST_TEST_MESSAGE ("rate\t\t" << std::fixed << std::setprecision (3)
-                      << (rate/1.0e6) << " M messages/sec");
+  BOOST_CHECK (latency_percentile_usecs (stats, 50.) < 1000);
 
-  BOOST_CHECK (rate > 1e6);
+  for (auto &line : stats.latency ().summary ().to_strings ())
+  {
+    BOOST_TEST_MESSAGE (line);
+  }
 }
 
 BOOST_AUTO_TEST_CASE (LatencySinkStreamPODMultiThread)
@@ -605,27 +589,17 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamPODMultiThread)
 
   PerformanceStats stats;
 
-  sink_stream_in_single_process_pod<char[128]> (capacity, stats, rate, prefetch);
+  sink_stream_in_single_process_pod<char[MESSAGE_SIZE]> (capacity, stats, rate, prefetch);
 
-  auto throughput = stats.throughput ()
-                         .summary ()
-                         .megabytes_per_sec (Clock::now ());
+  auto &throughput = stats.throughput ().summary ();
 
-  BOOST_CHECK (throughput > 100);
+  BOOST_TEST_MESSAGE (throughput.to_string ());
+
+  BOOST_CHECK (throughput.messages_per_sec () > 1000);
+
+  BOOST_CHECK (throughput.megabytes_per_sec () > 100);
 
   BOOST_CHECK (latency_percentile_usecs (stats, 50.) < 10);
-
-  BOOST_TEST_MESSAGE ("throughput\t" << std::setprecision (3)
-                      << (throughput/1024.) << " GB/sec");
-
-  rate = stats.throughput ()
-                         .summary ()
-                         .messages_per_sec (Clock::now ());
-
-  BOOST_TEST_MESSAGE ("rate\t\t" << std::fixed << std::setprecision (3)
-                      << (rate/1.0e6) << " M messages/sec");
-
-  BOOST_CHECK (rate > 500000);
 
   for (auto &line : stats.latency ().summary ().to_strings ())
   {
@@ -648,24 +622,19 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamPODWithPrefetchMultiThread)
 
   PerformanceStats stats;
 
-  sink_stream_in_single_process_pod<char[128]> (capacity, stats, rate, prefetch);
+  sink_stream_in_single_process_pod<char[MESSAGE_SIZE]> (capacity, stats, rate, prefetch);
 
-  auto throughput = stats.throughput ()
-                         .summary ()
-                         .megabytes_per_sec (Clock::now ());
+  auto &throughput = stats.throughput ().summary ();
 
-  BOOST_CHECK (throughput > 100);
+  BOOST_TEST_MESSAGE (throughput.to_string ());
 
-  BOOST_TEST_MESSAGE ("throughput\t" << std::setprecision (3)
-                      << (throughput/1024.) << " GB/sec");
-
-  rate = stats.throughput ().summary ()
-                            .messages_per_sec (Clock::now ());
+  /*
+   * Prefetch latency can be higher
+   */
+  BOOST_CHECK (throughput.messages_per_sec () > 1000);
 
   BOOST_TEST_MESSAGE ("rate\t\t" << std::fixed << std::setprecision (3)
-                      << (rate/1.0e6) << " M messages/sec");
-
-  BOOST_CHECK (rate > 1e6);
+                      << (rate/1.0e6) << " M msgs/sec");
 }
 
 BOOST_AUTO_TEST_CASE (LatencySinkStreamPODWithPrefetchMultiThread)
@@ -683,26 +652,15 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamPODWithPrefetchMultiThread)
 
   PerformanceStats stats;
 
-  sink_stream_in_single_process_pod<char[128]> (capacity, stats, rate, prefetch);
+  sink_stream_in_single_process_pod<char[MESSAGE_SIZE]> (capacity, stats, rate, prefetch);
 
-  auto throughput = stats.throughput ()
-                         .summary ()
-                         .megabytes_per_sec (Clock::now ());
+  auto &throughput = stats.throughput ().summary ();
 
-  BOOST_CHECK (throughput > 100);
+  BOOST_TEST_MESSAGE (throughput.to_string ());
+
+  BOOST_CHECK (throughput.messages_per_sec () > 1000);
 
   BOOST_CHECK (latency_percentile_usecs (stats, 50.) < 10);
-
-  BOOST_TEST_MESSAGE ("throughput\t" << std::setprecision (3)
-                      << (throughput/1024.) << " GB/sec");
-
-  rate = stats.throughput ().summary ()
-                            .messages_per_sec (Clock::now ());
-
-  BOOST_TEST_MESSAGE ("rate\t\t" << std::fixed << std::setprecision (3)
-                      << (rate/1e6) << " M messages/sec");
-
-  BOOST_CHECK (rate > 500000);
 
   for (auto &line : stats.latency ().summary ().to_strings ())
   {
@@ -735,11 +693,6 @@ void sink_stream_in_shared_memory (
   Throttle throttle (rate);
 
   /*
-   * Message size in bytes
-   */
-  size_t messageSize = 128;
-
-  /*
    * Create shared memory in which shared objects can be created
    */
   managed_shared_memory (open_or_create, name.c_str(),
@@ -749,9 +702,9 @@ void sink_stream_in_shared_memory (
 
   std::atomic<bool> stop = { false };
 
-  auto producer = std::thread ([&stop, &sink, &messageSize, &throttle] () {
+  auto producer = std::thread ([&stop, &sink, &throttle] () {
 
-    std::vector<uint8_t> message (messageSize, 0);
+    std::vector<uint8_t> message (MESSAGE_SIZE, 0);
 
     std::iota (std::begin (message), std::end (message), 1);
 
@@ -768,10 +721,10 @@ void sink_stream_in_shared_memory (
   SPMCStreamProcess stream (name, name + ":queue",
                             allowMessageDrops, prefetch);
 
-  auto consumer = std::thread ([&stream, &stats, &messageSize] () {
+  auto consumer = std::thread ([&stream, &stats] () {
     Header header;
 
-    std::vector<uint8_t> message (messageSize, 0);
+    std::vector<uint8_t> message (MESSAGE_SIZE, 0);
 
     while (true)
     {
@@ -787,6 +740,7 @@ void sink_stream_in_shared_memory (
     }
   });
 
+  // consume messages from the shared memory queue
   std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
 
   stream.stop ();
@@ -794,10 +748,8 @@ void sink_stream_in_shared_memory (
 
   stop = true;
 
-  // consume messages from the shared memory queue
   producer.join ();
   consumer.join ();
-
 }
 
 BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiProcess)
@@ -817,21 +769,11 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiProcess)
 
   sink_stream_in_shared_memory (capacity, stats, rate, prefetch);
 
-  auto megabytes_per_sec = stats.throughput ()
-                         .summary ()
-                         .megabytes_per_sec (Clock::now ());
+  auto &throughput = stats.throughput ().summary ();
 
-  BOOST_CHECK (megabytes_per_sec > 500);
+  BOOST_TEST_MESSAGE (throughput.to_string ());
 
-  BOOST_TEST_MESSAGE ("throughput\t" << std::setprecision (3)
-                      << (megabytes_per_sec/1024.) << " GB/sec");
-
-  auto messages_per_sec = stats.throughput ()
-                         .summary ()
-                         .messages_per_sec (Clock::now ());
-
-  BOOST_TEST_MESSAGE ("rate\t\t" << std::fixed << std::setprecision (3)
-                      << (messages_per_sec/1.0e6) << " M messages/sec");
+  BOOST_CHECK (throughput.messages_per_sec () > 1000);
 }
 
 BOOST_AUTO_TEST_CASE (ThroughputSinkStreamWithPrefetchMultiProcess)
@@ -851,21 +793,13 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamWithPrefetchMultiProcess)
 
   sink_stream_in_shared_memory (capacity, stats, rate, prefetch);
 
-  auto megabytes_per_sec = stats.throughput ()
-                         .summary ()
-                         .megabytes_per_sec (Clock::now ());
+  auto &throughput = stats.throughput ().summary ();
 
-  BOOST_CHECK (megabytes_per_sec > 1000);
+  BOOST_TEST_MESSAGE (throughput.to_string ());
 
-  BOOST_TEST_MESSAGE ("throughput\t" << std::setprecision (3)
-                      << (megabytes_per_sec/1024.) << " GB/sec");
+  BOOST_CHECK (throughput.messages_per_sec () > 100);
 
-  auto messages_per_sec = stats.throughput ()
-                         .summary ()
-                         .messages_per_sec (Clock::now ());
-
-  BOOST_TEST_MESSAGE ("rate\t\t" << std::fixed << std::setprecision (3)
-                      << (messages_per_sec/1.0e6) << " M messages/sec");
+  BOOST_CHECK (throughput.megabytes_per_sec () > 200);
 }
 
 BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiProcess)
@@ -885,23 +819,13 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiProcess)
 
   sink_stream_in_shared_memory (capacity, stats, rate, prefetch);
 
-  auto megabytes_per_sec = stats.throughput ()
-                         .summary ()
-                         .megabytes_per_sec (Clock::now ());
+  auto &throughput = stats.throughput ().summary ();
 
-  BOOST_CHECK (megabytes_per_sec > 100);
+  BOOST_TEST_MESSAGE (throughput.to_string ());
 
-  BOOST_CHECK (latency_percentile_usecs (stats, 50.) < 10);
+  BOOST_CHECK (throughput.messages_per_sec () > 1000);
 
-  BOOST_TEST_MESSAGE ("throughput\t" << std::setprecision (3)
-                      << (megabytes_per_sec/1024.) << " GB/sec");
-
-  auto messages_per_sec = stats.throughput ()
-                         .summary ()
-                         .messages_per_sec (Clock::now ());
-
-  BOOST_TEST_MESSAGE ("rate\t\t" << std::fixed << std::setprecision (3)
-                      << (messages_per_sec/1.0e6) << " M messages/sec");
+  BOOST_CHECK (throughput.megabytes_per_sec () > 100);
 
   for (auto &line : stats.latency ().summary ().to_strings ())
   {
@@ -975,8 +899,6 @@ BOOST_AUTO_TEST_CASE (ThreadIdentity)
 
     auto test_thread_local = std::thread ([&stop, &thread_local_count,
                                           &dummy] () {
-
-
       thread_local int local = 0;
 
       while (!stop)
@@ -1026,7 +948,6 @@ BOOST_AUTO_TEST_CASE (ThreadIdentity)
 
 }
 
-
 BOOST_AUTO_TEST_CASE (MemoryCopy)
 {
   constexpr size_t max = 204800;
@@ -1041,7 +962,6 @@ BOOST_AUTO_TEST_CASE (MemoryCopy)
   size_t loops_memmove = 0;
 
   const size_t counter_check = 100;
-
 
   for (size_t i = 0; i < max; ++i)
   {
@@ -1215,13 +1135,11 @@ void sink_stream_roundtrip_latency_threads (size_t capacity)
   ping.join ();
   pong.join ();
 
-  auto now = Clock::now ();
-
   BOOST_TEST_MESSAGE ("throughput (msgs/sec): "
-    << stats.throughput ().summary ().messages_per_sec (now));
+    << stats.throughput ().summary ().messages_per_sec ());
 
   BOOST_TEST_MESSAGE ("throughput (MB/sec): "
-    << stats.throughput ().summary ().megabytes_per_sec (now));
+    << stats.throughput ().summary ().megabytes_per_sec ());
 
   auto &quantiles = stats.latency ().summary ().quantiles ();
 
@@ -1230,15 +1148,10 @@ void sink_stream_roundtrip_latency_threads (size_t capacity)
   auto median = static_cast<int64_t> (
                   boost::accumulators::p_square_quantile (quantiles.at (50)));
 
-  auto ninetieth = static_cast<int64_t> (
-                  boost::accumulators::p_square_quantile (quantiles.at (90)));
-
   /*
    * Check latency expectations
    */
-  BOOST_CHECK (Nanoseconds (median) < Nanoseconds (500));
-
-  BOOST_CHECK (Nanoseconds (ninetieth) < Microseconds (1));
+  BOOST_CHECK (Nanoseconds (median) < 1us);
 
   BOOST_TEST_MESSAGE ("latency percentiles");
 
@@ -1253,12 +1166,19 @@ void sink_stream_roundtrip_latency_threads (size_t capacity)
  */
 BOOST_AUTO_TEST_CASE (RoundtripLatency)
 {
-  spmc::ScopedLogLevel log (error);
-
   if (getenv ("NOTIMING") != nullptr)
   {
     return;
   }
+
+  std::string log_level = "ERROR";
+
+  if (getenv ("LOG_LEVEL") != nullptr)
+  {
+    log_level = getenv ("LOG_LEVEL");
+  }
+
+  spmc::ScopedLogLevel log (log_level);
 
   std::vector<size_t> capacities { 100, 1000, 10000, 10000 };
 
@@ -1266,4 +1186,188 @@ BOOST_AUTO_TEST_CASE (RoundtripLatency)
   {
     sink_stream_roundtrip_latency_threads (capacity);
   }
+}
+
+template<typename T>
+T remainder (T num, T divisor)
+{
+    return (num - (divisor * (num / divisor)));
+}
+
+BOOST_AUTO_TEST_CASE (Modulus)
+{
+  const int32_t size = 8192;
+  const int32_t cycles = std::numeric_limits<int32_t>::max ()/2;
+
+  int32_t modulus = 0;
+  int32_t dummy = 0; // used to ensure the calculation isn't optimised away
+
+  modulus = 0;
+  dummy = 0;
+
+  auto warmup = std::thread ([&] () {
+
+    Timer timer;
+
+    for (int i = 0; i < cycles; ++i)
+    {
+      modulus = MODULUS(i, size);
+      dummy += modulus;
+    }
+
+    BOOST_TEST_MESSAGE ("warmup done");
+
+    modulus = dummy;
+  });
+
+  warmup.join ();
+
+  modulus = 0;
+  dummy = 0;
+  auto std_modulus = std::thread ([&] () {
+
+    std::modulus<int> f;
+
+    Timer timer;
+
+    for (int i = 0; i < cycles; ++i)
+    {
+      modulus = f ((int)i, size);
+      dummy += modulus;
+    }
+
+    (void)dummy;
+    auto elapsed = timer.elapsed ();
+
+    auto per_call = (static_cast<double>(elapsed.nanoseconds ().count ())
+                      / static_cast<double>(cycles));
+
+    BOOST_TEST_MESSAGE (per_call << " ns\tstd::modulus");
+
+    modulus = dummy;
+  });
+
+  std_modulus.join ();
+
+  modulus = 0;
+  dummy = 0;
+  auto modulus_operation = std::thread ([&] () {
+
+    Timer timer;
+
+    for (int i = 0; i < cycles; ++i)
+    {
+      modulus = i % size;
+      dummy += modulus;
+    }
+
+    auto elapsed = timer.elapsed ();
+
+    auto per_call = (static_cast<double>(elapsed.nanoseconds ().count ())
+                      / static_cast<double>(cycles));
+
+    BOOST_TEST_MESSAGE (per_call << " ns\t% operation");
+
+    modulus = dummy;
+  });
+
+  modulus_operation.join ();
+
+  modulus = 0;
+  dummy = 0;
+  auto remainder_template = std::thread ([&] () {
+
+    Timer timer;
+    for (int i = 0; i < cycles; ++i)
+    {
+      modulus = remainder<int32_t> (i, size);
+      dummy += modulus;
+    }
+
+    auto elapsed = timer.elapsed ();
+
+    auto per_call = (static_cast<double>(elapsed.nanoseconds ().count ())
+                      / static_cast<double>(cycles));
+
+    BOOST_TEST_MESSAGE (per_call << " ns\tremainder template");
+
+    modulus = dummy;
+  });
+
+  remainder_template.join ();
+
+  modulus = 0;
+  dummy = 0;
+
+  auto macro = std::thread ([&] () {
+
+    Timer timer;
+
+    for (int i = 0; i < cycles; ++i)
+    {
+      modulus = MODULUS(i, size);
+      dummy += modulus;
+    }
+
+    auto elapsed = timer.elapsed ();
+
+    auto per_call = (static_cast<double>(elapsed.nanoseconds ().count ())
+                      / static_cast<double>(cycles));
+
+    BOOST_TEST_MESSAGE (per_call << " ns\tremainder macro");
+
+    dummy = modulus;
+  });
+
+  macro.join ();
+
+  modulus = 0;
+  dummy = 0;
+
+  auto hardwired = std::thread ([&] () {
+
+    Timer timer;
+    for (int i = 0; i < cycles; ++i)
+    {
+      modulus = (i - (size * (i / size)));
+      dummy += modulus;
+    }
+
+    auto elapsed = timer.elapsed ();
+
+    auto per_call = (static_cast<double>(elapsed.nanoseconds ().count ())
+                      / static_cast<double>(cycles));
+
+    BOOST_TEST_MESSAGE (per_call << " ns\thardwired remainder operation");
+
+    dummy = modulus;
+    (void) dummy;
+  });
+
+  hardwired.join ();
+}
+
+BOOST_AUTO_TEST_CASE (ExpectCondition)
+{
+  BOOST_CHECK (SPMC_COND_EXPECT (true,  true)  == 1);
+  BOOST_CHECK (SPMC_COND_EXPECT (false, false) == 0);
+
+  BOOST_CHECK (SPMC_EXPECT_TRUE (true)  == 1);
+  BOOST_CHECK (SPMC_EXPECT_TRUE (false) == 0);
+
+  BOOST_CHECK (SPMC_EXPECT_FALSE (true)  == 1);
+  BOOST_CHECK (SPMC_EXPECT_FALSE (false) == 0);
+
+  struct A {
+    std::ofstream f;
+  };
+
+  auto return_file ([] () -> A
+  {
+    A a;
+
+    return a;
+  });
+
+  A a = return_file ();
 }
