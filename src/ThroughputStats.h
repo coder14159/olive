@@ -27,16 +27,6 @@ public:
   bool is_stopped () const;
   bool is_running () const;
 
-  // /*
-  //  * Write throughput data to file if enabled
-  //  */
-  // void write ();
-
-  // /*
-  //  * Register bytes consumed and current sequence number to spot dropped packets
-  //  */
-  // void next (uint64_t bytes, uint64_t seqNum);
-
   Throughput&       interval ()       { return m_interval;  }
   const Throughput& interval () const { return m_interval;  }
 
