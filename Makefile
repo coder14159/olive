@@ -1,6 +1,6 @@
-.PHONY:	all test bin_dir clean mytest
-
 include Makefile.include
+
+.PHONY:	all test clean $(BIN_DIR) $(LIB_DIR)
 
 .DEFAULT_GOAL := all
 
@@ -82,22 +82,6 @@ $(LIB_OBJ_FILES): | $(LIB_DIR)/.obj/src/detail
 $(LIB_DIR)/.obj/src/detail:
 	mkdir -p $(LIB_DIR)/.obj/src/detail
 
-# Build all binaries
-all:	$(BIN_DIR)/spmc_client \
-			$(BIN_DIR)/spmc_server \
-			$(BIN_DIR)/spsc_server \
-			$(BIN_DIR)/spsc_client \
-			$(BIN_DIR)/remove_shared_memory \
-			$(BIN_DIR)/test_performance \
-			$(BIN_DIR)/test_spmcqueue \
-			$(BIN_DIR)/test_stats \
-			$(BIN_DIR)/test_allocator
-
-# Create bin directory if required using "order-only prerequisites" syntax
-bin_dir: | $(BIN_DIR)
-$(BIN_DIR):
-	mkdir -p $(BIN_DIR)
-
 # Build library object files
 $(LIB_DIR)/.obj/%.o: %.h
 $(LIB_DIR)/.obj/%.o: %.inl
@@ -108,37 +92,66 @@ $(LIB_DIR)/.obj/%.o: %.cpp
 $(LIB_FILE_PATH): $(LIB_OBJ_FILES)
 	@ar -r -o $(LIB_FILE_PATH) $(LIB_OBJ_FILES)
 
+# Build all binaries
+
+EXE_FILES = $(BIN_DIR)/spmc_client \
+			$(BIN_DIR)/spmc_server \
+			$(BIN_DIR)/spsc_server \
+			$(BIN_DIR)/spsc_client \
+			$(BIN_DIR)/remove_shared_memory \
+			$(BIN_DIR)/test_performance \
+			$(BIN_DIR)/test_spmcqueue \
+			$(BIN_DIR)/test_stats \
+			$(BIN_DIR)/test_allocator
+
+# Create bin directory if required
+# Invoke using "order-only prerequisites" syntax to prevent directory timestamp
+# from updating and causing a rebuild
+$(BIN_DIR):
+	@mkdir -p $(BIN_DIR)
+
 # Build tools
-$(BIN_DIR)/spmc_client: $(BIN_DIR) Makefile tools/spmc_client/spmc_client.cpp $(LIB_FILE_PATH)
-	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $(BIN_DIR)/spmc_client tools/spmc_client/spmc_client.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
+$(BIN_DIR)/spmc_client: Makefile tools/spmc_client/spmc_client.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $@ tools/spmc_client/spmc_client.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
 
-$(BIN_DIR)/spmc_server: $(BIN_DIR) Makefile tools/spmc_server/spmc_server.cpp $(LIB_FILE_PATH)
-	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $(BIN_DIR)/spmc_server tools/spmc_server/spmc_server.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
+$(BIN_DIR)/spmc_server: Makefile tools/spmc_server/spmc_server.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $@ tools/spmc_server/spmc_server.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
 
-$(BIN_DIR)/spsc_client: $(BIN_DIR) Makefile tools/spsc_client/spsc_client.cpp $(LIB_FILE_PATH)
-	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $(BIN_DIR)/spsc_client tools/spsc_client/spsc_client.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
+$(BIN_DIR)/spsc_client: Makefile tools/spsc_client/spsc_client.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $@ tools/spsc_client/spsc_client.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
 
-$(BIN_DIR)/spsc_server: $(BIN_DIR) Makefile tools/spsc_server/spsc_server.cpp $(LIB_FILE_PATH)
-	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $(BIN_DIR)/spsc_server tools/spsc_server/spsc_server.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
+$(BIN_DIR)/spsc_server: Makefile tools/spsc_server/spsc_server.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $@ tools/spsc_server/spsc_server.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
 
-$(BIN_DIR)/remove_shared_memory: $(BIN_DIR) Makefile tools/remove_shared_memory/remove_shared_memory.cpp $(LIB_FILE_PATH)
-	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $(BIN_DIR)/remove_shared_memory tools/remove_shared_memory/remove_shared_memory.cpp $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
+$(BIN_DIR)/remove_shared_memory: Makefile tools/remove_shared_memory/remove_shared_memory.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $@ tools/remove_shared_memory/remove_shared_memory.cpp $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
 
-$(BIN_DIR)/ping_pong: $(BIN_DIR) Makefile tools/ping_pong/ping_pong.cpp $(LIB_FILE_PATH)
-	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $(BIN_DIR)/ping_pong tools/ping_pong/ping_pong.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_FILESYSTEM)
+$(BIN_DIR)/ping_pong: Makefile tools/ping_pong/ping_pong.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) -o $@ tools/ping_pong/ping_pong.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_FILESYSTEM)
 
 # Build tests
-$(BIN_DIR)/test_allocator: $(BIN_DIR) Makefile tests/test_allocator/test_allocator.cpp $(LIB_FILE_PATH)
-	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -o $(BIN_DIR)/test_allocator tests/test_allocator/test_allocator.cpp -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_THREAD) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
+$(BIN_DIR)/test_allocator: Makefile tests/test_allocator/test_allocator.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
+	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -o $@ tests/test_allocator/test_allocator.cpp -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_THREAD) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
 
-$(BIN_DIR)/test_performance: $(BIN_DIR) Makefile tests/test_performance/test_performance.cpp $(LIB_FILE_PATH)
-	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -o $(BIN_DIR)/test_performance tests/test_performance/test_performance.cpp -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_THREAD) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
+$(BIN_DIR)/test_performance: Makefile tests/test_performance/test_performance.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
+	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -o $@ tests/test_performance/test_performance.cpp -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_THREAD) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
 
-$(BIN_DIR)/test_spmcqueue: $(BIN_DIR) Makefile tests/test_spmcqueue/test_spmcqueue.cpp $(LIB_FILE_PATH)
-	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -o $(BIN_DIR)/test_spmcqueue tests/test_spmcqueue/test_spmcqueue.cpp -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_THREAD) $(LIB_BOOST_FILESYSTEM)
+$(BIN_DIR)/test_spmcqueue: Makefile tests/test_spmcqueue/test_spmcqueue.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
+	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -o $@ tests/test_spmcqueue/test_spmcqueue.cpp -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_THREAD) $(LIB_BOOST_FILESYSTEM)
 
-$(BIN_DIR)/test_stats: $(BIN_DIR) Makefile tests/test_stats/test_stats.cpp $(LIB_FILE_PATH) $(LIB_SRC_CPP_FILES)
-	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -o $(BIN_DIR)/test_stats tests/test_stats/test_stats.cpp -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_THREAD) $(LIB_BOOST_FILESYSTEM)
+$(BIN_DIR)/test_stats: Makefile tests/test_stats/test_stats.cpp $(LIB_FILE_PATH) $(LIB_SRC_CPP_FILES) | $(BIN_DIR)
+	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -o $@ tests/test_stats/test_stats.cpp -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_THREAD) $(LIB_BOOST_FILESYSTEM)
+
+# Build all binaries
+all : $(BIN_DIR)/spmc_client \
+			$(BIN_DIR)/spmc_server \
+			$(BIN_DIR)/spsc_server \
+			$(BIN_DIR)/spsc_client \
+			$(BIN_DIR)/remove_shared_memory \
+			$(BIN_DIR)/test_performance \
+			$(BIN_DIR)/test_spmcqueue \
+			$(BIN_DIR)/test_stats \
+			$(BIN_DIR)/test_allocator
 
 clean:
 	rm -rf build/$(PROCESSOR)$(BUILD_SUFFIX)
@@ -153,6 +166,3 @@ test:
 	$(call run_test,test_performance)
 	$(call run_test,test_spmcqueue)
 	$(call run_test,test_stats)
-
-
-#	suzuki ignus
