@@ -458,7 +458,8 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiThread)
 
   BOOST_CHECK (throughput.messages_per_sec () > (rate * 0.9));
 
-  BOOST_CHECK (throughput.megabytes_per_sec () > (rate * MESSAGE_SIZE * 0.9));
+  BOOST_CHECK (throughput.megabytes_per_sec () >
+    (rate * MESSAGE_SIZE * 0.9 / (1024*1024)));
 
   BOOST_TEST_MESSAGE (throughput.to_string ());
 

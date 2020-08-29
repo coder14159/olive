@@ -23,6 +23,9 @@ public:
    */
   void throttle ();
 
+  template<typename Sink>
+  void throttle (Sink &sink);
+
 private:
 
   // Target throughput rate in messages/second
@@ -33,5 +36,7 @@ private:
 };
 
 } // namespace spmc
+
+#include "Throttle.inl"
 
 #endif
