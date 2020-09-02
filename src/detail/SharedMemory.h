@@ -55,13 +55,21 @@ using Counter = std::atomic<int>;
  * 19.44 us to 52.94 us when using a packed structure.
  *
  */
+static const uint8_t HEADER_VERSION = 1;
+
+static const uint8_t STANDARD_MESSAGE_TYPE = 0;
+static const uint8_t WARMUP_MESSAGE_TYPE   = 1;
+static const uint8_t WARMUP_MESSAGE_SIZE   = 4;
+
+static const int64_t DEFAULT_TIMESTAMP = std::numeric_limits<int64_t>::min ();
+
 struct Header
 {
-  uint8_t  version   = 1;
-  uint8_t  type      = 0;
+  uint8_t  version   = HEADER_VERSION;
+  uint8_t  type      = STANDARD_MESSAGE_TYPE;
   size_t   size      = 0;
   uint64_t seqNum    = 0;
-  int64_t  timestamp = std::numeric_limits<int64_t>::min ();
+  int64_t  timestamp = DEFAULT_TIMESTAMP;
 };
 
 /*
