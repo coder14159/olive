@@ -46,7 +46,7 @@ template<typename Sink>
 void Throttle::throttle (Sink &sink)
 {
   /*
-   * No throttling by default
+   * No throttling if requesting maximum throughput
    */
   if (m_rate == 0)
   {
@@ -79,7 +79,7 @@ void Throttle::throttle (Sink &sink)
     * Periodically reset the counters so that the throttle is better able to
     * handle variations in workload.
     */
-  if ((intervalStart - m_startTime) > Seconds(1))
+  if ((intervalStart - m_startTime) > Seconds (1))
   {
     m_startTime = Clock::now ();
     m_counter = 0;
