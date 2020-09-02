@@ -44,6 +44,11 @@ public:
   template<typename POD>
   void next (const POD &data);
 
+  /*
+   * Send a null message to keep the cache warm
+   */
+  void next_keep_warm ();
+
   void stop ();
 
   /*
@@ -60,6 +65,15 @@ private:
 
   QueueType m_queue;
 
+  Header m_warmupHdr {
+      HEADER_VERSION,
+      WARMUP_MESSAGE_TYPE,
+      WARMUP_MESSAGE_SIZE,
+      0,
+      DEFAULT_TIMESTAMP
+  };
+
+  uint8_t m_warmupMsg[WARMUP_MESSAGE_SIZE];
 };
 
 /*
