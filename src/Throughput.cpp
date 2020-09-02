@@ -40,7 +40,7 @@ throughput_bytes_to_pretty (uint64_t bytes, TimeDuration duration)
     return (boost::format ("%4.0f KB/s") % (bytes_per_second/KB)).str ();
   }
 
-  return (boost::format ("%4d bytes/s") % bytes_per_second).str ();
+  return (boost::format ("%4.0f bytes/s") % bytes_per_second).str ();
 }
 
 std::string
@@ -51,7 +51,8 @@ throughput_messages_to_pretty (uint64_t messages, TimeDuration duration)
     return " - ";
   }
 
-  int messages_per_second = messages / to_seconds (duration);
+  double messages_per_second =
+    static_cast<double> (messages / to_seconds (duration));
 
   constexpr double K = 1.0e3;
   constexpr double M = 1.0e6;
@@ -70,7 +71,7 @@ throughput_messages_to_pretty (uint64_t messages, TimeDuration duration)
     return (boost::format ("%4.0f K msgs/s") % (messages_per_second/K)).str ();
   }
 
-  return (boost::format ("%4d msgs/s") % messages_per_second).str ();
+  return (boost::format ("%4.0f msgs/s") % messages_per_second).str ();
 }
 
 Throughput::Throughput ()
