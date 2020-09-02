@@ -27,7 +27,8 @@ CxxOptsHelper parse (int argc, char* argv[])
     ("h,help", "Performance test consuming of shared memory messages")
     ("name", "Shared memory name", cxxopts::value<std::string> ())
     ("allowdrops", "Allow message drops")
-    ("cpu", "Bind main thread to a cpu processor integer (default off)",
+    ("cpu",
+      "Bind main thread to a cpu processor integer. Use -1 for no binding",
       cxxopts::value<int> ()->default_value ("-1"))
     ("p,prefetchcache", "Size of a prefetch cache",
       cxxopts::value<size_t> ()->default_value ("0"))
@@ -41,7 +42,7 @@ CxxOptsHelper parse (int argc, char* argv[])
       cxxopts::value<bool> ())
     ("test", "Enable basic tests for message validity",
       cxxopts::value<bool> ())
-    ("loglevel", "l,Logging level",
+    ("loglevel", "Logging level",
       cxxopts::value<std::string> ()->default_value ("NOTICE"));
 
   CxxOptsHelper options (cxxopts.parse (argc, argv));
@@ -74,7 +75,8 @@ int main(int argc, char* argv[]) try
   auto latencyStats    = options.value<bool>   ("latencystats", false);
   auto prefetchCache   = options.value<size_t> ("prefetchcache", 0);
   auto test            = options.value<bool>   ("test", false);
-  auto logLevel = options.value<std::string> ("loglevel", log_levels (),"INFO");
+  auto logLevel        = options.value<std::string> ("loglevel",
+                                                    log_levels (),"INFO");
 
   set_log_level (logLevel);
 
@@ -121,7 +123,7 @@ int main(int argc, char* argv[]) try
 
   while (SPMC_EXPECT_FALSE (!stop))
   {
-    if (stream.next (header, data))
+    if (stream.next (header, data) && header.type == STANDARD_MESSAGE_TYPE)
     {
       stats.update (sizeof (Header) + data.size (), header.seqNum,
                     timepoint_from_nanoseconds_since_epoch (header.timestamp));
