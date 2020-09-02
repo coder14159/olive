@@ -108,7 +108,6 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
    */
   if (header.seqNum == 1)
   {
-    // m_bufferPtr = &*m_buffer;
     m_committed = 0;
     m_claimed   = 0;
     m_backPressure.reset_consumers ();
@@ -117,7 +116,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
   /*
    * Claim a range of the queue to overwrite
    */
-  uint64_t claim = m_claimed.load(std::memory_order_relaxed)
+  uint64_t claim = m_claimed.load (std::memory_order_relaxed)
                  + sizeof (Header)
                  + size;
 
@@ -161,15 +160,13 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
    * A queue data range has been successfully claimed so overwriting the range
    * should always be successful.
    */
-  m_claimed.store(claim, std::memory_order_relaxed);
+  m_claimed.store (claim, std::memory_order_relaxed);
 
   /*
    * Get the offset pointer from shared memory. It can be somewhat expensive to
    * retrieve but it is possible to cache the pointer locally.
    */
-  // auto buffer = &*m_buffer;
-
-  copy_to_buffer (reinterpret_cast<const uint8_t*>(&header), buffer,
+  copy_to_buffer (reinterpret_cast<const uint8_t*> (&header), buffer,
                   sizeof (Header));
 
   copy_to_buffer (data, buffer, header.size, sizeof (Header));
@@ -377,7 +374,8 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
    *
    * This is only relevant if the consumer is configured to allow message drops
    */
-  if (consumer.message_drops_allowed () && (m_claimed - consumed) > m_capacity)
+  if (SPMC_EXPECT_FALSE (consumer.message_drops_allowed ()) &&
+     (m_claimed - consumed) > m_capacity)
   {
     /*
      * If a the consumer is configured to allow message drops and the producer
@@ -433,7 +431,8 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
    *
    * This is only relevant if the consumer is configured to allow message drops
    */
-  if (consumer.message_drops_allowed () && (m_claimed - consumed) > m_capacity)
+  if (SPMC_EXPECT_FALSE (consumer.message_drops_allowed ()) &&
+     (m_claimed - consumed) > m_capacity)
   {
     /*
      * If a the consumer is configured to allow message drops and the producer
