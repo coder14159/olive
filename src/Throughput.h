@@ -115,4 +115,6 @@ private:
 
 }
 
+#include "Throughput.inl"
+
 #endif // IPC_THROUGHPUT_H

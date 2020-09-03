@@ -29,6 +29,7 @@ void SPSCSink::stop ()
   m_stop = true;
 }
 
+inline
 void SPSCSink::next (const std::vector<uint8_t> &data)
 {
   ++m_sequenceNumber;
@@ -44,29 +45,11 @@ void SPSCSink::next (const std::vector<uint8_t> &data)
   /*
    * Push the data packet onto the shared queue if there is available space
    */
-  size_t packetSize = sizeof (Header) + header.size;
+  size_t size = sizeof (Header) + header.size;
 
-  long waitCounter = 0;
-
-  while (packetSize > queue.write_available ())
-  {
-    /*
-     * Wait for space to become available
-     */
-    ++waitCounter;
-
-    if (waitCounter == 100000)
-    {
-      std::this_thread::sleep_for (1ns);
-
-      if (m_stop)
-      {
-        return;
-      }
-
-      waitCounter = 0;
-    }
-  }
+  while (m_stop.load (std::memory_order_relaxed) == false &&
+         queue.write_available () < size)
+  { }
 
   queue.push (reinterpret_cast <uint8_t*> (&header), sizeof (Header));
 

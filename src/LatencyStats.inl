@@ -1,33 +1,5 @@
-#include "Chrono.h"
-#include "LatencyStats.h"
-
-#include <boost/filesystem.hpp>
-#include <boost/log/trivial.hpp>
-
-using namespace std::chrono_literals;
-
-namespace fs = boost::filesystem;
 
 namespace spmc {
-namespace {
-
-static const int64_t RESET_INTERVAL = -1;
-
-} // namespace spmc
-
-inline
-LatencyStats::LatencyStats ()
-{ }
-
-inline
-LatencyStats::LatencyStats (const std::string &directory)
-: m_summary (directory, "latency-summary.csv")
-, m_interval (directory, "latency-interval.csv")
-{ }
-
-inline
-LatencyStats::~LatencyStats ()
-{ }
 
 inline
 bool LatencyStats::is_stopped () const

@@ -1,6 +1,8 @@
+#include "LatencyStats.h"
+
 #include "Assert.h"
 #include "Logger.h"
-#include "LatencyStats.h"
+
 
 #include <boost/cstdint.hpp>
 #include <boost/filesystem.hpp>
@@ -135,29 +137,6 @@ void Latency::enable (bool enable)
 void Latency::stop ()
 {
   m_stop = true;
-}
-
-void Latency::reset ()
-{
-  m_quantiles = m_empty;
-  m_min       = Nanoseconds::max ();
-  m_max       = Nanoseconds::min ();
-}
-
-void Latency::next (Nanoseconds nanoseconds)
-{
-  if (m_stop)
-  {
-    return;
-  }
-
-  for (auto &quantile : m_quantiles)
-  {
-    quantile.second (nanoseconds.count ());
-  }
-
-  m_min = std::min (m_min, nanoseconds);
-  m_max = std::max (m_max, nanoseconds);
 }
 
 void Latency::write_header ()

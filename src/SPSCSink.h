@@ -32,10 +32,6 @@ public:
 
   std::string name () const { return m_name; }
 
-// private:
-
-//   bool send (const uint8_t* data, size_t size);
-
 private:
   std::string m_name;
 

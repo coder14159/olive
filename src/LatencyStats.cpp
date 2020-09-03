@@ -1,4 +1,3 @@
-#include "Chrono.h"
 #include "LatencyStats.h"
 
 #include <boost/filesystem.hpp>
@@ -9,11 +8,6 @@ using namespace std::chrono_literals;
 namespace fs = boost::filesystem;
 
 namespace spmc {
-namespace {
-
-static const int64_t RESET_INTERVAL = -1;
-
-} // namespace spmc
 
 LatencyStats::LatencyStats ()
 { }
@@ -25,10 +19,5 @@ LatencyStats::LatencyStats (const std::string &directory)
 
 LatencyStats::~LatencyStats ()
 { }
-
-bool LatencyStats::is_stopped () const
-{
-  return (m_interval.is_stopped () && m_summary.is_stopped ());
-}
 
 } // namespace spmc
