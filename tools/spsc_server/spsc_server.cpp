@@ -24,8 +24,6 @@ namespace bi = boost::interprocess;
 
 namespace {
 
-std::atomic<bool> g_stop = { false };
-
 CxxOptsHelper parse (int argc, char* argv[])
 {
   std::string oneKB = std::to_string (1024);
@@ -112,7 +110,7 @@ void server (const std::string& name,
 
   int toConnect = numClients;
 
-  while (clientsReady.get () < numClients && !g_stop)
+  while (clientsReady.get () < numClients && !stop)
   {
     std::this_thread::sleep_for (5ms);
 
@@ -126,13 +124,6 @@ void server (const std::string& name,
       }
     }
   }
-
-  if (g_stop)
-  {
-    return;
-  }
-
-  BOOST_LOG_TRIVIAL (info) << "Start sending data";
 
   // create a reusable test message
   std::vector<uint8_t> message (messageSize, 0);
