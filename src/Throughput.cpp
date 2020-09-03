@@ -1,6 +1,7 @@
 #include "Assert.h"
 #include "Throughput.h"
 #include "detail/SharedMemory.h"
+#include "detail/Utils.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
@@ -137,16 +138,6 @@ bool Throughput::is_running () const
   return !m_stop;
 }
 
-void Throughput::reset ()
-{
-  m_header     = 0;
-  m_payload    = 0;
-  m_messages   = 0;
-  m_bytes      = 0;
-
-  m_timer.reset ().start ();
-}
-
 void Throughput::write_header ()
 {
   if (m_stop || !m_file.is_open ())
@@ -173,37 +164,6 @@ Throughput &Throughput::write_data ()
          << messages_per_sec ()  << '\n';
 
   return *this;
-}
-
-void Throughput::next (uint64_t header, uint64_t payload, uint64_t seqNum)
-{
-  m_payload += payload;
-
-  next (header + payload, seqNum);
-}
-
-void Throughput::next (uint64_t bytes, uint64_t seqNum)
-{
-  if (m_stop)
-  {
-    return;
-  }
-
-  /*
-   * Reset on startup or if the server was restarted
-   */
-  if (m_seqNum == 0 || seqNum == 1)
-  {
-    reset ();
-
-    m_seqNum = seqNum;
-  }
-  else
-  {
-    ++m_messages;
-
-    m_bytes += bytes;
-  }
 }
 
 uint32_t Throughput::megabytes_per_sec () const
