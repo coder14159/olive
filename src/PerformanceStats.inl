@@ -16,17 +16,28 @@ inline
 void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
                                TimePoint timestamp)
 {
+  if (seqNum < m_seqNum)
+  {
+    /*
+     * Assume the message producer has restarted if the sequence number is lower
+     * than expected.
+     */
+    m_seqNum = seqNum;
+
+    return;
+  }
+
   /*
    * Check for dropped messages
    */
   if (SPMC_EXPECT_TRUE (m_seqNum > 1))
   {
-    auto dropped = seqNum - m_seqNum;
+    auto diff = seqNum - m_seqNum;
 
-    if (SPMC_EXPECT_FALSE (dropped > 1))
+    if (SPMC_EXPECT_FALSE (diff > 1))
     {
-      m_dropped.interval += dropped;
-      m_dropped.summary  += dropped;
+      m_dropped.interval += diff;
+      m_dropped.summary  += diff;
     }
   }
 
@@ -34,13 +45,12 @@ void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
 
   m_throughput.interval ().next (bytes, seqNum);
   m_throughput.summary ().next (bytes, seqNum);
+
   /*
    * Sample latency values as requesting a timestamp too often impacts
    * performance
    */
-  Nanoseconds durationSinceSampled (timestamp - m_sampled);
-
-  if (durationSinceSampled < 10us)
+  if (SPMC_EXPECT_FALSE ((timestamp - m_sampled) < 10ns))
   {
     return;
   }
@@ -48,8 +58,6 @@ void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
   m_sampled = Clock::now ();
 
   m_queue.push ({ m_sampled - timestamp });
-
-  m_bytes = 0;
 }
 
 inline
