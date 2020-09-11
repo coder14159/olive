@@ -62,7 +62,7 @@ void PerformanceStats::start ()
         /*
          * Avoid using too much CPU time
          */
-        std::this_thread::sleep_for (1us);
+        std::this_thread::sleep_for (1ns);
 
         continue;
       }

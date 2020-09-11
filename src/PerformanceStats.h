@@ -78,13 +78,11 @@ private:
 
   TimePoint m_startTime;
 
-  const uint64_t QUEUE_SIZE = 10;
+  const uint64_t QUEUE_SIZE = { 10 };
 
   boost::lockfree::spsc_queue<Clock::duration> m_queue { QUEUE_SIZE };
 
   std::thread m_thread;
-
-  uint64_t m_bytes = 0;
 
   uint64_t m_seqNum = 0;
 
