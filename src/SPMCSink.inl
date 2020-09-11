@@ -54,19 +54,15 @@ void SPMCSink<Queuetype>::next (const POD &data)
   header.seqNum    = ++m_sequenceNumber;
   header.timestamp = nanoseconds_since_epoch (Clock::now ());
 
-  while (true)
-  {
-    if (m_stop.load (std::memory_order_relaxed) || m_queue.push (header, data))
-    {
-      break;
-    }
-  }
+  while (!m_stop.load (std::memory_order_relaxed) &&
+         !m_queue.push (header, data))
+  { }
 }
 
 template <class Queuetype>
 void SPMCSink<Queuetype>::next_keep_warm ()
 {
-  m_queue.push (m_warmupHdr, m_warmupMsg);
+  m_queue.push (m_warmupHdr);
 }
 
 } // namespace spmc

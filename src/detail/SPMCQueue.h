@@ -227,6 +227,13 @@ public:
   bool push (const Header &header, const Data &data, uint8_t *buffer);
 
   /*
+   * Push a Header pod onto the queue.
+   * Typically used to keep the data cache warm during lower throughput rates.
+   */
+  template <typename Header>
+  bool push (const Header &header, uint8_t *buffer);
+
+  /*
    * Pop data out of the queue, header and data must popped in a single call
    */
   template <typename Header>

@@ -59,21 +59,21 @@ public:
 
 private:
 
-  uint64_t m_sequenceNumber = 0;
+  uint64_t m_sequenceNumber
+    __attribute__ ((aligned (CACHE_LINE_SIZE))) = 0;
 
-  std::atomic<bool> m_stop = { false };
+  std::atomic<bool> m_stop
+    __attribute__ ((aligned (CACHE_LINE_SIZE))) = { false };
 
   QueueType m_queue;
 
-  Header m_warmupHdr {
+  Header m_warmupHdr __attribute__ ((aligned (CACHE_LINE_SIZE))) = {
       HEADER_VERSION,
       WARMUP_MESSAGE_TYPE,
-      WARMUP_MESSAGE_SIZE,
+      0,
       0,
       DEFAULT_TIMESTAMP
   };
-
-  uint8_t m_warmupMsg[WARMUP_MESSAGE_SIZE];
 };
 
 /*

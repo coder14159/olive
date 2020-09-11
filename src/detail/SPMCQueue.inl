@@ -160,11 +160,11 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
    * A queue data range has been successfully claimed so overwriting the range
    * should always be successful.
    */
-  m_claimed.store (claim, std::memory_order_relaxed);
+  // m_claimed.store (claim, std::memory_order_relaxed);
+  m_claimed.store (claim, std::memory_order_release);
 
   /*
-   * Get the offset pointer from shared memory. It can be somewhat expensive to
-   * retrieve but it is possible to cache the pointer locally.
+   * Copy the header and payload data to the shared buffer.
    */
   copy_to_buffer (reinterpret_cast<const uint8_t*> (&header), buffer,
                   sizeof (Header));
@@ -191,6 +191,97 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
+template <typename Header>
+bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
+  const Header &header,
+  uint8_t *buffer)
+{
+  /*
+   * The producer has just started or restarted
+   */
+
+  if (header.seqNum == 1)
+  {
+    m_committed = 0;
+    m_claimed   = 0;
+    m_backPressure.reset_consumers ();
+  }
+
+  /*
+   * Claim a range of the queue to overwrite
+   */
+  uint64_t claim = m_claimed.load (std::memory_order_relaxed)
+                 + sizeof (Header);
+
+  if (m_backPressure.has_non_drop_consumers ())
+  {
+
+    uint64_t minConsumed = m_backPressure.min_consumed ();
+    /*
+     * If no consumers are allowed to drop messages there is no need to moderate
+     * the speed of the producer thread.
+     *
+     * If all consumers which had no drops enabled have stopped then there is no
+     * need to feed back consumer progress to the producer.
+     */
+    if (minConsumed != Consumer::UnInitialised)
+    {
+      uint64_t queueClaim = claim - minConsumed;
+
+#if DELETE_DEBUG_CODE
+      BOOST_LOG_TRIVIAL(debug) << "Claimed=" << m_claimed
+                      << " minConsumed=" << m_backPressure.min_consumed ()
+                      << " queueClaim="
+                      << m_claimed - m_backPressure.min_consumed ();
+#endif
+      /*
+       * If "no message drops" has been enabled check if any registered no-drop
+       * consumers are far enough behind to prevent the producer from writing to
+       * the queue without causing consumer message drops.
+       *
+       * Claimed variable is only written by this thread.
+       */
+
+      if (queueClaim > m_capacity)
+      {
+        return false;
+      }
+    }
+  }
+
+  /*
+   * A queue data range has been successfully claimed so overwriting the range
+   * should always be successful.
+   */
+  m_claimed.store (claim, std::memory_order_relaxed);
+
+  /*
+   * Copy the header to the shared buffer.
+   */
+  copy_to_buffer (reinterpret_cast<const uint8_t*> (&header), buffer,
+                  sizeof (Header));
+
+  size_t committed = sizeof (Header);
+
+  /*
+   * Make data available to the consumers.
+   *
+   * Use a release commit so the data stored cannot be ordered after the commit
+   * has been made.
+   */
+  m_committed.fetch_add (committed, std::memory_order_release);
+
+#if DELETE_DEBUG_CODE
+  BOOST_LOG_TRIVIAL(notice) << "Producer m_claimed=" << m_claimed
+                            << " m_committed=" << m_committed
+                            << " diff=" << (m_claimed-m_committed);
+#endif
+
+  return true;
+}
+
+
+template <class Allocator, size_t MaxNoDropConsumers>
 template <class Header>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   Header               &header,
@@ -208,7 +299,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
    * Acquire the committed data variable to ensure the data stored in the queue
    * by the producer thread is visible
    */
-  auto   committed = m_committed.load (std::memory_order_acquire);
+  auto committed = m_committed.load (std::memory_order_acquire);
 
   size_t available = committed - consumed;
 
@@ -233,15 +324,30 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
    */
   bool consumerAllowsMessageDrops = consumer.message_drops_allowed ();
 
-  /*
-   * Store a pointer to the shared memory offset location
-   */
-  // const auto *buffer = &*m_buffer;
-
   if (copy_from_buffer (buffer, reinterpret_cast<uint8_t*> (&header),
                         sizeof (Header), consumed,
                         consumerAllowsMessageDrops))
   {
+    /*
+     * If the header has no associated payload data, feed the new queue state
+     * back to the producer
+     */
+    if (header.size == 0)
+    {
+      /*
+       * Feed the progress of a no-drop consumer thread back to the producer
+       */
+      if (consumerAllowsMessageDrops == false)
+      {
+        m_backPressure.consumed (consumed, producer.index ());
+      }
+
+      return true;
+    }
+
+    /*
+     * The message has payload data, copy it
+     */
     data.resize (header.size);
 
     if (copy_from_buffer (buffer, data.data (), header.size,
@@ -274,8 +380,8 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::copy_to_buffer (
    * m_commit is synchronised after this call in the producer thread so relaxed
    * memory ordering is ok here.
    */
-  size_t index =
-    MODULUS((m_committed.load (std::memory_order_relaxed) + offset), m_capacity);
+  size_t index = MODULUS (
+    (m_committed.load (std::memory_order_relaxed) + offset), m_capacity);
 
 
   if ((index + size) <= m_capacity)
@@ -302,7 +408,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
 {
   bool success = true;
 
-  size_t index = MODULUS(consumed, m_capacity);
+  size_t index = MODULUS (consumed, m_capacity);
 
   // copy the header from the buffer
   size_t spaceToEnd = m_capacity - index;
@@ -351,7 +457,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
 
   auto& consumed = consumer.consumed();
 
-  size_t index = MODULUS(consumed, m_capacity);
+  size_t index = MODULUS (consumed, m_capacity);
 
   /*
    * Copy the header from the buffer
@@ -409,7 +515,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
 
   auto & consumed = consumer.consumed ();
 
-  size_t index = MODULUS(consumed, m_capacity);
+  size_t index = MODULUS (consumed, m_capacity);
 
   /*
    * Copy the header from the buffer
@@ -456,7 +562,7 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::initialise_consumer (
   ProducerType &producer,
   ConsumerType &consumer)
 {
-  BOOST_LOG_TRIVIAL (trace) << "Initialise consumer";
+  // BOOST_LOG_TRIVIAL (trace) << "Initialise consumer";
 
 #if 0
   if (m_bufferPtr == nullptr)
