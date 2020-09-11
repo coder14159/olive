@@ -100,6 +100,14 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
+template <class Header>
+bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (const Header &header)
+{
+  return m_queue->push (header, m_buffer);
+}
+
+
+template <class Allocator, size_t MaxNoDropConsumers>
 void SPMCQueue<Allocator, MaxNoDropConsumers>::allow_message_drops ()
 {
   m_consumer.allow_message_drops ();

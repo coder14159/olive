@@ -75,7 +75,7 @@ public:
    * Push data into the queue, always succeeds unless there are slow consumers
    * configured to be non-dropping.
    *
-   * The queue should be larger than the data size + header size
+   * The queue should be larger than the data size + header size.
    */
   template <class Header>
   bool push (const Header &header, const std::vector<uint8_t> &data);
@@ -84,10 +84,19 @@ public:
    * Push pod type data into the queue, always succeeds unless there are slow
    * consumers configured to be non-dropping.
    *
-   * The queue should be larger than the data size + header size
+   * The queue should be larger than the data size + header size.
    */
   template <class Header, class Data>
   bool push (const Header &header, const Data &data);
+
+  /*
+   * Push just a header to the queue with no data.
+   *
+   * Useful if the header type has no associated data. An example would be when
+   * sending warmup messages.
+   */
+  template <class Header>
+  bool push (const Header &header);
 
   /*
    * Pop data out of the header and data from the queue
@@ -132,8 +141,6 @@ private:
   Buffer<std::allocator<uint8_t>> m_cache;
 
   bool m_cacheEnabled = false;
-
-  uint64_t m_seqNum = 0;
 
 };
 
