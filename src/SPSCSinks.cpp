@@ -38,7 +38,7 @@ SPSCSinks::SPSCSinks (const std::string &memoryName)
     {
       if (requests.empty ())
       {
-        sleep_for (milliseconds (100));
+        sleep_for (Seconds (1));
       }
       else
       {

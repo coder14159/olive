@@ -41,7 +41,6 @@ void SPSCSink::next (const std::vector<uint8_t> &data)
   header.timestamp = Clock::now ().time_since_epoch ().count ();
 
   auto &queue = *m_queue;
-
   /*
    * Push the data packet onto the shared queue if there is available space
    */
@@ -55,6 +54,15 @@ void SPSCSink::next (const std::vector<uint8_t> &data)
 
   queue.push (data.data (), header.size);
 }
+
+void SPSCSink::next_keep_warm ()
+{
+  // TODO store the queue pointer
+  auto &queue = *m_queue;
+
+  queue.push (reinterpret_cast <uint8_t*> (&m_warmupHdr), sizeof (Header));
+}
+
 
 #if 0
 bool SPSCSink::send (const uint8_t *data, size_t size)

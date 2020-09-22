@@ -28,6 +28,11 @@ public:
    */
   void next (const std::vector<uint8_t> &data);
 
+  /*
+   * Send a null message to keep the cache warm
+   */
+  void next_keep_warm ();
+
   void stop ();
 
   std::string name () const { return m_name; }
@@ -39,12 +44,20 @@ private:
 
   uint64_t m_sequenceNumber = 0;
 
-  std::atomic<bool> m_stop = { false };
+  std::atomic<bool> m_stop
+    __attribute__ ((aligned (CACHE_LINE_SIZE))) = { false };
 
   boost::interprocess::managed_shared_memory m_memory;
 
   SharedMemory::Allocator m_allocator;
 
+  Header m_warmupHdr __attribute__ ((aligned (CACHE_LINE_SIZE))) = {
+      HEADER_VERSION,
+      WARMUP_MESSAGE_TYPE,
+      0,
+      0,
+      DEFAULT_TIMESTAMP
+  };
 };
 
 }
