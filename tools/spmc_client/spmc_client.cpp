@@ -11,6 +11,7 @@
 #include <boost/log/trivial.hpp>
 
 #include <exception>
+#include <set>
 
 using namespace spmc;
 
@@ -23,29 +24,30 @@ CxxOptsHelper parse (int argc, char* argv[])
   cxxopts::Options cxxopts ("spmc_client",
                 "Consume messages sent to local named shared memory");
 
+  std::vector<std::string> stats;
+
   cxxopts.add_options ()
     ("h,help", "Performance test consuming of shared memory messages")
     ("name", "Shared memory name", cxxopts::value<std::string> ())
     ("allowdrops", "Allow message drops")
-    ("cpu",
-      "Bind main thread to a cpu processor integer. Use -1 for no binding",
+    ("cpu", "Bind main thread to a cpu processor integer, "
+            "use -1 for no binding",
       cxxopts::value<int> ()->default_value ("-1"))
-    ("p,prefetchcache", "Size of a prefetch cache",
+    ("prefetchcache", "Size of a prefetch cache",
       cxxopts::value<size_t> ()->default_value ("0"))
     ("directory", "Directory for statistics files",
       cxxopts::value<std::string> ())
-    ("intervalstats", "Periodically print statistics ",
-      cxxopts::value<bool> ())
-    ("latencystats", "Enable latency statistics",
-      cxxopts::value<bool> ())
-    ("throughputstats", "Enable throughput statistics",
-      cxxopts::value<bool> ())
     ("test", "Enable basic tests for message validity",
       cxxopts::value<bool> ())
+    ("stats", "Statistics to log. "
+     "Comma separated list (throughput,latency,interval)",
+      cxxopts::value<std::vector<std::string>> (stats))
     ("loglevel", "Logging level",
       cxxopts::value<std::string> ()->default_value ("NOTICE"));
 
   CxxOptsHelper options (cxxopts.parse (argc, argv));
+
+  options.positional ("stats", stats);
 
   if (options.exists ("help"))
   {
@@ -66,17 +68,17 @@ int main(int argc, char* argv[]) try
   /*
    * Get required and default values
    */
-  auto name            = options.required<std::string> ("name");
-  auto directory       = options.value<std::string> ("directory", "");
-  auto cpu             = options.value<int>    ("cpu", -1);
-  auto allowDrops      = options.value<bool>   ("allowdrops", false);
-  auto intervalStats   = options.value<bool>   ("intervalstats", false);
-  auto throughputStats = options.value<bool>   ("throughputstats", false);
-  auto latencyStats    = options.value<bool>   ("latencystats", false);
-  auto prefetchCache   = options.value<size_t> ("prefetchcache", 0);
-  auto test            = options.value<bool>   ("test", false);
-  auto logLevel        = options.value<std::string> ("loglevel",
+  auto name          = options.required<std::string> ("name");
+  auto directory     = options.value<std::string> ("directory", "");
+  auto cpu           = options.value<int>    ("cpu", -1);
+  auto allowDrops    = options.value<bool>   ("allowdrops", false);
+  auto prefetchCache = options.value<size_t> ("prefetchcache", 0);
+  auto test          = options.value<bool>   ("test", false);
+  auto logLevel      = options.value<std::string> ("loglevel",
                                                     log_levels (),"INFO");
+  auto latency       = options.positional ("stats", "latency");
+  auto throughput    = options.positional ("stats", "throughput");
+  auto interval      = options.positional ("stats", "interval");
 
   set_log_level (logLevel);
 
@@ -108,11 +110,11 @@ int main(int argc, char* argv[]) try
 
   PerformanceStats stats (directory);
 
-  stats.latency ().summary ().enable (latencyStats);
-  stats.latency ().interval ().enable (intervalStats && latencyStats);
+  stats.latency ().summary ().enable (latency);
+  stats.latency ().interval ().enable (interval && latency);
 
-  stats.throughput ().summary ().enable (throughputStats);
-  stats.throughput ().interval ().enable (intervalStats && throughputStats);
+  stats.throughput ().summary ().enable (throughput);
+  stats.throughput ().interval ().enable (interval && throughput);
 
   bind_to_cpu (cpu);
 
@@ -123,7 +125,7 @@ int main(int argc, char* argv[]) try
 
   while (SPMC_EXPECT_FALSE (!stop))
   {
-    if (stream.next (header, data) && header.type == STANDARD_MESSAGE_TYPE)
+    if (stream.next (header, data))
     {
       stats.update (sizeof (Header) + data.size (), header.seqNum,
                     timepoint_from_nanoseconds_since_epoch (header.timestamp));
@@ -161,4 +163,3 @@ catch (const cxxopts::OptionException &e)
 {
   std::cerr << e.what () << std::endl;
 }
-

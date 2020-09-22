@@ -23,6 +23,8 @@ CxxOptsHelper parse (int argc, char* argv[])
   cxxopts::Options cxxopts ("spsc_server",
         "Message consumer for shared memory performance testing");
 
+  std::vector<std::string> stats;
+
   cxxopts.add_options ()
     ("h,help", "Message consumer for SPSC shared memory performance testing")
     ("name", "Shared memory name", cxxopts::value<std::string> ())
@@ -32,18 +34,17 @@ CxxOptsHelper parse (int argc, char* argv[])
       cxxopts::value<size_t> ()->default_value ("0"))
     ("directory", "Directory for statistics files",
       cxxopts::value<std::string> ())
-    ("intervalstats", "Periodically print statistics ",
-      cxxopts::value<bool> ())
-    ("latencystats", "Enable latency statistics",
-      cxxopts::value<bool> ())
-    ("throughputstats", "Enable throughput statistics",
-      cxxopts::value<bool> ())
+    ("stats", "Statistics to log. "
+     "Comma separated list (throughput,latency,interval)",
+      cxxopts::value<std::vector<std::string>> (stats))
     ("test", "Enable basic tests for message validity",
       cxxopts::value<bool> ())
     ("loglevel", "l,Logging level",
       cxxopts::value<std::string> ()->default_value ("NOTICE"));
 
   CxxOptsHelper options (cxxopts.parse (argc, argv));
+
+  options.positional ("stats", stats);
 
   if (options.exists ("help"))
   {
@@ -65,19 +66,27 @@ int main(int argc, char* argv[]) try
   auto directory       = options.value<std::string> ("directory", "");
   auto cpu             = options.value<int>    ("cpu", -1);
   auto prefetchCache   = options.value<size_t> ("prefetchcache", 0);
-  auto intervalStats   = options.value<bool>   ("intervalstats", false);
-  auto latencyStats    = options.value<bool>   ("latencystats", false);
-  auto throughputStats = options.value<bool>   ("throughputstats", false);
   auto test            = options.value<bool>   ("test", false);
-  auto logLevel = options.value<std::string> ("loglevel", log_levels (),"INFO");
+  auto logLevel        = options.value<std::string> ("loglevel",
+                                                     log_levels (),"INFO");
+  auto latency         = options.positional ("stats", "latency");
+  auto throughput      = options.positional ("stats", "throughput");
+  auto interval        = options.positional ("stats", "interval");
 
-  // TODO add message drop option
-//  auto allowDrops      = options.value<bool>   ("allowdrops", false);
+  /*
+   * TODO add a message drop option similar to spmc_client tool
+   *
+   * auto allowDrops   = options.value<bool> ("allowdrops", false);
+   */
 
   BOOST_LOG_TRIVIAL (info) << "Start shared memory spsc_client";
 
   BOOST_LOG_TRIVIAL (info) << "Consume from: " << name;
-  BOOST_LOG_TRIVIAL (info) << "CPU: " << cpu;
+
+  if (cpu != -1)
+  {
+    BOOST_LOG_TRIVIAL (info) << "Bind to CPU: " << cpu;
+  }
 
   SPSCStream stream (name, prefetchCache);
 
@@ -100,11 +109,11 @@ int main(int argc, char* argv[]) try
 
   PerformanceStats stats (directory);
 
-  stats.latency ().summary ().enable (latencyStats);
-  stats.latency ().interval ().enable (latencyStats && intervalStats);
+  stats.latency ().summary ().enable (latency);
+  stats.latency ().interval ().enable (latency && interval);
 
-  stats.throughput ().summary ().enable (throughputStats);
-  stats.throughput ().interval ().enable (throughputStats && intervalStats);
+  stats.throughput ().summary ().enable (throughput);
+  stats.throughput ().interval ().enable (throughput && interval);
 
   bind_to_cpu (cpu);
 

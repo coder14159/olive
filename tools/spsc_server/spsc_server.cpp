@@ -137,9 +137,9 @@ void server (const std::string& name,
     for (auto &sink : sinks)
     {
       sink->next (message);
-    }
 
-    throttle.throttle ();
+      throttle.throttle<SPSCSink> (*sink);
+    }
   }
 }
 

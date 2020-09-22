@@ -1,47 +1,59 @@
-#include <exception>
-#include <iostream>
-#include <string>
+#include "detail/CXXOptsHelper.h"
 
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/log/trivial.hpp>
 
-#include <cxxopts.hpp>
+#include <exception>
+#include <iostream>
+#include <string>
 
-namespace ip = boost::interprocess;
+using namespace spmc;
+
+namespace bi = boost::interprocess;
+
+namespace {
+
+CxxOptsHelper parse (int argc, char* argv[])
+{
+  cxxopts::Options cxxopts ("remove_shared_memory",
+                           "Delete instances of named shared memory");
+
+  std::vector<std::string> names;
+
+  cxxopts.add_options ()
+    ("h,help", "Remove named shared memory instance from the local machine")
+    ("names", "Comma separated list of shared memory names to remove",
+      cxxopts::value<std::vector<std::string>> (names));
+
+  spmc::CxxOptsHelper options (cxxopts.parse (argc, argv));
+
+  options.positional ("names", names);
+
+  if (options.exists ("help"))
+  {
+    std::cout << cxxopts.help ({"", "Group"}) << std::endl;
+
+    exit (EXIT_SUCCESS);
+  }
+
+  return options;
+}
+
+} // namespace {
 
 int main(int argc, char* argv[]) try
 {
-  cxxopts::Options options ("remove_shared_memory",
-                            "Delete named shared memory instance");
-
-  options.add_options ()
-    ("h,help", "Remove named shared memory instance from the local machine")
-    ("n,name", "Shared memory name", cxxopts::value<std::string> ());
-
-  auto result = options.parse (argc, argv);
-
-  if (result.count ("help") != 0)
+  for (auto name : parse (argc, argv).values ("names"))
   {
-    std::cout << options.help () << std::endl;
-    return EXIT_SUCCESS;
-  }
-
-  if (result.count ("name") != 1)
-  {
-    std::cerr << "Set a value for shared memory name\n" << std::endl;
-    return EXIT_FAILURE;
-  }
-
-  auto name = result["name"].as<std::string> ();
-
-
-  if (ip::shared_memory_object::remove (name.c_str ()))
-  {
-    std::cout << "Removed shared memory named '" << name << "'" << std::endl;
-  }
-  else
-  {
-    std::cout << "Failed to remove shared memory named '" << name << "'" << std::endl;
+    std::cout << "Shared memory '" << name << "' " ;
+    if (bi::shared_memory_object::remove (name.c_str ()))
+    {
+      std::cout << "removed" << std::endl;
+    }
+    else
+    {
+      std::cout << "not removed" << std::endl;
+    }
   }
 
   return EXIT_SUCCESS;

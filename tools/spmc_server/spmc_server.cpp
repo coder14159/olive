@@ -103,10 +103,11 @@ void server (const std::string& name,
   while (SPMC_EXPECT_FALSE (!stop))
   {
     sink.next (message);
-
     /*
      * If throughput is not set to maximum rate, Throttle reduces message
-     * throughput to the required rate
+     * throughput to the required rate.
+     *
+     * Throttle also sends WARMUP_MESSAGE_TYPE messages to keep the cache warm.
      */
     throttle.throttle<Sink> (sink);
   }
