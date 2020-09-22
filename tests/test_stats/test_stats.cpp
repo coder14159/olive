@@ -38,7 +38,7 @@ BOOST_AUTO_TEST_CASE(ThroughputStatsUpdates)
                     .megabytes_per_sec () > 100);
 }
 
-BOOST_AUTO_TEST_CASE(LatencyStatsUpdateIsFast)
+BOOST_AUTO_TEST_CASE (LatencyStatsUpdateIsFast)
 {
   spmc::ScopedLogLevel log (warning);
 
