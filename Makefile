@@ -128,7 +128,7 @@ $(BIN_DIR)/spsc_client: Makefile tools/spsc_client/spsc_client.cpp $(LIB_FILE_PA
 $(BIN_DIR)/spsc_server: Makefile tools/spsc_server/spsc_server.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
 	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) tools/spsc_server/spsc_server.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) -o $@
 
-$(BIN_DIR)/remove_shared_memory: Makefile tools/remove_shared_memory/remove_shared_memory.cpp | $(BIN_DIR)
+$(BIN_DIR)/remove_shared_memory: Makefile tools/remove_shared_memory/remove_shared_memory.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
 	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) tools/remove_shared_memory/remove_shared_memory.cpp $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) -o $@
 
 $(BIN_DIR)/ping_pong: Makefile tools/ping_pong/ping_pong.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
