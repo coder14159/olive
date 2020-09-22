@@ -64,39 +64,29 @@ void SPMCStream<QueueType>::stop ()
 template <typename QueueType>
 bool SPMCStream<QueueType>::next (Header &header, std::vector<uint8_t> &data)
 {
-  while (SPMC_EXPECT_TRUE (next_non_blocking (header, data) == false))
+  while (!m_stop.load (std::memory_order_relaxed))
   {
-    if (m_stop.load (std::memory_order_relaxed))
+    if (m_queue.pop (header, data))
     {
-      return false;
+      return true;
     }
   }
 
-  return true;
+  return false;
 }
 
 template <typename QueueType>
 bool SPMCStream<QueueType>::next_non_blocking (Header &header,
                                                std::vector<uint8_t> &data)
 {
-  if (SPMC_EXPECT_TRUE (m_queue.read_available () > sizeof (Header)))
-  {
-    return m_queue.pop (header, data);
-  }
-
-  return false;
+  return (SPMC_EXPECT_TRUE (m_queue.pop (header, data)));
 }
 
-// TODO function placeholder for receive policies (eg backoff/yield)
+// TODO receive policies (eg backoff/yield)
 template <typename QueueType>
 bool SPMCStream<QueueType>::receive (Header &header, std::vector<uint8_t> &data)
 {
-  if (SPMC_EXPECT_TRUE (m_queue.read_available () > sizeof (Header)))
-  {
-    return m_queue.pop (header, data);
-  }
-
-  return false;
+  return (SPMC_EXPECT_TRUE (m_queue.pop (header, data)));
 }
 
 }
