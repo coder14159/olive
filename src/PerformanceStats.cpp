@@ -48,7 +48,9 @@ void PerformanceStats::start ()
     Clock::duration latency_duration;
 
     TimePoint now = Clock::now ();
+
     TimePoint lastLog = now;
+    bool warmupPeriod = true;
 
     while (!m_stop)
     {
@@ -67,10 +69,30 @@ void PerformanceStats::start ()
         continue;
       }
 
+      // TODO REMOVE
+      // Print new max latencies
       now = Clock::now ();
+      static Microseconds maxLatency (1);
+
+      if ((latency_duration) > maxLatency)
+      {
+        BOOST_LOG_TRIVIAL(info) << "New max latency: "
+                    << nanoseconds_to_pretty (latency_duration);
+
+        maxLatency = std::chrono::duration_cast<Microseconds> (latency_duration);
+      }
+
 
       if ((now - lastLog) > Seconds (1))
       {
+        if (warmupPeriod)
+        {
+          warmupPeriod = false;
+          lastLog = now;
+
+          continue;
+        }
+
         log_interval_stats ();
 
         m_latency.interval ().write_data ();
@@ -138,7 +160,9 @@ void PerformanceStats::log_interval_stats ()
     m_throughput.interval ().write_data ().reset ();
   }
 
-  if (m_dropped.interval > 0)
+  if (m_dropped.interval > 0 &&
+     (m_latency.interval ().is_running () ||
+      m_throughput.interval ().is_running ()))
   {
     if (!log.empty ()) { log += "|"; }
 
