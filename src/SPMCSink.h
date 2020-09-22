@@ -62,7 +62,7 @@ private:
   uint64_t m_sequenceNumber
     __attribute__ ((aligned (CACHE_LINE_SIZE))) = 0;
 
-  std::atomic<bool> m_stop
+  bool m_stop
     __attribute__ ((aligned (CACHE_LINE_SIZE))) = { false };
 
   QueueType m_queue;

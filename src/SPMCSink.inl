@@ -34,7 +34,7 @@ void SPMCSink<Queuetype>::next (const std::vector<uint8_t> &data)
 
   while (true)
   {
-    if (m_stop.load (std::memory_order_relaxed) || m_queue.push (header, data))
+    if (m_stop || m_queue.push (header, data))
     {
       break;
     }
@@ -54,8 +54,7 @@ void SPMCSink<Queuetype>::next (const POD &data)
   header.seqNum    = ++m_sequenceNumber;
   header.timestamp = nanoseconds_since_epoch (Clock::now ());
 
-  while (!m_stop.load (std::memory_order_relaxed) &&
-         !m_queue.push (header, data))
+  while (!m_stop && !m_queue.push (header, data))
   { }
 }
 
