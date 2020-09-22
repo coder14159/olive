@@ -65,15 +65,19 @@ void SPSCStream::stop ()
   }
 }
 
-
 bool SPSCStream::next (Header &header, std::vector<uint8_t> &data)
 {
   bool success = false;
 
-  while (!m_stop && !success)
+  while (!m_stop.load (std::memory_order_relaxed) && !success)
   {
    	auto headerSize =
       receive (reinterpret_cast<uint8_t*> (&header), sizeof (Header));
+
+    if (header.type == WARMUP_MESSAGE_TYPE)
+    {
+      return false;
+    }
 
     if (headerSize > 0)
     {
@@ -97,8 +101,9 @@ bool SPSCStream::next (Header &header, std::vector<uint8_t> &data)
 
 size_t SPSCStream::receive (uint8_t* data, size_t size)
 {
-
-  // the queue in shared memory
+  /*
+   * The queue potentially in shared memory
+   */
   auto &queue = *m_queue;
 
 
@@ -116,14 +121,22 @@ size_t SPSCStream::receive (uint8_t* data, size_t size)
     {
       return queue.pop (data, size);
     }
+    return false;
   }
 
-  /* needs work - drain the cache before disabling*/
+  /*
+   * TODO: needs work - drain the cache before disabling
+   */
   if (m_cache.capacity () < size)
   {
+    BOOST_LOG_TRIVIAL (info)
+      << "Disabling local SPSCStream cache as it is too small"
+      << " (cache capacity: " << m_cache.capacity ()
+      << " message size " << size << ")";
+
     m_cacheEnabled = false;
 
-    return 0;
+    return false;
   }
 
   /*

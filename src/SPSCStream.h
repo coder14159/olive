@@ -48,7 +48,9 @@ private:
 
   Buffer<std::allocator<uint8_t>> m_cache;
 
-  bool m_cacheEnabled = true;
+  bool m_cacheEnabled = false;
+
+  bool m_allowDrops = false;
 
 };
 
