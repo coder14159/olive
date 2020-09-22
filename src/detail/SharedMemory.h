@@ -36,7 +36,12 @@ using SegmentManager = boost::interprocess::managed_shared_memory
 // A memory allocator for producer / consumer shared memory queues
 using Allocator = boost::interprocess::allocator<uint8_t, SegmentManager>;
 
-// Single producer / single consumer shared memory queue
+/*
+ * Single producer / single consumer shared memory queue
+ *
+ * TODO: wrap in a SPSCQueue object to add addional functionality like, for
+ * example add ability to allow message drops.
+ */
 using SPSCQueue = boost::lockfree::spsc_queue<uint8_t,
                                               boost::lockfree
                                                    ::allocator<Allocator>>;
@@ -59,7 +64,6 @@ static const uint8_t HEADER_VERSION = 1;
 
 static const uint8_t STANDARD_MESSAGE_TYPE = 0;
 static const uint8_t WARMUP_MESSAGE_TYPE   = 1;
-static const uint8_t WARMUP_MESSAGE_SIZE   = 4;
 
 static const int64_t DEFAULT_TIMESTAMP = std::numeric_limits<int64_t>::min ();
 
