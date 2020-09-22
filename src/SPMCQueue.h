@@ -121,6 +121,8 @@ private:
    */
   boost::interprocess::managed_shared_memory m_memory;
 
+  bool m_cacheEnabled  __attribute__ ((aligned (CACHE_LINE_SIZE))) = false;
+
   typename QueueType::ConsumerType m_consumer
             __attribute__ ((aligned (CACHE_LINE_SIZE)));
 
@@ -139,8 +141,6 @@ private:
    * A cache used to store chunks of data taken from the shared queue
    */
   Buffer<std::allocator<uint8_t>> m_cache;
-
-  bool m_cacheEnabled = false;
 
 };
 
