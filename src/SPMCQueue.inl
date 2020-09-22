@@ -12,7 +12,7 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (size_t capacity)
 {
   ASSERT (m_queue.get () != nullptr, "SPMCQueue initialisation failed");
 
-  m_buffer = m_queue->buffer_ptr ();
+  m_buffer = m_queue->buffer ();
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
@@ -34,7 +34,7 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
   ASSERT_SS (m_queue != nullptr,
              "Shared memory object initialisation failed: " << queueName);
 
-  m_buffer = m_queue->buffer_ptr ();
+  m_buffer = m_queue->buffer ();
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
@@ -61,7 +61,7 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
   ASSERT_SS (memory.second == 1,
              "Queue object: " << queueName << " should not be an array");
 
-  m_buffer = m_queue->buffer_ptr ();
+  m_buffer = m_queue->buffer ();
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
@@ -126,8 +126,8 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   std::vector<uint8_t> &data)
 {
   /*
-   * Use of the cache is only permitted if no consumers are permitted to drop
-   * messages.
+   * The local data cache is only permitted if this consumer is not permitted to
+   * drop messages.
    */
   if (!m_cacheEnabled || m_consumer.message_drops_allowed ())
   {
@@ -135,69 +135,78 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   }
 
   /*
-    * Use cases to consider
+    * TODO: Use cases to consider
     * - data size is smaller than header size
     * - cache size is smaller header size
-    *
     */
-  if (m_queue->producer_restarted (m_consumer))
+#if 0
+  if (!m_cacheEnabled)
   {
-    BOOST_LOG_TRIVIAL(info)
-      << "Producer restarted. Clear the consumer prefetch cache.";
-    m_cache.clear ();
+    return m_queue->pop (header, data, m_producer, m_consumer, m_buffer);
   }
-
+#endif
   /*
-    * Nothing to do if both cache and queue are empty
-    */
-  if (m_cache.size () < sizeof (Header))
+   * Use client local cache so consuming data in larger chunks
+   */
+  if (m_cacheEnabled)
   {
-    /*
-      * Check that header and payload are available
-      */
-    if (read_available () < sizeof (Header))
+    if (m_queue->producer_restarted (m_consumer))
     {
-      return false;
+      BOOST_LOG_TRIVIAL(info)
+        << "Producer restarted. Clear the consumer prefetch cache.";
+      m_cache.clear ();
     }
 
-    if (!m_queue->pop (m_cache, m_producer, m_consumer, m_buffer))
-    {
-      return false;
-    }
-  }
-
-  m_cache.pop (header);
-
-  if (m_cache.capacity () < (header.size + sizeof (Header)))
-  {
     /*
-      * Disable the cache if a message received is too large to fit
+      * Nothing to do if both cache and queue are empty
       */
-    BOOST_LOG_TRIVIAL(info) << "Disable the prefetch cache. "
-                      << "Message size is too large (" << header.size << ")";
+    if (m_cache.size () < sizeof (Header))
+    {
+      /*
+        * Check that header and payload are available
+        */
+      if (read_available () < sizeof (Header))
+      {
+        return false;
+      }
 
-    m_cacheEnabled = false;
+      if (!m_queue->pop (m_cache, m_producer, m_consumer, m_buffer))
+      {
+        return false;
+      }
+    }
 
-    m_cache.pop (data, std::min (header.size, m_cache.size ()));
+    m_cache.pop (header);
+
+    if (m_cache.capacity () < (header.size + sizeof (Header)))
+    {
+      /*
+        * Disable the cache if a message received is too large to fit
+        */
+      BOOST_LOG_TRIVIAL(info) << "Disable the prefetch cache. "
+                        << "Message size is too large (" << header.size << ")";
+
+      m_cacheEnabled = false;
+
+      m_cache.pop (data, std::min (header.size, m_cache.size ()));
 
 
-    return m_queue->pop (data, header.size - data.size (),
-                         m_producer, m_consumer, m_buffer);
+      return m_queue->pop (data, header.size - data.size (),
+                          m_producer, m_consumer, m_buffer);
+    }
+    /*
+     * Make sure the payload is received
+     * TODO Consider adding resilience if the payload is not sent.
+     */
+    while (m_cache.size () < header.size)
+    {
+      m_queue->pop (m_cache, m_producer, m_consumer, m_buffer);
+    }
+
+    return m_cache.pop (data, header.size);
   }
 
-  /*
-    * Make sure the payload is received
-    *
-    * TODO Consider adding resilience if the payload is not sent.
-    */
-  while (m_cache.size () < header.size)
-  {
-    m_queue->pop (m_cache, m_producer, m_consumer, m_buffer);
-  }
-
-  return m_cache.pop (data, header.size);
-
-  UNREACHABLE ("SPMCQueue::pop () should have returned");
+  throw ("SPMCQueue::pop () should have returned");
 }
 
 } // namespace spmc {

@@ -104,7 +104,7 @@ public:
 };
 
 /*
- * Inter-process bytes consumed count
+ * Inter-process shared memory bytes consumed count
  */
 class SharedMemoryConsumer
 {
@@ -114,7 +114,7 @@ public:
   /*
    * Return a reference to the number of bytes consumed by the consumer process
    */
-  uint64_t &consumed ()       { return m_bytes; }
+  uint64_t &consumed () { return m_bytes; }
 
   /*
    * Return the number of bytes consumed by the consumer process
@@ -188,6 +188,8 @@ public:
 
   ~SPMCQueue ();
 
+  void consumer_checks (ProducerType &producer, ConsumerType &consumer);
+
   /*
    * Return number of bytes which have been written to the queue by teh producer
    * and are available to to be consumed.
@@ -206,7 +208,9 @@ public:
    * The queue should be larger than the data size + header size
    */
   template <typename Header>
-  bool push (const Header &header, const std::vector<uint8_t> &data, uint8_t *buffer);
+  bool push (const Header &header,
+             const std::vector<uint8_t> &data,
+             uint8_t *buffer);
 
   /*
    * Push data into the queue, always succeeds unless no drops is enabled
@@ -215,7 +219,10 @@ public:
    * The queue should be larger than the data size + header size
    */
   template <typename Header>
-  bool push (const Header &header, const uint8_t *data, size_t size, uint8_t *buffer);
+  bool push (const Header  &header,
+             const uint8_t *data,
+             const size_t   size,
+             uint8_t *buffer);
 
   /*
    * Push POD data into the queue, always succeeds unless no drops is enabled
@@ -232,7 +239,6 @@ public:
    */
   template <typename Header>
   bool push (const Header &header, uint8_t *buffer);
-
   /*
    * Pop data out of the queue, header and data must popped in a single call
    */
@@ -242,9 +248,8 @@ public:
             ProducerType         &producer,
             ConsumerType         &consumer,
             const uint8_t        *buffer);
-
   /*
-   * Prefetch a chunk of data for caching in a fast circular buffer
+   * Prefetch a chunk of data for caching in a local non-shared circular buffer
    */
   template <typename BufferType>
   bool pop (BufferType    &chunk,
@@ -269,26 +274,30 @@ public:
    */
   bool producer_restarted (const ConsumerType &consumer) const;
 
-
-  uint8_t *buffer_ptr () const { return &*m_buffer; }
+  /*
+   * Return a pointer to the internal buffer shared between either processes
+   * or threads (but not both).
+   */
+  uint8_t *buffer () const { return &*m_buffer; }
 
 private:
-
-  void consumer_checks (ProducerType &producer, ConsumerType &consumer);
+  void reset_producer ();
 
   void initialise_consumer (ProducerType &producer, ConsumerType &consumer);
 
-  void copy_to_buffer (const uint8_t *from, uint8_t* to, size_t size, size_t offset = 0);
+  void copy_to_buffer (const uint8_t *from, uint8_t* to, size_t size,
+                       size_t offset = 0);
 
-  bool copy_from_buffer (const uint8_t* from, uint8_t *to, size_t size, uint64_t &consumed,
-                       bool messageDropsAllowed);
+  size_t copy_from_buffer (const uint8_t* from, uint8_t *to, size_t size,
+                           ConsumerType &consumed,
+                           bool messageDropsAllowed);
 
   bool copy_from_buffer (const uint8_t* from, uint8_t *to, size_t size,
-                       ConsumerType &consumer);
+                         ConsumerType &consumer);
 
   template <typename Buffer>
   bool copy_from_buffer (const uint8_t* from, Buffer &to, size_t size,
-                       ConsumerType &consumer);
+                         ConsumerType &consumer);
 
 private:
 
@@ -304,6 +313,8 @@ private:
 
   typedef typename Allocator::pointer Pointer;
 
+  bool m_consumerInitialised = false;
+
   /*
    * Structure used by consumers exert back pressure on the consumer
    */
@@ -318,13 +329,20 @@ private:
    * ovewriting a range which the consumer has just read.
    */
   std::atomic<uint64_t> m_claimed
-                            __attribute__ ((aligned (CACHE_LINE_SIZE))) = { 0 };
+        __attribute__ ((aligned (CACHE_LINE_SIZE))) = { 0 };
 
   /*
    * Counter used by the producer to publish a data range
    */
   std::atomic<uint64_t> m_committed
-                            __attribute__ ((aligned (CACHE_LINE_SIZE))) = { 0 };
+        __attribute__ ((aligned (CACHE_LINE_SIZE))) = { 0 };
+
+  /*
+   * Cache the producer buffer pointer to avoid the shared memory not
+   * insignificant dereferencing cost
+   */
+  uint8_t *m_producerBuf
+        __attribute__ ((aligned (CACHE_LINE_SIZE))) = { 0 };
 
   /*
    * A buffer held in shared or heap memory used by the producer to pass data
@@ -332,6 +350,9 @@ private:
    */
   Pointer m_buffer __attribute__ ((aligned (CACHE_LINE_SIZE))) = { nullptr };
 
+  // const static size_t MAX_SIZE = 20480;
+
+  // uint8_t m_smallBuffer[MAX_SIZE];
 };
 
 
