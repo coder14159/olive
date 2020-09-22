@@ -23,19 +23,27 @@ void CxxOptsHelper::positional (const std::string &name,
 bool CxxOptsHelper::positional (const std::string &name,
                                 const std::string &value) const
 {
-  if (m_positional.count (name) == 0)
+  if (!exists (name))
   {
     return false;
   }
 
-  auto &values = m_positional.at (name);
-
-  return (contains_value (values, value));
+  return (contains_value (m_positional.at (name), value));
 }
 
-  /*
-  * Return the value parsed from a string. Throw if not present.
-  */
+std::vector<std::string> CxxOptsHelper::values (const std::string &name) const
+{
+  if (!exists (name))
+  {
+    return {};
+  }
+
+  return m_positional.at (name);
+}
+
+/*
+ * Return the value parsed from a string. Throw if not present.
+ */
 template<typename T>
 T CxxOptsHelper::required (const std::string &name) const
 {

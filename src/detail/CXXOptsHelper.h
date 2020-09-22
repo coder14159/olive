@@ -3,9 +3,11 @@
 
 #include <cxxopts.hpp>
 
-#include <boost/algorithm/cxx11/none_of.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/range/algorithm.hpp>
 
+#include <map>
+#include <set>
 #include <string>
 
 
@@ -17,98 +19,71 @@ namespace spmc {
 class CxxOptsHelper
 {
 public:
-  CxxOptsHelper (const cxxopts::ParseResult &result) : m_result (result)
-  { }
+  CxxOptsHelper (const cxxopts::ParseResult &result);
 
   /*
-   * Return the parsed result object
+   * Add positional values associated with a named command line argument
    */
-  const cxxopts::ParseResult &result () const { return m_result; }
+  void positional (const std::string &name,
+                   const std::vector<std::string> &values);
 
   /*
+   * Return true if a positional string is associated with a named positional
+   * command line argument
+   */
+  bool positional (const std::string &name, const std::string &value) const;
+
+   /*
    * Return the value parsed from a string. Throw if not present.
    */
   template<typename T>
-  T required (const std::string &name) const
-  {
-    check_exists (name);
-
-    return m_result[name].as<T> ();
-  }
-
+  T required (const std::string &name) const;
 
   /*
    * Return a default value if the name is not set in the command line
    */
   template<typename T>
-  T value (const std::string &name, const T& defaultValue) const
-  {
-    if (!exists (name))
-    {
-      return defaultValue;
-    }
-
-    return m_result[name].as<T> ();
-  }
+  T value (const std::string &name, const T& defaultValue) const;
 
   /*
-   * Get a value for a command line option and return it if it appears on a
-   * list of valid values, otherwise throw.
+   * Get and return a value for a command line option if it appears on the list
+   * of valid values, otherwise throw.
    */
   template<typename T>
   T value (const std::string &name,
            std::vector<std::string> validValues,
-           const T& defaultValue) const
-  {
-    auto returnValue = value (name, defaultValue);
+           const T& defaultValue) const;
 
-    if (!list_contains (returnValue, validValues))
-    {
-      std::stringstream ss;
-      ss << "Invalid argument name: " << name << " value: " << returnValue;
-
-      throw cxxopts::OptionParseException (ss.str ());
-    }
-
-    return returnValue;
-  }
+  /*
+   * Return a list of values associated with an option name
+   */
+  std::vector<std::string> values (const std::string &name) const;
 
   /*
    * Return true if name is set on the command line
    */
-  bool exists (const std::string &name) const
-  {
-    return (m_result.count (name) != 0);
-  }
+  bool exists (const std::string &name) const;
 
 private:
+  bool contains_value (const std::vector<std::string> &values,
+                       const std::string &value) const;
 
   /*
    * Assert if an argument name is not set
    */
-  void check_exists (const std::string &name) const
-  {
-    if (!exists (name))
-    {
-      throw cxxopts::option_not_exists_exception (name);
-    }
-  }
+  void check_exists (const std::string &name) const;
 
-  /*
-   * Return true if the list contains the value
-   */
-  template<typename T>
-  bool list_contains (const std::string &value, const std::vector<T> &list) const
-  {
-    return boost::range::find (list, value) != list.end ();
-  }
 
 private:
 
   cxxopts::ParseResult m_result;
 
+  std::map<std::string, std::vector<std::string>> m_positional;
+
 };
 
 }
+
+#include "CXXOptsHelper.inl"
 
 #endif // IPC_CXX_OPTS_HELPER
