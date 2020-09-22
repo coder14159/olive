@@ -76,7 +76,7 @@ void PerformanceStats::start ()
 
       if ((latency_duration) > maxLatency)
       {
-        BOOST_LOG_TRIVIAL(info) << "New max latency: "
+        BOOST_LOG_TRIVIAL(info) << "max latency: "
                     << nanoseconds_to_pretty (latency_duration);
 
         maxLatency = std::chrono::duration_cast<Microseconds> (latency_duration);
