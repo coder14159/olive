@@ -83,7 +83,7 @@ protected:
   /*
    * Current number of consumers
    */
-  size_t m_consumerCount    = { 0 };
+  size_t m_consumerCount = { 0 };
 
   /*
    * Index used to implement fair servicing of the ConsumerArray

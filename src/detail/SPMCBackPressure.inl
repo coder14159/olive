@@ -10,6 +10,7 @@ template<class Mutex, size_t MaxNoDropConsumers>
 SPMCBackPressure<Mutex, MaxNoDropConsumers>::SPMCBackPressure ()
 : m_maxNoDropConsumers (MaxNoDropConsumers)
 {
+  std::lock_guard<Mutex> g (m_mutex);
   m_consumed.fill (-1);
 }
 
