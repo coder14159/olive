@@ -73,14 +73,13 @@ private:
 
 private:
 
-  std::atomic<bool> m_stop
-            __attribute__ ((aligned (CACHE_LINE_SIZE))) = { false };
+  alignas (CACHE_LINE_SIZE)
+  std::atomic<bool> m_stop = { false };
 
-  std::unique_ptr<QueueType> m_queueObj
-            __attribute__ ((aligned (CACHE_LINE_SIZE)));
+  alignas (CACHE_LINE_SIZE)
+  std::unique_ptr<QueueType> m_queueObj;
 
-  QueueType &m_queue
-            __attribute__ ((aligned (CACHE_LINE_SIZE)));
+  QueueType &m_queue;
 
   Buffer<std::allocator<uint8_t>> m_cache;
 };

@@ -121,13 +121,14 @@ private:
    */
   boost::interprocess::managed_shared_memory m_memory;
 
-  bool m_cacheEnabled  __attribute__ ((aligned (CACHE_LINE_SIZE))) = false;
+  alignas (CACHE_LINE_SIZE)
+  bool m_cacheEnabled  = false;
 
-  typename QueueType::ConsumerType m_consumer
-            __attribute__ ((aligned (CACHE_LINE_SIZE)));
+  alignas (CACHE_LINE_SIZE)
+  typename QueueType::ConsumerType m_consumer;
 
-  typename QueueType::ProducerType m_producer
-            __attribute__ ((aligned (CACHE_LINE_SIZE)));
+  alignas (CACHE_LINE_SIZE)
+  typename QueueType::ProducerType m_producer;
 
   /*
    * Local pointer to data buffer shared between producer and consumers.
@@ -135,8 +136,8 @@ private:
    * Dereferencing the boost shared memory offset pointer has a cost. Therefore
    * cache the dereferenced pointer in each client.
    */
-  uint8_t *m_buffer
-            __attribute__ ((aligned (CACHE_LINE_SIZE))) = { nullptr };
+  alignas (CACHE_LINE_SIZE)
+  uint8_t *m_buffer = { nullptr };
   /*
    * A cache used to store chunks of data taken from the shared queue
    */

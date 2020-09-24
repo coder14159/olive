@@ -44,14 +44,15 @@ private:
 
   uint64_t m_sequenceNumber = 0;
 
-  std::atomic<bool> m_stop
-    __attribute__ ((aligned (CACHE_LINE_SIZE))) = { false };
+  alignas (CACHE_LINE_SIZE)
+  std::atomic<bool> m_stop = { false };
 
   boost::interprocess::managed_shared_memory m_memory;
 
   SharedMemory::Allocator m_allocator;
 
-  Header m_warmupHdr __attribute__ ((aligned (CACHE_LINE_SIZE))) = {
+  alignas (CACHE_LINE_SIZE)
+  Header m_warmupHdr = {
       HEADER_VERSION,
       WARMUP_MESSAGE_TYPE,
       0,

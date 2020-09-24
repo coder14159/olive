@@ -59,21 +59,22 @@ public:
 
 private:
 
-  uint64_t m_sequenceNumber
-    __attribute__ ((aligned (CACHE_LINE_SIZE))) = 0;
+  alignas (CACHE_LINE_SIZE)
+  bool m_stop = { false };
 
-  bool m_stop
-    __attribute__ ((aligned (CACHE_LINE_SIZE))) = { false };
+  alignas (CACHE_LINE_SIZE)
+  uint64_t m_sequenceNumber = 0;
 
-  QueueType m_queue;
-
-  Header m_warmupHdr __attribute__ ((aligned (CACHE_LINE_SIZE))) = {
+  alignas (CACHE_LINE_SIZE)
+  Header m_warmupHdr = {
       HEADER_VERSION,
       WARMUP_MESSAGE_TYPE,
       0,
       0,
       DEFAULT_TIMESTAMP
   };
+
+  QueueType m_queue;
 };
 
 /*
