@@ -6,7 +6,7 @@
 
 namespace spmc {
 
-template<class Mutex, size_t MaxNoDropConsumers>
+template<class Mutex, uint16_t MaxNoDropConsumers>
 SPMCBackPressure<Mutex, MaxNoDropConsumers>::SPMCBackPressure ()
 : m_maxNoDropConsumers (MaxNoDropConsumers)
 {
@@ -14,7 +14,7 @@ SPMCBackPressure<Mutex, MaxNoDropConsumers>::SPMCBackPressure ()
   m_consumed.fill (-1);
 }
 
-template<class Mutex, size_t MaxNoDropConsumers>
+template<class Mutex, uint16_t MaxNoDropConsumers>
 size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer ()
 {
   std::lock_guard<Mutex> g (m_mutex);
@@ -78,7 +78,7 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer ()
   return index;
 }
 
-template<class Mutex, size_t MaxNoDropConsumers>
+template<class Mutex, uint16_t MaxNoDropConsumers>
 void SPMCBackPressure<Mutex, MaxNoDropConsumers>::reset_consumers ()
 {
   std::lock_guard<Mutex> g (m_mutex);
@@ -95,7 +95,7 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::reset_consumers ()
   }
 }
 
-template<class Mutex, size_t MaxNoDropConsumers>
+template<class Mutex, uint16_t MaxNoDropConsumers>
 void SPMCBackPressure<Mutex, MaxNoDropConsumers>::unregister_consumer (size_t index)
 {
   BOOST_LOG_TRIVIAL(trace) << "Unregister consumer: index=" << index;
@@ -106,23 +106,24 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::unregister_consumer (size_t in
   }
 }
 
-template<class Mutex, size_t MaxNoDropConsumers>
+template<class Mutex, uint16_t MaxNoDropConsumers>
 bool SPMCBackPressure<Mutex, MaxNoDropConsumers>::has_non_drop_consumers () const
 {
   return m_hasNonDropConsumers;
 }
 
-template<class Mutex, size_t MaxNoDropConsumers>
+template<class Mutex, uint16_t MaxNoDropConsumers>
 uint64_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::min_consumed ()
 {
-  size_t   consumers = m_maxConsumerIndex;
-  uint64_t min       = std::numeric_limits<uint64_t>::max ();
+  uint64_t min = std::numeric_limits<uint64_t>::max ();
+
+  uint16_t consumers = m_maxConsumerIndex;
   /*
    * Get the bytes consumed by the slowest consumer.
    *
-   * For a more fair iteration do not always start with same consumer thread
+   * Don't always start with same consumer thread for fair iteration
    */
-  for (size_t i = m_lastIndex; i < (consumers + m_lastIndex ); ++i)
+  for (uint16_t i = m_lastIndex; i < (consumers + m_lastIndex ); ++i)
   {
     uint64_t consumed = m_consumed[i - m_lastIndex];
 
@@ -140,7 +141,7 @@ uint64_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::min_consumed ()
   return min;
 }
 
-template<class Mutex, size_t MaxNoDropConsumers>
+template<class Mutex, uint16_t MaxNoDropConsumers>
 void SPMCBackPressure<Mutex, MaxNoDropConsumers>::consumed (uint64_t bytes, size_t index)
 {
   m_consumed[index] = bytes;
