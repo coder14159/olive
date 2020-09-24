@@ -425,6 +425,7 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
        * cache line at the start of the buffer into memory.
        */
       volatile auto dummy = from[0];
+      (void)dummy;
     }
   }
 
