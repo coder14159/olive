@@ -63,29 +63,4 @@ void SPSCSink::next_keep_warm ()
   queue.push (reinterpret_cast <uint8_t*> (&m_warmupHdr), sizeof (Header));
 }
 
-
-#if 0
-bool SPSCSink::send (const uint8_t *data, size_t size)
-{
-  bool ret = false;
-
-  /*
-   * Access the queue in shared memory
-   */
-  auto &queue = *m_queue;
-
-  while (!m_stop)
-  {
-    if (queue.write_available () >= size)
-    {
-      queue.push (data, size);
-
-      ret = true;
-      break;
-    }
-  }
-
-  return ret;
-}
-#endif
 }
