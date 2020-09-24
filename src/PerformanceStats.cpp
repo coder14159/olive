@@ -50,7 +50,11 @@ void PerformanceStats::start ()
     TimePoint now = Clock::now ();
 
     TimePoint lastLog = now;
-    bool warmupPeriod = true;
+    /*
+     * Warmup for a few seconds before starting to take latency values
+     */
+    Seconds warmupDuration (2);
+    bool warming = true;
 
     while (!m_stop)
     {
@@ -69,25 +73,26 @@ void PerformanceStats::start ()
         continue;
       }
 
-      // TODO REMOVE
-      // Print new max latencies
       now = Clock::now ();
-      static Microseconds maxLatency (1);
 
-      if ((latency_duration) > maxLatency)
-      {
-        BOOST_LOG_TRIVIAL(info) << "max latency: "
-                    << nanoseconds_to_pretty (latency_duration);
+      {  // TODO REMOVE
+        // Print first few max latencies during a warmup period
+        static Nanoseconds maxLatency (1);
 
-        maxLatency = std::chrono::duration_cast<Microseconds> (latency_duration);
+        if ((latency_duration) > maxLatency)
+        {
+          BOOST_LOG_TRIVIAL(info) << "max latency: "
+                      << nanoseconds_to_pretty (latency_duration);
+
+          maxLatency = std::chrono::duration_cast<Nanoseconds> (latency_duration);
+        }
       }
-
 
       if ((now - lastLog) > Seconds (1))
       {
-        if (warmupPeriod)
+        if (warming && (now - lastLog) > warmupDuration)
         {
-          warmupPeriod = false;
+          warming = false;
           lastLog = now;
 
           continue;
