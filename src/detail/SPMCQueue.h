@@ -157,7 +157,7 @@ private:
  * a producer and multiple consumers.
  */
 template <class Allocator,
-          size_t MaxNoDropConsumers = MAX_NO_DROP_CONSUMERS_DEFAULT>
+          uint16_t MaxNoDropConsumers = MAX_NO_DROP_CONSUMERS_DEFAULT>
 class SPMCQueue : private Allocator
 {
 private:
@@ -179,11 +179,16 @@ public:
 
 public:
   /*
-   * Construct a SPMCQueue for use in-process by a single producer and multiple
-   * consumers or shared between processes.
+   * Construct an SPMCQueue for use in-process by a single producer and multiple
+   * consumer threads.
    */
   SPMCQueue (size_t capacity);
 
+  /*
+   * Construct an SPMCQueue for use with a single producer and multiple
+   * consumers which can be shared between processes by using an allocator type
+   * of SharedMemory::Allocator
+   */
   SPMCQueue (size_t capacity, const Allocator &allocator);
 
   ~SPMCQueue ();
@@ -315,12 +320,7 @@ private:
 
   bool m_consumerInitialised = false;
 
-  /*
-   * Structure used by consumers exert back pressure on the consumer
-   */
-  BackPressureType m_backPressure;
-
-  const size_t m_capacity __attribute__ ((aligned (CACHE_LINE_SIZE)));
+  const size_t m_capacity;
 
   /*
    * Counter used to claim a data range by the producer to write data.
@@ -328,31 +328,33 @@ private:
    * Consumer threads use this counter to check if a producer has begun
    * ovewriting a range which the consumer has just read.
    */
-  std::atomic<uint64_t> m_claimed
-        __attribute__ ((aligned (CACHE_LINE_SIZE))) = { 0 };
+  alignas (CACHE_LINE_SIZE)
+  std::atomic<uint64_t> m_claimed = { 0 };
 
   /*
    * Counter used by the producer to publish a data range
    */
-  std::atomic<uint64_t> m_committed
-        __attribute__ ((aligned (CACHE_LINE_SIZE))) = { 0 };
+  alignas (CACHE_LINE_SIZE)
+  std::atomic<uint64_t> m_committed = { 0 };
 
   /*
    * Cache the producer buffer pointer to avoid the shared memory not
    * insignificant dereferencing cost
    */
-  uint8_t *m_producerBuf
-        __attribute__ ((aligned (CACHE_LINE_SIZE))) = { 0 };
+  alignas (CACHE_LINE_SIZE)
+  uint8_t *m_producerBuf = { 0 };
 
   /*
    * A buffer held in shared or heap memory used by the producer to pass data
    * to the consumers
    */
-  Pointer m_buffer __attribute__ ((aligned (CACHE_LINE_SIZE))) = { nullptr };
+  alignas (CACHE_LINE_SIZE)
+  Pointer m_buffer = { nullptr };
 
-  // const static size_t MAX_SIZE = 20480;
-
-  // uint8_t m_smallBuffer[MAX_SIZE];
+  /*
+   * Structure used by consumers exert back pressure on the consumer
+   */
+  BackPressureType m_backPressure;
 };
 
 
