@@ -44,7 +44,7 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer ()
   for (size_t i = 0; i < m_maxConsumerIndex; ++i)
   {
     BOOST_LOG_TRIVIAL(trace)
-      << "slot check m_consumed[" << i << "]=" << m_consumed[i];
+      << "Slot check m_consumed[" << i << "]=" << m_consumed[i];
 
     if (m_consumed[i] == Consumer::Stopped)
     {
