@@ -48,11 +48,6 @@ bool InprocessConsumer::initialised ()
   return (get_bytes () != Consumer::UnInitialised);
 }
 
-uint64_t &InprocessConsumer::consumed ()
-{
-  return get_bytes ();
-}
-
 uint64_t InprocessConsumer::consumed () const
 {
   return get_bytes ();

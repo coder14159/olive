@@ -76,11 +76,6 @@ public:
   bool initialised ();
 
   /*
-   * Return a reference number of bytes consumed by the consumer thread
-   */
-  uint64_t &consumed ();
-
-  /*
    * Return the number of bytes consumed by the consumer thread
    */
   uint64_t consumed () const;
@@ -89,6 +84,11 @@ public:
    * Set the number of bytes consumed by the consumer thread
    */
   void consumed (uint64_t consumed);
+
+  /*
+   * Add a number of bytes to the consumer count
+   */
+  void add (uint64_t consumed);
 
   /*
    * Returns true if the consumer thread permits message drops
@@ -114,7 +114,7 @@ public:
   /*
    * Return a reference to the number of bytes consumed by the consumer process
    */
-  uint64_t &consumed () { return m_bytes; }
+  // uint64_t &consumed () { return m_bytes; }
 
   /*
    * Return the number of bytes consumed by the consumer process
@@ -125,6 +125,11 @@ public:
    * Set the number of bytes consumed by the consumer process
    */
   void consumed (uint64_t consumed) { m_bytes = consumed; }
+
+  /*
+   * Add a number of bytes to the consumer count
+   */
+  void add (uint64_t consumed) { m_bytes += consumed; }
 
   /*
    * Return true if a consumer process is allowed to drop messages
@@ -192,6 +197,8 @@ public:
   SPMCQueue (size_t capacity, const Allocator &allocator);
 
   ~SPMCQueue ();
+
+  size_t size () const;
 
   void consumer_checks (ProducerType &producer, ConsumerType &consumer);
 
@@ -294,12 +301,12 @@ private:
                        size_t offset = 0);
 
   size_t copy_from_buffer (const uint8_t* from, uint8_t *to, size_t size,
-                           ConsumerType &consumed,
+                           ConsumerType &consumer,
                            bool messageDropsAllowed);
-
+#if 0
   bool copy_from_buffer (const uint8_t* from, uint8_t *to, size_t size,
                          ConsumerType &consumer);
-
+#endif
   template <typename Buffer>
   bool copy_from_buffer (const uint8_t* from, Buffer &to, size_t size,
                          ConsumerType &consumer);
@@ -318,12 +325,10 @@ private:
 
   typedef typename Allocator::pointer Pointer;
 
-  bool m_consumerInitialised = false;
-
   const size_t m_capacity;
 
   /*
-   * Counter used to claim a data range by the producer to write data.
+   * Counter used to claim a data range by the producer before writing data.
    *
    * Consumer threads use this counter to check if a producer has begun
    * ovewriting a range which the consumer has just read.
