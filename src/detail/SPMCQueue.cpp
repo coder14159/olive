@@ -63,6 +63,11 @@ void InprocessConsumer::consumed (uint64_t consumed)
   get_bytes () = consumed;
 }
 
+void InprocessConsumer::add (uint64_t consumed)
+{
+  get_bytes () += consumed;
+}
+
 bool InprocessConsumer::message_drops_allowed () const
 {
   return get_message_drops_allowed ();
