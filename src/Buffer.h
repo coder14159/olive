@@ -39,17 +39,6 @@ public:
   ~Buffer ();
 
   /*
-   * Clear the contents
-   */
-  void clear ();
-
-  /*
-   * Reset the capacity of the buffer.
-   * Non-standard behaviour: all internal data is deleted on resize
-   */
-  void resize (size_t size);
-
-  /*
    * Return the maximum size
    */
   size_t capacity () const;
@@ -60,24 +49,38 @@ public:
   bool empty () const;
 
   /*
+   * Clear the contents of Buffer
+   */
+  void clear ();
+
+  /*
+   * Reset the capacity of the buffer.
+   *
+   * Non-standard behaviour: all internal data is deleted on resize
+   */
+  void resize (size_t size);
+
+  /*
    * Return current size of the buffer
    */
   size_t size () const;
 
   /*
-   * Push a trivially copyable object onto the back of the buffer.
+   * Push a trivially copyable POD object onto the back of the buffer.
    * Always succeeds.
    */
   template<class T>
   bool push (const T &data);
 
   /*
-   * Push serialised data onto the back of the buffer. Always succeeds.
+   * Push serialised data onto the back of the buffer.
+   * Fails if data size is larger than Buffer capacity
    */
   bool push (const std::vector<uint8_t> &data);
 
   /*
-   * Push serialised data onto the back of the buffer. Always succeeds.
+   * Push serialised data onto the back of the buffer/
+   * Fails if data size is larger than Buffer capacity
    */
   bool push (const uint8_t* data, size_t size);
 
@@ -92,31 +95,33 @@ public:
   bool push (boost::lockfree::spsc_queue<uint8_t> &queue);
 
   /*
-   * Pop a pod object off the front of the buffer
+   * Pop a POD object off the front of the buffer into data variable
    */
   template<class T>
   bool pop (T& data);
 
   /*
-   * Pop serialised data of known size off the front of the buffer
+   * Pop size bytes of data off the front of the buffer and copy into the data
+   * variable
    */
   bool pop (std::vector<uint8_t> &data, size_t size);
 
   /*
-   * Pop serialised data of known size off the front of the buffer
+   * Pop size bytes of data off the front of the buffer and copy to the memory
+   * which data points to.
+   *
+   * Assumes data points to memory equal to or larger than size bytes.
    */
   bool pop (uint8_t* data, size_t size);
 
   /*
-   * Pop serialised data of known size off the front of the buffer
-   */
-  void pop (std::vector<uint8_t> &data, uint64_t consumed, size_t size);
-
-  /*
-   * Return unrestricted access to the internal buffer - be careful with this
+   * Return unrestricted access to the internal buffer - use with care
    */
   uint8_t *data ();
 
+  /*
+   * Print internal state for debugging
+   */
   void print_debug ();
 
 private:
@@ -125,19 +130,22 @@ private:
    */
   uint8_t *begin ();
 
+  /*
+   * Push data from a boost::spsc_queue type onto the internal queue
+   */
   template<class T>
   bool push_from_spsc_queue (T &queue, size_t size);
 
 private:
 
-  size_t m_capacity = 0;
+  size_t m_capacity = 0; // capacity of Buffer
 
   size_t m_size  = 0; // current container size
   size_t m_front = 0; // the first value
   size_t m_back  = 1; // one element past the last value
 
   /*
-   * The data buffer.
+   * Pointer to the data buffer
    */
   typename Allocator::pointer m_buffer = nullptr;
 };

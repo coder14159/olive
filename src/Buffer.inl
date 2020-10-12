@@ -35,19 +35,33 @@ void Buffer<Allocator>::clear ()
 }
 
 template <class Allocator>
-void Buffer<Allocator>::resize (size_t size)
+void Buffer<Allocator>::resize (size_t capacity)
 {
-  auto newBuffer = Allocator::allocate (size);
+  if (m_capacity == capacity)
+  {
+    BOOST_LOG_TRIVIAL (info) << "Resize of Buffer does not change capacity";
+    return;
+  }
+
+  auto newBuffer = Allocator::allocate (capacity);
+  /*
+   * Copy over existing data on resize if possible
+   */
+  if (capacity >= m_size)
+  {
+    std::memcpy (newBuffer, m_buffer, m_size);
+  }
+  else
+  {
+    clear ();
+    BOOST_LOG_TRIVIAL (info) << "Resize of Buffer deleted internal data";
+  }
 
   Allocator::deallocate (m_buffer, m_capacity);
 
   m_buffer = newBuffer;
 
-  m_capacity = size;
-
-  m_size  = 0;
-  m_front = 0;
-  m_back  = 1;
+  m_capacity = capacity;
 }
 
 template <class Allocator>
@@ -248,44 +262,6 @@ bool Buffer<Allocator>::pop (uint8_t* data, size_t size)
   m_size -= size;
 
   return true;
-}
-
-template <class Allocator>
-void Buffer<Allocator>::pop (
-  std::vector<uint8_t> &data,
-  uint64_t consumed,
-  size_t   size)
-{
-  assert (size <= m_capacity);
-
-  data.resize (size);
-
-  size_t index = consumed % m_capacity;
-
-  /*
-   * Copy the header from the buffer
-   */
-  size_t spaceToEnd = m_capacity - consumed;
-
-  /*
-   * Ensure "&*" is used to access the (potentially) shared memory
-   * pointer so the boost interprocess offset_ptr is able to return the
-   * appropriate point in shared memory via operator* () call
-   */
-  auto *buffer = &*m_buffer;
-
-  if (spaceToEnd >= size)
-  {
-    std::memcpy (data.data (), data.data () + index, size);
-  }
-  else
-  {
-    std::memcpy (data.data (), buffer + index, spaceToEnd);
-
-    std::memcpy (data.data () + spaceToEnd, buffer, size - spaceToEnd);
-  }
-
-  m_size -= size;
 }
 
 template <class Allocator>
