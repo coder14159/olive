@@ -51,7 +51,7 @@ void SPMCStream<QueueType>::init (bool allowMessageDrops, size_t prefetchSize)
 
   if (prefetchSize > 0)
   {
-    m_queue.cache_size (prefetchSize);
+    m_queue.resize_cache (prefetchSize);
   }
 }
 
@@ -66,7 +66,24 @@ bool SPMCStream<QueueType>::next (Header &header, std::vector<uint8_t> &data)
 {
   while (!m_stop.load (std::memory_order_relaxed))
   {
-    if (SPMC_EXPECT_TRUE (m_queue.pop (header, data)))
+    if (SPMC_EXPECT_TRUE (m_queue.pop (header, data) &&
+        header.type != WARMUP_MESSAGE_TYPE))
+    {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+template <typename QueueType>
+bool SPMCStream<QueueType>::next (Header &header,
+                                  Buffer<std::allocator<uint8_t>> &data)
+{
+  while (!m_stop.load (std::memory_order_relaxed))
+  {
+    if (SPMC_EXPECT_TRUE (m_queue.pop (header, data) &&
+        header.type != WARMUP_MESSAGE_TYPE))
     {
       return true;
     }

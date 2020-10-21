@@ -54,6 +54,7 @@ public:
    * Retrieve the next packet of data, blocks until successful
    */
   bool next (Header &header, std::vector<uint8_t> &data);
+  bool next (Header &header, Buffer<std::allocator<uint8_t>> &data);
 
   /*
    * Retrieve the next packet of data, non-blocking

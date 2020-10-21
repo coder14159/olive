@@ -46,23 +46,49 @@ public:
              const std::string &queueName);
 
   /*
-   * Return the size of data currently available in the queue
+   * Return the capacity of the queue in bytes
    */
-  uint64_t read_available () const;
+  size_t capacity () const;
 
   /*
-   * Return the size of the data currently stored in the local consumer cache
+   * Return true if queue is empty
    */
-  void cache_size (size_t size);
+  bool empty () const;
 
   /*
    * Allow a consumer to drop messages if it cannot keep up with the message
-   * rate of the producer.
+   * rate of the producer. The default is non-dropping.
    *
    * Called from a consumer thread context to ensure the producer message rate
    * is not affected buy performance of a given consumer thread or process.
    */
   void allow_message_drops ();
+
+  /*
+   * Allow the consumer to drop messages if it consumes data too slowly so that
+   * it doesn't slow down other non-drop consumers.
+   */
+  bool message_drops_allowed () const;
+
+  /*
+   * Return the size of data currently available in the queue
+   */
+  uint64_t read_available () const;
+
+  /*
+   * Set the capacity of the data cache which is local to each consumer
+   */
+  void resize_cache (size_t size);
+
+  /*
+   * Return the current size of the consumer local data cache
+   */
+  size_t cache_size () const;
+
+  /*
+   * Return the capacity of the consumer local data cache
+   */
+  size_t cache_capacity () const;
 
   /*
    * Inform producer that a consumer is stopping.
@@ -101,20 +127,17 @@ public:
   /*
    * Pop data out of the header and data from the queue
    */
-  template <class Header>
-  bool pop (Header &header, std::vector<uint8_t> &data);
+  template <class Header, class BufferType>
+  bool pop (Header &header, BufferType &data);
 
 private:
-
-  typedef typename std::conditional<
-          std::is_same<std::allocator<uint8_t>, Allocator>::value,
-          std::unique_ptr<QueueType>,
-          QueueType*>::type QueuePtr;
-
   /*
-   * The shared queue
+   * Pop a chunk of data from the shared queue to a local data cache and return
+   * a message header and associated data from the local cache
    */
-  QueuePtr m_queue;
+  template <class Header, class BufferType>
+  bool pop_from_cache (Header &header, BufferType &data);
+
 
   /*
    * Memory shared between processes
@@ -129,6 +152,16 @@ private:
 
   alignas (CACHE_LINE_SIZE)
   typename QueueType::ProducerType m_producer;
+
+  typedef typename std::conditional<
+          std::is_same<std::allocator<uint8_t>, Allocator>::value,
+          std::unique_ptr<QueueType>,
+          QueueType*>::type QueuePtr;
+
+  /*
+   * The shared queue
+   */
+  QueuePtr m_queue;
 
   /*
    * Local pointer to data buffer shared between producer and consumers.
