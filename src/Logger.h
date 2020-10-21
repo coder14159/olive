@@ -57,8 +57,6 @@ public:
   boost::log::trivial::severity_level m_level;
 };
 
-#define TRACE_ENABLED 0
-
 } // namespace spmc
 
 #endif // IPC_LOGGER_H
