@@ -200,8 +200,6 @@ public:
 
   size_t size () const;
 
-  void consumer_checks (ProducerType &producer, ConsumerType &consumer);
-
   /*
    * Return number of bytes which have been written to the queue by teh producer
    * and are available to to be consumed.
@@ -211,8 +209,9 @@ public:
   /*
    * Return the capacity of the queue
    */
-  size_t capacity ();
+  size_t capacity () const;
 
+  void consumer_checks (ProducerType &producer, ConsumerType &consumer);
   /*
    * Push data into the queue, always succeeds unless no drops is enabled and
    * a consumer is slow.
@@ -254,28 +253,29 @@ public:
   /*
    * Pop data out of the queue, header and data must popped in a single call
    */
-  template <typename Header>
-  bool pop (Header               &header,
-            std::vector<uint8_t> &data,
-            ProducerType         &producer,
-            ConsumerType         &consumer,
-            const uint8_t        *buffer);
-  /*
-   * Prefetch a chunk of data for caching in a local non-shared circular buffer
-   */
-  template <typename BufferType>
-  bool pop (BufferType    &chunk,
+  template <typename Header, typename Buffer>
+  bool pop (Header        &header,
+            Buffer        &data,
             ProducerType  &producer,
             ConsumerType  &consumer,
             const uint8_t *buffer);
   /*
-   * Append queue data to a data chunk
+   * Prefetch a chunk of data for caching in a local non-shared circular buffer
    */
-  bool pop (std::vector<uint8_t> &chunk,
-            size_t                size,
-            ProducerType         &producer,
-            ConsumerType         &consumer,
-            const uint8_t        *buffer);
+  template <typename BufferType>
+  bool pop (BufferType    &cache,
+            ProducerType  &producer,
+            ConsumerType  &consumer,
+            const uint8_t *buffer);
+  /*
+   * Append queue data to a consumer local data cache
+   */
+  template <typename BufferType>
+  bool pop (BufferType    &cache,
+            size_t         size,
+            ProducerType  &producer,
+            ConsumerType  &consumer,
+            const uint8_t *buffer);
   /*
    * Unregister a consumer thread / process
    */
@@ -297,16 +297,16 @@ private:
 
   void initialise_consumer (ProducerType &producer, ConsumerType &consumer);
 
+  /*
+   * Push data to the internal queue
+   */
   void copy_to_buffer (const uint8_t *from, uint8_t* to, size_t size,
                        size_t offset = 0);
 
   size_t copy_from_buffer (const uint8_t* from, uint8_t *to, size_t size,
                            ConsumerType &consumer,
                            bool messageDropsAllowed);
-#if 0
-  bool copy_from_buffer (const uint8_t* from, uint8_t *to, size_t size,
-                         ConsumerType &consumer);
-#endif
+
   template <typename Buffer>
   bool copy_from_buffer (const uint8_t* from, Buffer &to, size_t size,
                          ConsumerType &consumer);

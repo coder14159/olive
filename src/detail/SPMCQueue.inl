@@ -1,6 +1,7 @@
 #include "Utils.h"
 #include <boost/log/trivial.hpp>
 
+#include <algorithm>
 #include <cmath>
 
 namespace spmc {
@@ -11,7 +12,12 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (size_t capacity)
 : m_capacity (capacity)
 , m_buffer (Allocator::allocate (capacity))
 {
+  ASSERT (capacity > sizeof (Header),
+          "SPMCQueue capacity must be greater than header size");
+
   m_producerBuf = &*m_buffer;
+
+  std::fill (m_producerBuf, m_producerBuf + m_capacity, 0);
 }
 
 
@@ -22,7 +28,12 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
 , m_capacity (capacity)
 , m_buffer (Allocator::allocate (capacity))
 {
+  ASSERT (capacity > sizeof (Header),
+          "SPMCQueue capacity must be greater than header size");
+
   m_producerBuf = &*m_buffer;
+
+  std::fill (m_producerBuf, m_producerBuf + m_capacity, 0);
 }
 
 template <class Allocator, uint16_t MaxNoDropConsumers>
@@ -44,9 +55,15 @@ uint64_t SPMCQueue<Allocator, MaxNoDropConsumers>::committed () const
 }
 
 template <class Allocator, uint16_t MaxNoDropConsumers>
-size_t SPMCQueue<Allocator, MaxNoDropConsumers>::capacity ()
+size_t SPMCQueue<Allocator, MaxNoDropConsumers>::capacity () const
 {
   return m_capacity;
+}
+
+template <class Allocator, uint16_t MaxNoDropConsumers>
+size_t SPMCQueue<Allocator, MaxNoDropConsumers>::size () const
+{
+  return m_committed - m_claimed;
 }
 
 template <class Allocator, uint16_t MaxNoDropConsumers>
@@ -103,17 +120,9 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
 {
   assert (size > 0);
 
-#if USE_ASSERTS
-  assert_fn (header.size <= data.size (), [&] () {
-             std::cerr << "header.size (%lu) must equal data size "
-                       << header.size, data.size ()
-                       << std::endl;});
-
-  assert_fn (sizeof (Header) + data.size () <= m_capacity, [&] () {
-      std::cerr << "capacity (" << m_capacity << ") " <<
-          << "must be greater than sizeof Header (" << sizeof (Header) ") " <<
-          << "+ data size (" << data.size ();});
-#endif
+  ASSERT (header.size == size, "Header size must be equal to data size");
+  ASSERT (sizeof (Header) + size <= m_capacity,
+          "Capacity must be larger than size of Header plus data size");
 
   /*
    * The producer has just started or restarted
@@ -257,13 +266,13 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
 
 
 template <class Allocator, uint16_t MaxNoDropConsumers>
-template <class Header>
+template <typename Header, typename BufferType>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
-  Header               &header,
-  std::vector<uint8_t> &data,
-  ProducerType         &producer,
-  ConsumerType         &consumer,
-  const uint8_t        *buffer)
+  Header        &header,
+  BufferType    &data,
+  ProducerType  &producer,
+  ConsumerType  &consumer,
+  const uint8_t *buffer)
 {
   consumer_checks (producer, consumer);
 
@@ -317,10 +326,9 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   */
   data.resize (header.size);
 
-  bytesCopied += copy_from_buffer (buffer, data.data (), header.size,
-                        consumer, messageDropsAllowed);
-
-  /*
+  bytesCopied += copy_from_buffer (buffer, data.data (),
+                                   header.size, consumer, messageDropsAllowed);
+ /*
   * Feed the progress of a no-drop consumer thread back to the producer
   */
   if (!messageDropsAllowed)
@@ -328,18 +336,93 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
     m_backPressure.consumed (consumed + bytesCopied, producer.index ());
   }
 
-  consumer.consumed (consumed + bytesCopied);
-
   return true;
+}
+
+template <class Allocator, uint16_t MaxNoDropConsumers>
+template <class BufferType>
+bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
+  BufferType   &cache,
+  ProducerType &producer,
+  ConsumerType &consumer,
+  const uint8_t *buffer)
+{
+  ASSERT (consumer.message_drops_allowed () == false,
+          "Consumer message drops facility should not be enabled");
+
+  if (!consumer.initialised ())
+  {
+    consumer_checks (producer, consumer);
+  }
+
+  auto consumed = consumer.consumed ();
+  /*
+   * Acquire the committed data variable to ensure the data stored in the queue
+   * by the producer thread is visible to the consumer.
+   */
+  auto committed = m_committed.load (std::memory_order_acquire);
+  size_t available = committed - consumed;
+
+  if (available == 0)
+  {
+    return false;
+  }
+
+  /*
+   * Append as much available data as possible
+   */
+  size_t size = std::min (cache.capacity () - cache.size (), available);
+
+  if (copy_from_buffer (buffer, cache, size, consumer))
+  {
+    m_backPressure.consumed (consumed, producer.index ());
+
+    return true;
+  }
+
+  return false;
+}
+
+template <class Allocator, uint16_t MaxNoDropConsumers>
+template <class BufferType>
+bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
+  BufferType &data,
+  size_t                size,
+  ProducerType         &producer,
+  ConsumerType         &consumer,
+  const uint8_t        *buffer)
+{
+  ASSERT (consumer.message_drops_allowed () == false,
+          "Consumer message drops facility should not be enabled");
+
+  consumer_checks (producer, consumer);
+
+  bool ret = false;
+  /*
+   * Acquire the committed data variable to ensure the data stored in the queue
+   * by the producer thread is visible to the consumer.
+   */
+  m_committed.load (std::memory_order_acquire);
+  /*
+   * Append to data
+   */
+  data.resize (data.size () + size);
+
+  if (copy_from_buffer (buffer, data.data (), size, consumer,
+                       consumer.message_drops_allowed ()))
+  {
+    m_backPressure.consumed (consumer.consumed (), producer.index ());
+
+    ret = true;
+  }
+
+  return ret;
 }
 
 template <class Allocator, uint16_t MaxNoDropConsumers>
 void SPMCQueue<Allocator, MaxNoDropConsumers>::copy_to_buffer (
   const uint8_t* from, uint8_t* buffer, size_t size, size_t offset)
 {
-#if USE_ASSERTS
-  assert (from != nullptr);
-#endif
   /*
    * m_commit is synchronised after this call in the producer thread so relaxed
    * memory ordering is ok here.
@@ -360,13 +443,15 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::copy_to_buffer (
        * If reading near the end of the buffer, read the buffer start to pull a
        * cache line at the start of the buffer into memory.
        */
-      volatile auto dummy = buffer[0];
+      auto dummy = buffer[0];
       (void)dummy;
     }
   }
   else
   {
-    // input data wraps the queue buffer
+    /*
+     * Input data wraps the end of the queue buffer
+     */
     size_t spaceToEnd = m_capacity - index;
 
     std::memcpy (buffer + index, from, spaceToEnd);
@@ -380,8 +465,6 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
   const uint8_t* from, uint8_t* to, size_t size,
   ConsumerType &consumer, bool messageDropsAllowed)
 {
-  size_t bytesCopied = 0;
-
   auto consumed = consumer.consumed ();
 
   size_t index = MODULUS (consumed, m_capacity);
@@ -406,7 +489,7 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
    * This is only relevant if the consumer is configured to allow message drops
    */
   if (SPMC_EXPECT_FALSE (messageDropsAllowed) &&
-      SPMC_EXPECT_FALSE ((m_claimed - consumed) > m_capacity))
+      SPMC_EXPECT_FALSE ((m_claimed - consumer.consumed ()) > m_capacity))
   {
     /*
      * If a the consumer is configured to allow message drops and the producer
@@ -414,24 +497,28 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
      * reset the consumer to point to the most recent data.
      */
     consumer.consumed (m_committed);
-  }
-  else
-  {
-    bytesCopied = size;
-    if ((spaceToEnd + size) < CACHE_LINE_SIZE)
-    {
-      /*
-       * If reading near the end of the buffer, read the buffer start to pull a
-       * cache line at the start of the buffer into memory.
-       */
-      volatile auto dummy = from[0];
-      (void)dummy;
-    }
+
+    return 0;
   }
 
-  return bytesCopied;
+  consumer.add (size);
+
+#if 1
+  /*
+    * If reading near the end of the buffer, read the buffer start to pull a
+    * cache line at the start of the buffer into memory.
+    */
+  if ((spaceToEnd + size) <= CACHE_LINE_SIZE)
+  {
+    auto dummy = from[0];
+    (void)dummy;
+  }
+#endif
+  return size;
 }
 
+// TODO is this method still required?
+#if 0
 template <class Allocator, uint16_t MaxNoDropConsumers>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
   const uint8_t* from, uint8_t* to, size_t size, ConsumerType &consumer)
@@ -441,7 +528,6 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
   auto consumed = consumer.consumed ();
 
   size_t index = MODULUS (consumed, m_capacity);
-
   /*
    * Copy the header from the buffer
    */
@@ -478,20 +564,22 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
   else
   {
     consumed += size;
-
+#if 1
     if ((spaceToEnd + size) < CACHE_LINE_SIZE)
     {
       /*
        * If reading near the end of the buffer, read the buffer start to pull a
        * cache line at the start of the buffer into memory.
        */
-      volatile auto dummy = from[0];
+      auto dummy = from[0];
       (void)dummy;
     }
+#endif
   }
 
   return success;
 }
+#endif
 
 template <class Allocator, uint16_t MaxNoDropConsumers>
 template <class Buffer>
@@ -503,8 +591,6 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
 {
   ASSERT (size <= to.capacity (),
           "Message size larger than capacity buffer capacity");
-
-  bool success = true;
 
   auto consumed = consumer.consumed ();
 
@@ -540,14 +626,14 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
      */
     consumer.consumed (m_committed);
 
-    success  = false;
+    return false;
   }
   else
   {
-    consumed += size;
+    consumer.add (size);
   }
 
-  return success;
+  return true;
 }
 
 template <class Allocator, uint16_t MaxNoDropConsumers>
@@ -579,21 +665,14 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::initialise_consumer (
     {
       auto consumerIndex = m_backPressure.register_consumer ();
 
-      if (consumerIndex == Consumer::UnInitialised)
-      {
-        throw std::logic_error ("Failed to register a no-drop consumer");
-      }
+      ASSERT (consumerIndex != Consumer::UnInitialised,
+              "Failed to register a no-drop consumer");
 
       producer.index (consumerIndex);
     }
 
     consumer.consumed (0);
 
-#if TRACE_ENABLED
-    BOOST_LOG_TRIVIAL(trace) << "consumer.consumed ()="
-                             << consumer.consumed ()
-                             << " producer.index ()=" << producer.index ();
-#endif
     /*
      * If producer wrapped the queue before the producer could be informed of
      * the consumer progress then begin consuming at the most recent data.
@@ -606,17 +685,6 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::initialise_consumer (
       m_backPressure.consumed (committed, producer.index ());
 
       consumer.consumed (committed);
-
-#if TRACE_ENABLED
-      BOOST_LOG_TRIVIAL (trace)
-                     "consumer.consumed ()=" << consumer.consumed ()
-                      << " m_claimed="           << m_claimed
-                      << " m_committed="         << m_committed
-                      << " producer.index ()="   << producer.index ()
-                      << " m_backPressure.min_consumed ()="
-                            << m_backPressure.min_consumed ();
-#endif
-
     }
   }
 }
@@ -637,12 +705,11 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::consumer_checks (
   {
     initialise_consumer (producer, consumer);
   }
-
   /*
    * The producer has been restarted if the consumed value is larger than
    * the committed index.
    */
-#if 0 // TODO_READD_RESTART_TEST is this required functionality?
+#if 1 // TODO_READD_RESTART_TEST is this required functionality?
   // if (producer_restarted (consumer))
   if (consumer.consumed () > m_committed.load (std::memory_order_relaxed))
   {
@@ -662,88 +729,6 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::producer_restarted (
    * the committed index.
    */
   return (consumer.consumed () > m_committed.load (std::memory_order_relaxed));
-}
-
-template <class Allocator, uint16_t MaxNoDropConsumers>
-template <class BufferType>
-bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
-  BufferType   &cache,
-  ProducerType &producer,
-  ConsumerType &consumer,
-  const uint8_t *buffer)
-{
-  ASSERT (consumer.message_drops_allowed () == false,
-          "Consumer message drops facility should not be enabled");
-
-  consumer_checks (producer, consumer);
-
-  bool ret = false;
-
-  auto &consumed  = consumer.consumed ();
-
-  /*
-   * Acquire the committed data variable to ensure the data stored in the queue
-   * by the producer thread is visible to the consumer.
-   */
-  auto   committed = m_committed.load (std::memory_order_acquire);
-  size_t available = committed - consumed;
-
-  if (available == 0)
-  {
-    return false;
-  }
-
-  /*
-   * Append as much available data as possible
-   */
-  size_t size = std::min (cache.capacity () - cache.size (), available);
-
-  if (copy_from_buffer (buffer, cache, size, consumer))
-  {
-    m_backPressure.consumed (consumed, producer.index ());
-
-    ret = true;
-  }
-
-  return ret;
-}
-
-template <class Allocator, uint16_t MaxNoDropConsumers>
-bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
-  std::vector<uint8_t> &data,
-  size_t                size,
-  ProducerType         &producer,
-  ConsumerType         &consumer,
-  const uint8_t        *buffer)
-{
-  ASSERT (consumer.message_drops_allowed () == false,
-          "Consumer message drops facility should not be enabled");
-
-  consumer_checks (producer, consumer);
-
-  bool ret = false;
-
-  // auto  &consumed  = consumer.consumed ();
-  /*
-   * Acquire the committed data variable to ensure the data stored in the queue
-   * by the producer thread is visible to the consumer.
-   */
-  m_committed.load (std::memory_order_acquire);
-
-  /*
-   * Append to data
-   */
-  data.resize (data.size () + size);
-
-  if (copy_from_buffer (buffer, data.data (), size, consumer,
-                       consumer.message_drops_allowed ()))
-  {
-    m_backPressure.consumed (consumer.consumed (), producer.index ());
-
-    ret = true;
-  }
-
-  return ret;
 }
 
 } // namespace detail
