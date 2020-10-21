@@ -12,9 +12,20 @@
 #endif
 
 #if defined SPMC_MODULUS
+
 #define MODULUS(number, divisor) (number - (divisor * (number / divisor)))
+
+#elif defined SPMC_MODULUS_DIVISOR_POWER_OF_2
+ /*
+  * Marginally faster if and *only if* divisor is a power of 2
+  * Probably not worth using as too inflexible
+  */
+#define MODULUS(number, divisor) (number & (divisor - 1))
+
 #else
+
 #define MODULUS(number, divisor) (number % divisor)
+
 #endif
 
 #endif // IPC_DETAIL_UTILS_H
