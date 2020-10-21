@@ -34,7 +34,7 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer ()
   size_t index = 0;
 
   /*
-   * consumers should intialise one at a time
+   * Intialisation of consumers is serialised to be one at a time
    */
   bool registered = false;
 
