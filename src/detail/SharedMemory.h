@@ -12,8 +12,6 @@
 #include <chrono>
 #include <string>
 
-//#define SPMC_TRACE_ENABLE 1
-
 namespace spmc {
 
 /*
