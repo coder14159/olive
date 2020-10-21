@@ -11,11 +11,16 @@
 
 namespace spmc {
 
+/*
+ * Very basic local helper class for time durations
+ */
 class TimeDuration : boost::totally_ordered<TimeDuration>
 {
 public:
   TimeDuration ();
-  TimeDuration (Nanoseconds nanoseconds);
+
+  template<typename DurationType>
+  TimeDuration (const DurationType duration);
 
   Nanoseconds nanoseconds () const { return m_nanoseconds; }
 
@@ -72,5 +77,7 @@ double to_nanoseconds (TimeDuration duration)
 }
 
 } // namespace spmc
+
+#include "TimeDuration.inl"
 
 #endif // IPC_TIME_DURATION_H
