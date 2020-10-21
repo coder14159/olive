@@ -104,7 +104,8 @@ public:
    * Pop size bytes of data off the front of the buffer and copy into the data
    * variable
    */
-  bool pop (std::vector<uint8_t> &data, size_t size);
+  template<typename BufferType>
+  bool pop (BufferType &data, size_t size);
 
   /*
    * Pop size bytes of data off the front of the buffer and copy to the memory

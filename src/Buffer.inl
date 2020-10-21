@@ -39,7 +39,6 @@ void Buffer<Allocator>::resize (size_t capacity)
 {
   if (m_capacity == capacity)
   {
-    BOOST_LOG_TRIVIAL (info) << "Resize of Buffer does not change capacity";
     return;
   }
 
@@ -117,7 +116,6 @@ bool Buffer<Allocator>::push (const uint8_t* data, size_t size)
   {
     // input data does not wrap the buffer
     std::memcpy (buffer + m_back - 1, data, size);
-
   }
   else
   {
@@ -216,7 +214,8 @@ bool Buffer<Allocator>::pop (T& value)
 }
 
 template <class Allocator>
-bool Buffer<Allocator>::pop (std::vector<uint8_t> &data, size_t size)
+template<typename BufferType>
+bool Buffer<Allocator>::pop (BufferType &data, size_t size)
 {
   if (m_size < size)
   {
@@ -231,6 +230,14 @@ bool Buffer<Allocator>::pop (std::vector<uint8_t> &data, size_t size)
 template <class Allocator>
 bool Buffer<Allocator>::pop (uint8_t* data, size_t size)
 {
+  /*
+   * Requesting a zero size is valid
+   */
+  if (size == 0)
+  {
+    return true;
+  }
+
   assert (size <= m_capacity);
 
   if (size > m_size)
