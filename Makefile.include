@@ -5,10 +5,11 @@
 COMPILER := /usr/bin/g++
 
 CXXFLAGS  += -g -Wall
+CXXFLAGS  += -std=c++17
+CXXFLAGS  += -lrt -lpthread
 CXXFLAGS  += -DBOOST_LOG_DYN_LINK
 CXXFLAGS  += -DENABLE_ASSERTS=1
 CXXFLAGS  += -DSPMC_MODULUS=1
-CXXFLAGS  += -lrt -lpthread
 
 # _GNU_SOURCE is required for pthreads
 CXXFLAGS  += -D_GNU_SOURCE

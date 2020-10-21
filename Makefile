@@ -59,6 +59,7 @@ LIB_SRC_CPP_FILES += src/ThroughputStats.cpp
 LIB_SRC_CPP_FILES += src/ThroughputStats.h
 LIB_SRC_CPP_FILES += src/TimeDuration.cpp
 LIB_SRC_CPP_FILES += src/TimeDuration.h
+LIB_SRC_CPP_FILES += src/TimeDuration.inl
 LIB_SRC_CPP_FILES += src/Timer.cpp
 LIB_SRC_CPP_FILES += src/Timer.h
 LIB_SRC_CPP_FILES += src/detail/CXXOptsHelper.h
