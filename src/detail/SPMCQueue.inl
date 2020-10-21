@@ -503,7 +503,6 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
 
   consumer.add (size);
 
-#if 1
   /*
     * If reading near the end of the buffer, read the buffer start to pull a
     * cache line at the start of the buffer into memory.
@@ -513,73 +512,9 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
     auto dummy = from[0];
     (void)dummy;
   }
-#endif
+
   return size;
 }
-
-// TODO is this method still required?
-#if 0
-template <class Allocator, uint16_t MaxNoDropConsumers>
-bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
-  const uint8_t* from, uint8_t* to, size_t size, ConsumerType &consumer)
-{
-  bool success = true;
-
-  auto consumed = consumer.consumed ();
-
-  size_t index = MODULUS (consumed, m_capacity);
-  /*
-   * Copy the header from the buffer
-   */
-  size_t spaceToEnd = m_capacity - index;
-
-  if (spaceToEnd >= size)
-  {
-    std::memcpy (to, from + index, size);
-  }
-  else
-  {
-    std::memcpy (to, from + index, spaceToEnd);
-
-    std::memcpy (to + spaceToEnd, from, size - spaceToEnd);
-  }
-
-  /*
-   * Check the data copied wasn't overwritten during the copy
-   *
-   * This is only relevant if the consumer is configured to allow message drops
-   */
-  if (SPMC_EXPECT_FALSE (consumer.message_drops_allowed ()) &&
-     (m_claimed - consumed) > m_capacity)
-  {
-    /*
-     * If a the consumer is configured to allow message drops and the producer
-     * has wrapped the buffer and begun overwritting the data just copied,
-     * reset the consumer to point to the most recent data.
-     */
-    consumer.consumed (m_committed);
-
-    success  = false;
-  }
-  else
-  {
-    consumed += size;
-#if 1
-    if ((spaceToEnd + size) < CACHE_LINE_SIZE)
-    {
-      /*
-       * If reading near the end of the buffer, read the buffer start to pull a
-       * cache line at the start of the buffer into memory.
-       */
-      auto dummy = from[0];
-      (void)dummy;
-    }
-#endif
-  }
-
-  return success;
-}
-#endif
 
 template <class Allocator, uint16_t MaxNoDropConsumers>
 template <class Buffer>
