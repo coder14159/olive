@@ -1,9 +1,10 @@
+#include <type_traits>
 
 namespace spmc {
 
 namespace bi = boost::interprocess;
 
-SPSCStream::SPSCStream (const std::string &name, size_t prefetchSize)
+SPSCStream::SPSCStream (const std::string &name)
 {
 	// open an existing shared memory segment
   m_memory = bi::managed_shared_memory (bi::open_only, name.c_str());
@@ -43,13 +44,6 @@ SPSCStream::SPSCStream (const std::string &name, size_t prefetchSize)
   BOOST_LOG_TRIVIAL(info) << "SPSCStream constructed " << queueName;
 
   ++(*readyCounter);
-
-  if (prefetchSize > 0)
-  {
-    m_cache.resize (prefetchSize);
-
-    m_cacheEnabled = true;
-  }
 }
 
 SPSCStream::~SPSCStream ()
@@ -67,38 +61,58 @@ void SPSCStream::stop ()
 
 bool SPSCStream::next (Header &header, std::vector<uint8_t> &data)
 {
-  bool success = false;
-
-  while (!m_stop.load (std::memory_order_relaxed) && !success)
+  while (!m_stop.load (std::memory_order_relaxed))
   {
-   	auto headerSize =
-      receive (reinterpret_cast<uint8_t*> (&header), sizeof (Header));
-
-    if (header.type == WARMUP_MESSAGE_TYPE)
+   	if (!pop<Header> (header))
     {
-      return false;
+      continue;
     }
 
-    if (headerSize > 0)
+    if (header.type != WARMUP_MESSAGE_TYPE && header.size > 0)
     {
       data.resize (header.size);
 
-      while (!m_stop)
+      while (!m_stop.load (std::memory_order_relaxed))
       {
-        auto packetSize = receive (data.data (), header.size);
-
-        if (packetSize > 0)
+        if (pop (data.data (), header.size) > 0)
         {
-          success = true;
-          break;
+          return true;
         }
       }
     }
   }
 
-  return success;
+  return false;
 }
 
+template<typename POD>
+bool SPSCStream::pop (POD &pod)
+{
+  return pop (reinterpret_cast<uint8_t*> (&pod), sizeof (POD));
+}
+
+bool SPSCStream::pop (uint8_t *data, size_t size)
+{
+  /*
+   * The queue potentially in shared memory
+   */
+  auto &queue = *m_queue;
+
+  auto available = queue.read_available ();
+
+  if (available < size)
+  {
+    return false;
+  }
+
+  size_t popped_size = queue.pop (data, size);
+
+  assert (popped_size == size);
+
+  return popped_size;
+}
+
+#if 0
 size_t SPSCStream::receive (uint8_t* data, size_t size)
 {
   /*
@@ -154,5 +168,6 @@ size_t SPSCStream::receive (uint8_t* data, size_t size)
 
   return size;
 }
+#endif
 
 } // namespace spmc {

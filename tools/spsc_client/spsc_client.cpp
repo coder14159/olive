@@ -30,8 +30,8 @@ CxxOptsHelper parse (int argc, char* argv[])
     ("name", "Shared memory name", cxxopts::value<std::string> ())
     ("cpu", "bind main thread to a cpu processor id",
      cxxopts::value<int> ()->default_value ("-1"))
-    ("prefetchcache", "Size of a prefetch cache",
-      cxxopts::value<size_t> ()->default_value ("0"))
+    // ("prefetchcache", "Size of a prefetch cache",
+    //   cxxopts::value<size_t> ()->default_value ("0"))
     ("directory", "Directory for statistics files",
       cxxopts::value<std::string> ())
     ("stats", "Statistics to log. "
@@ -65,7 +65,6 @@ int main(int argc, char* argv[]) try
   auto name            = options.required<std::string> ("name");
   auto directory       = options.value<std::string> ("directory", "");
   auto cpu             = options.value<int>    ("cpu", -1);
-  auto prefetchCache   = options.value<size_t> ("prefetchcache", 0);
   auto test            = options.value<bool>   ("test", false);
   auto logLevel        = options.value<std::string> ("loglevel",
                                                      log_levels (),"INFO");
@@ -88,7 +87,7 @@ int main(int argc, char* argv[]) try
     BOOST_LOG_TRIVIAL (info) << "Bind to CPU: " << cpu;
   }
 
-  SPSCStream stream (name, prefetchCache);
+  SPSCStream stream (name);
 
   bool stop = { false };
 
@@ -126,16 +125,21 @@ int main(int argc, char* argv[]) try
   {
     if (stream.next (header, data))
     {
+      if (header.type == WARMUP_MESSAGE_TYPE)
+      {
+        continue;
+      }
+
       stats.update (sizeof (Header) + data.size (), header.seqNum,
                     timepoint_from_nanoseconds_since_epoch (header.timestamp));
       if (test)
       {
-        assert (header.size == data.size ());
-
+        ASSERT_SS (header.size == data.size (), "Unexpected payload size: "
+                  << data.size () << " expected: " << header.size);
         /*
          * Initialise the expected packet on receipt of the first message
          */
-        if (expected.size () < data.size ())
+        if (expected.size () != data.size ())
         {
           expected.resize (data.size ());
 
@@ -143,10 +147,10 @@ int main(int argc, char* argv[]) try
         }
 
         ASSERT_SS (expected.size () == data.size (),
-                "expected.size ()=" << expected.size ()
-                << " data.size ()=" << data.size ());
+                  "expected.size ()=" << expected.size ()
+                  << " data.size ()=" << data.size ());
 
-        ASSERT (expected == data, "unexpected data packet");
+        ASSERT (expected == data, "Unexpected data packet payload");
 
         data.clear ();
       }

@@ -22,7 +22,7 @@ namespace spmc {
 class SPSCStream
 {
 public:
-  SPSCStream (const std::string &name, size_t prefetchCache);
+  SPSCStream (const std::string &name);
   ~SPSCStream ();
 
   /*
@@ -34,23 +34,37 @@ public:
 
 private:
 
-  size_t receive (uint8_t* data, size_t size);
+  template<typename POD>
+  bool pop (POD &data);
+
+  /*
+   * Pop data off the queue to the location pointed to by data
+   */
+  bool pop (uint8_t* data, size_t size);
 
 private:
 
-  boost::interprocess::managed_shared_memory m_memory;
+  using QueueType = SharedMemory::SPSCQueue;
 
-  std::unique_ptr<SharedMemory::Allocator> m_allocator;
+  /*
+   * TODO:
+   * Currently inter-process communication only. Extend to be compatible with
+   * inter-thread communication.
+   */
+  alignas (CACHE_LINE_SIZE)
+  QueueType *m_queue = { nullptr };
 
-  SharedMemory::SPSCQueue *m_queue = { nullptr };
+  bool m_allowDrops = false;
 
   std::atomic<bool> m_stop = { false };
 
+  alignas (CACHE_LINE_SIZE)
+  std::unique_ptr<SharedMemory::Allocator> m_allocator;
+
+  alignas (CACHE_LINE_SIZE)
   Buffer<std::allocator<uint8_t>> m_cache;
 
-  bool m_cacheEnabled = false;
-
-  bool m_allowDrops = false;
+  boost::interprocess::managed_shared_memory m_memory;
 
 };
 
