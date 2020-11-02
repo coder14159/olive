@@ -73,7 +73,7 @@ void SPSCSinks::next (const std::vector<uint8_t> &data)
     Header header;
     header.size      = data.size ();
     header.seqNum    = m_sequenceNumber;
-    header.timestamp = spmc::Time::now ().serialise ();
+    header.timestamp = Time::now ().serialise ();
 
     if (send (reinterpret_cast <uint8_t*> (&header), sizeof (Header)))
     {
