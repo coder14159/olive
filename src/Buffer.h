@@ -66,31 +66,33 @@ public:
   size_t size () const;
 
   /*
-   * Push a trivially copyable POD object onto the back of the buffer.
-   * Always succeeds.
+   * Push a trivially copyable POD object onto the back of the buffer if space
+   * is available
    */
   template<class T>
   bool push (const T &data);
 
   /*
-   * Push serialised data onto the back of the buffer.
+   * Push serialised data onto the back of the buffer if space is available.
+   *
    * Fails if data size is larger than Buffer capacity
    */
   bool push (const std::vector<uint8_t> &data);
 
   /*
-   * Push serialised data onto the back of the buffer/
+   * Push serialised data onto the back of the buffer if space is available.
    * Fails if data size is larger than Buffer capacity
    */
   bool push (const uint8_t* data, size_t size);
 
   /*
-   * Push serialised data from a queue onto the back of the buffer.
+   * Push serialised data from a queue onto the back of the buffer if space is
+   * available.
    */
   bool push (SharedMemory::SPSCQueue &queue);
 
   /*
-   * Push data available in the spsc_queue into the Buffer
+   * Push data available in the spsc_queue into the Buffer if space is available.
    */
   bool push (boost::lockfree::spsc_queue<uint8_t> &queue);
 
@@ -108,15 +110,8 @@ public:
   bool pop (BufferType &data, size_t size);
 
   /*
-   * Pop size bytes of data off the front of the buffer and copy to the memory
-   * which data points to.
-   *
-   * Assumes data points to memory equal to or larger than size bytes.
-   */
-  bool pop (uint8_t* data, size_t size);
-
-  /*
-   * Return unrestricted access to the internal buffer - use with care
+   * Return unrestricted access to the internal buffer
+   * Primarily for debugging
    */
   uint8_t *data ();
 
@@ -126,6 +121,14 @@ public:
   void print_debug ();
 
 private:
+  /*
+   * Pop size bytes of data off the front of the buffer and copy to the memory
+   * which data points to.
+   *
+   * Assumes data points to memory equal to or larger than size bytes.
+   */
+  bool pop (uint8_t* data, size_t size);
+
   /*
    * Return a pointer to the start of the circular buffer data
    */

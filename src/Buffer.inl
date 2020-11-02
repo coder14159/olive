@@ -1,4 +1,3 @@
-#include <cassert>
 #include <type_traits>
 
 #include <boost/log/trivial.hpp>
@@ -44,16 +43,17 @@ void Buffer<Allocator>::resize (size_t capacity)
 
   auto newBuffer = Allocator::allocate (capacity);
   /*
-   * Copy over existing data on resize if possible
+   * Copy over all existing data on resize if possible
    */
   if (capacity >= m_size)
   {
-    std::memcpy (newBuffer, m_buffer, m_size);
+    std::memcpy (newBuffer, m_buffer, m_capacity);
   }
   else
   {
     clear ();
-    BOOST_LOG_TRIVIAL (info) << "Resize of Buffer deleted internal data";
+    BOOST_LOG_TRIVIAL (warning) << "Resize Buffer to capacity smaller stored "
+                                << "data clears internal data";
   }
 
   Allocator::deallocate (m_buffer, m_capacity);
@@ -217,11 +217,6 @@ template <class Allocator>
 template<typename BufferType>
 bool Buffer<Allocator>::pop (BufferType &data, size_t size)
 {
-  if (m_size < size)
-  {
-    return false;
-  }
-
   data.resize (size);
 
   return pop (data.data (), size);
@@ -230,6 +225,18 @@ bool Buffer<Allocator>::pop (BufferType &data, size_t size)
 template <class Allocator>
 bool Buffer<Allocator>::pop (uint8_t* data, size_t size)
 {
+  if (m_capacity < size)
+  {
+    size_t new_capacity = (size*2);
+
+    BOOST_LOG_TRIVIAL (info) << "Cache capacity is too small, "
+      << "increasing it to the size from " << m_capacity << " bytes "
+      << "to " << new_capacity << " bytes";
+    /*
+     * Data is preserved when increasing Buffer size
+     */
+    resize (new_capacity);
+  }
   /*
    * Requesting a zero size is valid
    */
@@ -238,21 +245,14 @@ bool Buffer<Allocator>::pop (uint8_t* data, size_t size)
     return true;
   }
 
-  assert (size <= m_capacity);
-
-  if (size > m_size)
-  {
-    return false;
-  }
-
-  size_t spaceToEnd = m_capacity - m_front;
-
   /*
    * Ensure "&*" is used to access the (potentially) shared memory pointer so
    * the boost interprocess offset_ptr is able to return the appropriate point
    * in shared memory via operator* () call.
    */
   auto buffer = &*m_buffer;
+
+  size_t spaceToEnd = m_capacity - m_front;
 
   if (spaceToEnd >= size)
   {
