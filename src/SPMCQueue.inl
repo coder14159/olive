@@ -98,6 +98,12 @@ uint64_t SPMCQueue<Allocator, MaxNoDropConsumers>::read_available () const
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
+bool SPMCQueue<Allocator, MaxNoDropConsumers>::cache_enabled () const
+{
+  return m_cacheEnabled;
+}
+
+template <class Allocator, size_t MaxNoDropConsumers>
 size_t SPMCQueue<Allocator, MaxNoDropConsumers>::cache_capacity () const
 {
   return m_cache.capacity ();
@@ -176,12 +182,6 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
     return m_queue->pop (header, data, m_producer, m_consumer, m_buffer);
   }
 
-  /*
-   * TODO: Use cases to consider
-   * Probably remove cache functionality, uncomplex
-   * - data size is smaller than header size
-   * - cache size is smaller header size
-   */
   return pop_from_cache (header, data);
 }
 
@@ -191,75 +191,69 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
   Header     &header,
   BufferType &data)
 {
-  /*
-   * Use client local cache so consuming data in larger chunks
-   *
-   * TODO: Consider removing consumer cache functionality.
-   * Doesn't seem to improve performance and adds complexity.
-   */
-  if (m_cacheEnabled)
+
+  if (!m_cacheEnabled)
   {
-    if (m_queue->producer_restarted (m_consumer))
-    {
-      BOOST_LOG_TRIVIAL (info)
-        << "Producer restarted. Reset the consumer prefetch cache.";
-      m_cache.clear ();
-    }
+    return false;
+  }
 
+  if (m_queue->producer_restarted (m_consumer) && !m_cache.empty ())
+  {
+    BOOST_LOG_TRIVIAL (info)
+      << "Producer restarted. Clear the consumer prefetch cache.";
+    m_cache.clear ();
+  }
+
+  if (m_cache.size () < sizeof (Header))
+  {
     /*
-      * Nothing to do if both cache and queue are empty
-      * If the cache is used it should contain both the header and the data
-      */
-    if (m_cache.size () < sizeof (Header))
+     * Move a chunk of data from the shared queue into the local cache.
+     *
+     * The cache will be increased in size if it is too small.
+     */
+    m_queue->prefetch_to_cache (m_cache, m_producer, m_consumer, m_buffer);
+  }
+
+  if (m_cache.pop (header))
+  {
+    if (m_cache.capacity () < (header.size))
     {
       /*
-        * Check that header and payload are available
-        */
-      if (read_available () < sizeof (Header))
-      {
-        return false;
-      }
-
-      /*
-       * Copy data from the shared queue to the local cache.
-       * It can then be returned from the cache
+       * If a message received is too large to fit in the cache, drain the
+       * cache and disable local caching.
        */
-      if (!m_queue->pop (m_cache, m_producer, m_consumer, m_buffer))
-      {
-        return false;
-      }
-    }
-
-    m_cache.pop (header);
-
-    if (m_cache.capacity () < (header.size + sizeof (Header)))
-    {
-      /*
-        * Disable the cache if a message received is too large to fit
-        */
-      BOOST_LOG_TRIVIAL(info) << "Disable the prefetch cache. "
-                        << "Message size is too large (" << header.size << ")";
+      BOOST_LOG_TRIVIAL(warning)
+        << "Disable the prefetch cache (" << m_cache.capacity () << " bytes), "
+        << "message size is too large (" << header.size << " bytes).";
 
       m_cacheEnabled = false;
 
-      m_cache.pop (data, std::min (header.size, m_cache.size ()));
+      m_cache.pop (data, m_cache.size ());
 
-      return m_queue->pop (data, header.size - data.size (),
-                          m_producer, m_consumer, m_buffer);
+      std::vector<uint8_t> tmp (header.size);
+
+      assert (m_queue->pop (tmp, header.size - data.size (),
+                            m_producer, m_consumer, m_buffer));
+
+      data.insert (data.end (), tmp.begin (), tmp.end ());
+
+      return true;
     }
+
     /*
      * Make sure the payload is received, waiting if necessary
-     * TODO Consider adding resilience if the payload is not sent.
+     *
+     * TODO: exit this loop if the producer exits before the payload is sent
      */
     while (m_cache.size () < header.size)
     {
-      m_queue->pop (m_cache, m_producer, m_consumer, m_buffer);
+      m_queue->prefetch_to_cache (m_cache, m_producer, m_consumer, m_buffer);
     }
 
     return m_cache.pop (data, header.size);
   }
 
-  UNREACHABLE ("Cached data retrieval failed");
+  return false;
 }
 
 } // namespace spmc {

@@ -155,13 +155,13 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
     if (minConsumed != Consumer::UnInitialised)
     {
       const uint64_t queueClaim = claim - minConsumed;
-     /*
-      * If "no message drops" has been enabled check if any registered no-drop
-      * consumers are far enough behind to prevent the producer from writing to
-      * the queue without causing consumer message drops.
-      *
-      * Claimed variable is only written by this thread.
-      */
+      /*
+       * If "no message drops" has been enabled check if any registered no-drop
+       * consumers are far enough behind to prevent the producer from writing to
+       * the queue without causing consumer message drops.
+       *
+       * Claimed variable is only written by this thread.
+       */
       if (queueClaim > m_capacity)
       {
         return false;
@@ -340,8 +340,64 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
 }
 
 template <class Allocator, uint16_t MaxNoDropConsumers>
-template <class BufferType>
+template <typename BufferType>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
+  BufferType    &data,
+  size_t         size,
+  ProducerType  &producer,
+  ConsumerType  &consumer,
+  const uint8_t *buffer)
+{
+  consumer_checks (producer, consumer);
+
+  uint64_t consumed = consumer.consumed ();
+  /*
+   * Acquire the committed data variable to ensure the data stored in the queue
+   * by the producer thread is visible
+   */
+  auto committed = m_committed.load (std::memory_order_acquire);
+
+  size_t available = committed - consumed;
+  /*
+   * Return false if header and payload are not yet available
+   */
+  if (available < size)
+  {
+    return false;
+  }
+  /*
+   * Cache a variable for the duration of the call for a small performance
+   * improvement, particularly for the in-process consumer as thread-local
+   * variables are a hotspot
+   *
+   * TODO: move value from consumer.message_drops_allowed to member variable
+   */
+  bool messageDropsAllowed = consumer.message_drops_allowed ();
+
+  data.resize (size);
+
+  auto bytesCopied = copy_from_buffer (buffer,
+                        data.data (), size,
+                        consumer, messageDropsAllowed);
+
+  if (bytesCopied == 0)
+  {
+    return false;
+  }
+  /*
+   * Feed the progress of a no-drop consumer thread back to the producer
+   */
+  if (!messageDropsAllowed)
+  {
+    m_backPressure.consumed (consumed + bytesCopied, producer.index ());
+  }
+
+  return true;
+}
+
+template <class Allocator, uint16_t MaxNoDropConsumers>
+template <class BufferType>
+bool SPMCQueue<Allocator, MaxNoDropConsumers>::prefetch_to_cache (
   BufferType   &cache,
   ProducerType &producer,
   ConsumerType &consumer,
@@ -381,42 +437,6 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   }
 
   return false;
-}
-
-template <class Allocator, uint16_t MaxNoDropConsumers>
-template <class BufferType>
-bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
-  BufferType &data,
-  size_t                size,
-  ProducerType         &producer,
-  ConsumerType         &consumer,
-  const uint8_t        *buffer)
-{
-  ASSERT (consumer.message_drops_allowed () == false,
-          "Consumer message drops facility should not be enabled");
-
-  consumer_checks (producer, consumer);
-
-  bool ret = false;
-  /*
-   * Acquire the committed data variable to ensure the data stored in the queue
-   * by the producer thread is visible to the consumer.
-   */
-  m_committed.load (std::memory_order_acquire);
-  /*
-   * Append to data
-   */
-  data.resize (data.size () + size);
-
-  if (copy_from_buffer (buffer, data.data (), size, consumer,
-                       consumer.message_drops_allowed ()))
-  {
-    m_backPressure.consumed (consumer.consumed (), producer.index ());
-
-    ret = true;
-  }
-
-  return ret;
 }
 
 template <class Allocator, uint16_t MaxNoDropConsumers>

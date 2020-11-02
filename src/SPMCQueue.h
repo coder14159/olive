@@ -76,9 +76,14 @@ public:
   uint64_t read_available () const;
 
   /*
-   * Set the capacity of the data cache which is local to each consumer
+   * Return the capacity of the consumer local data cache
    */
-  void resize_cache (size_t size);
+  size_t cache_capacity () const;
+
+  /*
+   * Return true if the cache is currently enabled
+   */
+  bool cache_enabled () const;
 
   /*
    * Return the current size of the consumer local data cache
@@ -86,9 +91,9 @@ public:
   size_t cache_size () const;
 
   /*
-   * Return the capacity of the consumer local data cache
+   * Set the capacity of the data cache which is local to each consumer
    */
-  size_t cache_capacity () const;
+  void resize_cache (size_t size);
 
   /*
    * Inform producer that a consumer is stopping.
@@ -131,13 +136,13 @@ public:
   bool pop (Header &header, BufferType &data);
 
 private:
+
   /*
    * Pop a chunk of data from the shared queue to a local data cache and return
    * a message header and associated data from the local cache
    */
   template <class Header, class BufferType>
   bool pop_from_cache (Header &header, BufferType &data);
-
 
   /*
    * Memory shared between processes
@@ -166,13 +171,15 @@ private:
   /*
    * Local pointer to data buffer shared between producer and consumers.
    *
-   * Dereferencing the boost shared memory offset pointer has a cost. Therefore
-   * cache the dereferenced pointer in each client.
+   * Dereferencing the boost shared memory offset pointer has a measuable cost,
+   * so cache the dereferenced pointer in each client.
    */
   alignas (CACHE_LINE_SIZE)
   uint8_t *m_buffer = { nullptr };
+
   /*
-   * A cache used to store chunks of data taken from the shared queue
+   * This data cache can optionally be used to store chunks of data taken from
+   * the shared queue. This cache is local to each client.
    */
   Buffer<std::allocator<uint8_t>> m_cache;
 

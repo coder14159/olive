@@ -259,23 +259,36 @@ public:
             ProducerType  &producer,
             ConsumerType  &consumer,
             const uint8_t *buffer);
+
   /*
-   * Prefetch a chunk of data for caching in a local non-shared circular buffer
+   * Pop data of specified size out of the queue into a data buffer
    */
-  template <typename BufferType>
-  bool pop (BufferType    &cache,
-            ProducerType  &producer,
-            ConsumerType  &consumer,
-            const uint8_t *buffer);
-  /*
-   * Append queue data to a consumer local data cache
-   */
-  template <typename BufferType>
-  bool pop (BufferType    &cache,
+  template <typename Buffer>
+  bool pop (Buffer        &data,
             size_t         size,
             ProducerType  &producer,
             ConsumerType  &consumer,
             const uint8_t *buffer);
+
+  /*
+   * Prefetch a chunk of data for caching in a local non-shared circular buffer
+   */
+  template <typename BufferType>
+  bool prefetch_to_cache (BufferType &cache,
+            ProducerType  &producer,
+            ConsumerType  &consumer,
+            const uint8_t *buffer);
+#if 0
+  /*
+   * Append queue data to a consumer local data cache
+   */
+  template <typename BufferType>
+  bool pop_from_cache (BufferType &cache,
+            size_t         size,
+            ProducerType  &producer,
+            ConsumerType  &consumer,
+            const uint8_t *buffer);
+#endif
   /*
    * Unregister a consumer thread / process
    */
@@ -288,7 +301,7 @@ public:
 
   /*
    * Return a pointer to the internal buffer shared between either processes
-   * or threads (but not both).
+   * or threads
    */
   uint8_t *buffer () const { return &*m_buffer; }
 
