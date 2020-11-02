@@ -68,36 +68,26 @@ void PerformanceStats::start ()
         /*
          * Avoid using too much CPU time
          */
-        std::this_thread::sleep_for (1ns);
+        std::this_thread::sleep_for (10ns);
 
         continue;
       }
 
       now = Clock::now ();
 
-      {  // TODO REMOVE
-        // Print first few max latencies during a warmup period
-        static Nanoseconds maxLatency (1);
+      if (warming && (now - lastLog) > warmupDuration)
+      {
+        warming = false;
+        lastLog = now;
 
-        if ((latency_duration) > maxLatency)
-        {
-          BOOST_LOG_TRIVIAL(info) << "max latency: "
-                      << nanoseconds_to_pretty (latency_duration);
+        BOOST_LOG_TRIVIAL (info) << "Warmup completed, "
+                                 << "start logging performance statistics";
 
-          maxLatency = std::chrono::duration_cast<Nanoseconds> (latency_duration);
-        }
+        continue;
       }
 
       if ((now - lastLog) > Seconds (1))
       {
-        if (warming && (now - lastLog) > warmupDuration)
-        {
-          warming = false;
-          lastLog = now;
-
-          continue;
-        }
-
         log_interval_stats ();
 
         m_latency.interval ().write_data ();
