@@ -127,17 +127,21 @@ int main(int argc, char* argv[]) try
   {
     if (stream.next (header, data))
     {
+      if (header.type == WARMUP_MESSAGE_TYPE)
+      {
+        continue;
+      }
+
       stats.update (sizeof (Header) + data.size (), header.seqNum,
                     timepoint_from_nanoseconds_since_epoch (header.timestamp));
-
       if (test)
       {
-        assert(header.size == data.size ());
-
+        ASSERT_SS (header.size == data.size (), "Unexpected payload size: "
+                  << data.size () << " expected: " << header.size);
         /*
          * Initialise the expected packet on receipt of the first message
          */
-        if (expected.size () < data.size ())
+        if (expected.size () != data.size ())
         {
           expected.resize (data.size ());
 
@@ -148,7 +152,7 @@ int main(int argc, char* argv[]) try
                   "expected.size ()=" << expected.size ()
                   << " data.size ()=" << data.size ());
 
-        ASSERT (expected == data, "unexpected data packet");
+        ASSERT (expected == data, "Unexpected data packet payload");
 
         data.clear ();
       }
