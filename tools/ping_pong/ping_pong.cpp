@@ -18,16 +18,107 @@ using namespace std::chrono;
 
 using namespace spmc;
 
+void interthread_atomic_ping_pong (Seconds timeout)
+{
+  std::atomic_bool stop { false };
+
+  SignalCatcher s ({SIGINT, SIGTERM}, [&stop] (int) {
+    stop = true;
+
+    std::cout << "Stopping ping_pong" << std::endl;
+  });
+
+  const int64_t null_timestamp = 0;
+
+  std::atomic<int64_t> ping_timestamp { null_timestamp };
+  std::atomic<int64_t> pong_timestamp { null_timestamp };
+
+  Latency latency;
+
+  Timer timer;
+
+  timer.start ();
+
+  auto ping = std::thread ([&] {
+
+    bind_to_cpu (1);
+
+    int i = 0;
+
+    while (true)
+    {
+      ping_timestamp = nanoseconds_since_epoch (Clock::now ());
+
+      while (pong_timestamp == null_timestamp)
+      { }
+
+      Nanoseconds nanoseconds (pong_timestamp - ping_timestamp);
+
+      latency.next (nanoseconds);
+
+      ++i;
+
+      if (stop)
+      {
+        break;
+      }
+
+      ping_timestamp = null_timestamp;
+      pong_timestamp = null_timestamp;
+    }
+
+    std::cout << "count: " << i << std::endl;
+  });
+  /*
+   * Measure the time duration it takes for the pong thread to view the
+   * timestamp value set by the ping thread
+   */
+  auto pong = std::thread ([&] {
+
+    bind_to_cpu (2);
+
+    while (!stop)
+    {
+      if (pong_timestamp == null_timestamp && ping_timestamp != null_timestamp)
+      {
+        pong_timestamp = nanoseconds_since_epoch (Clock::now ());
+      }
+    }
+  });
+
+  std::this_thread::sleep_for (timeout);
+
+  stop = true;
+
+  ping.join ();
+  pong.join ();
+
+  for (auto s : latency.to_strings ())
+  {
+    std::cout << s << std::endl;
+  }
+}
+
+void interprocess_ping_pong ()
+{
+
+}
+
 CxxOptsHelper parse (int argc, char* argv[])
 {
-  cxxopts::Options cxxopts ("ping_pong", "Measure cpu latency");
+  std::vector<std::string> memory_types = {"interprocess", "inprocess" };
+
+  cxxopts::Options cxxopts ("ping_pong",
+    "Measure latency of a shared atomic or full sink/streams");
 
   cxxopts.add_options ()
     ("h,help", "Measure inter-CPU latency")
-    ("r,rate", "msgs/sec set rate to 0 for maximum rate (default: 0)",
-      cxxopts::value<uint64_t> ())
-    ("t,timeout", "Time to run the test in seconds (default: 2 sec)",
-      cxxopts::value<int64_t> ());
+    ("type", "Execute using inprocess threads or processes over shared memory",
+     cxxopts::value<std::string> ())
+    ("timeout", "Time to run the test in seconds",
+      cxxopts::value<int64_t> ()->default_value ("2"))
+    ("loglevel", "Logging level",
+     cxxopts::value<std::string> ()->default_value ("INFO"));
 
   CxxOptsHelper options (cxxopts.parse (argc, argv));
 
@@ -43,93 +134,24 @@ CxxOptsHelper parse (int argc, char* argv[])
 
 int main(int argc, char* argv[]) try
 {
-  set_log_level ("WARNING");
-
-  std::atomic_bool stop { false };
-
-  SignalCatcher s ({SIGINT, SIGTERM}, [&stop] (int) {
-    stop = true;
-
-    std::cout << "Stopping ping_pong" << std::endl;
-  });
-
-  auto ns_since_epoch = [] () {
-    return std::chrono::duration_cast<Nanoseconds> (
-        Clock::now ().time_since_epoch ()).count ();
-  };
-
   auto options = parse (argc, argv);
 
-  auto timeout = Seconds (options.value<int64_t> ("timeout", 2));
+  auto timeout  = options.value<int64_t> ("timeout", 2);
+  auto logLevel = options.value<std::string> ("loglevel",
+                  log_levels (), "WARNING");
+  auto type     = options.value<std::string> ("type",
+                  {"threads", "processes"}, "threads");
 
-  auto rate = options.value<uint64_t> ("rate", 0);
+  set_log_level (logLevel);
 
-  const int64_t zero = 0;
-
-  std::atomic<int64_t> ping_timestamp { zero };
-
-  Latency latency;
-
-  Throttle throttle (rate);
-
-  Timer timer;
-
-  timer.start ();
-  /*
-   * Assign a value to timestamp
-   */
-  auto ping = std::thread ([&] {
-
-    bind_to_cpu (1);
-
-    while (!stop)
-    {
-      if (ping_timestamp == zero)
-      {
-        ping_timestamp = ns_since_epoch ();
-      }
-
-      throttle.throttle ();
-
-      if (to_seconds (timer.elapsed ()) > timeout.count ())
-      {
-        stop = true;
-      }
-    }
-  });
-
-  uint64_t count = 0;
-
-  /*
-   * Measure the time duration it takes for the pong thread to view the
-   * timestamp value set by the ping thread
-   */
-  auto pong = std::thread ([&] {
-
-    bind_to_cpu (3);
-
-    while (!stop)
-    {
-      int64_t p = ping_timestamp;
-
-      if (p != zero)
-      {
-        Nanoseconds duration (ns_since_epoch () - p);
-        latency.next (duration);
-
-        ++count;
-
-        ping_timestamp = zero;
-      }
-    }
-  });
-
-  ping.join ();
-  pong.join ();
-
-  for (auto s : latency.to_strings ())
+  if (type == "processes")
   {
-    std::cout << s << std::endl;
+
+
+  }
+  else
+  {
+    interthread_atomic_ping_pong (Seconds (timeout));
   }
 
   return EXIT_SUCCESS;
