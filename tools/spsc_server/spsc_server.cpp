@@ -125,6 +125,8 @@ void server (const std::string& name,
     }
   }
 
+  BOOST_LOG_TRIVIAL (info) << numClients << " client ready";
+
   // create a reusable test message
   std::vector<uint8_t> message (messageSize, 0);
 
