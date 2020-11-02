@@ -53,7 +53,7 @@ TimeDuration get_test_duration ()
     duration = Seconds (seconds);
   }
 
-  return std::chrono::duration_cast<Nanoseconds> (duration);
+  return duration;
 }
 
 BOOST_AUTO_TEST_CASE (TestTimeDuration)
@@ -112,7 +112,6 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
     {
       if ((i % 1000) == 0 && duration < timer.elapsed ())
       {
-        timer.elapsed ().pretty ();
         break;
       }
       out.clear ();
@@ -124,7 +123,7 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
       std::copy (buffer.begin (), buffer.end (), std::back_inserter (out));
 
       // erase copied data from the buffer
-      buffer.erase (buffer.begin (), buffer.begin () + buffer.size ());
+      buffer.clear ();
 
       throughput.next (out.size (), ++seqNum);
 
@@ -143,7 +142,8 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
   {
     BOOST_CHECK (bufferSize > messageSize);
 
-    std::vector<uint8_t> message (messageSize);
+    std::vector<uint8_t> in (messageSize);
+    std::iota (std::begin (in), std::end (in), 1);
 
     Buffer<std::allocator<uint8_t>> buffer (bufferSize);
     std::vector<uint8_t> out (bufferSize);
@@ -162,10 +162,12 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
       }
 
       // insert data to the buffer
-      buffer.push (message.data (), message.size ());
+      buffer.push (in);
 
-      // copy data out of circular buffer
-      buffer.pop (out, message.size ());
+      // copy data out of custom circular buffer
+      buffer.pop (out, in.size ());
+
+      buffer.clear ();
 
       throughput.next (out.size (), ++seqNum);
 
@@ -177,19 +179,80 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
     return throughput;
   };
 
-  for (size_t bufferSize : { 10000, 20480, 409600})
+  auto stress_boost_small_vector = [&duration] (
+    size_t bufferSize, size_t messageSize) -> Throughput
+  {
+    BOOST_CHECK (bufferSize > messageSize);
+
+    std::vector<uint8_t> message (messageSize);
+
+    const size_t MAX_SIZE = 1024;
+
+    boost::container::small_vector<uint8_t, MAX_SIZE> buffer (bufferSize);
+
+    std::vector<uint8_t> out;
+    out.reserve (bufferSize);
+
+    uint64_t seqNum = 0;
+
+    Throughput throughput;
+
+    Timer timer;
+
+    for (int i = 0; ; ++i)
+    {
+      if ((i % 1000) == 0 && duration < timer.elapsed ())
+      {
+        break;
+      }
+      out.clear ();
+
+      // insert data to the buffer
+      buffer.insert (buffer.end (), message.begin (), message.end ());
+
+      // copy data out of circular buffer
+      std::copy (buffer.begin (), buffer.end (), std::back_inserter (out));
+
+      // erase copied data from the buffer
+      buffer.clear ();
+
+      throughput.next (out.size (), ++seqNum);
+
+      ++i;
+    }
+
+    timer.stop ();
+
+    BOOST_TEST_MESSAGE ("    boost small_vector  " << throughput.to_string ());
+
+    return throughput;
+  };
+
+  for (size_t bufferSize : { 10, 100, 10000, 20480, 409600})
   {
     BOOST_TEST_MESSAGE ("buffer size: " << bufferSize);
 
-    for (size_t messageSize : { 128, 512, 1024, 2048, 4096 })
+    for (size_t messageSize : { 32, 64, 128, 512, 1024, 2048, 4096 })
     {
+      if (messageSize > bufferSize)
+      {
+        BOOST_TEST_MESSAGE ("message_size > buffer_size"
+          << " message_size: " << messageSize
+          << " buffer_size: " << bufferSize);
+        continue;
+      }
       BOOST_TEST_MESSAGE ("  message size: " << messageSize);
-
-      auto boost = stress_boost_circular_buffer (bufferSize, messageSize);
 
       auto custom = stress_custom_buffer (bufferSize, messageSize);
 
-      BOOST_CHECK (custom.messages_per_sec () > boost.messages_per_sec ());
+      auto boost = stress_boost_circular_buffer (bufferSize, messageSize);
+
+      stress_boost_small_vector (bufferSize, messageSize);
+
+      /*
+       * Custom circular buffer is faster than the boost circular buffer
+       */
+      BOOST_CHECK (custom.messages_per_sec () > (2*boost.messages_per_sec ()));
     }
   }
 }
@@ -217,11 +280,12 @@ void ThroughputOfVector (
     {
       break;
     }
+    out.clear ();
 
     buffer.push (in.data (), in.size ());
 
     out.resize (in.size ());
-    buffer.pop (out.data (), in.size ());
+    buffer.pop (out, in.size ());
 
     throughput.next (out.size (), ++seqNum);
 
@@ -484,7 +548,7 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamWithPrefetchMultiThread)
 
   spmc::ScopedLogLevel log (error);
 
-  size_t capacity = 2048000;
+  size_t capacity = 204800;
   size_t rate     = 0;
   size_t prefetch = 1024;
 
@@ -553,7 +617,7 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamPODMultiThread)
 
   size_t capacity = 2048000;
   size_t rate     = 0;
-  size_t prefetch = 1024;
+  size_t prefetch = 0;
 
   PerformanceStats stats;
 
@@ -607,7 +671,7 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamPODMultiThread)
     BOOST_TEST_MESSAGE (line);
   }
 }
-
+#if 0
 BOOST_AUTO_TEST_CASE (ThroughputSinkStreamPODWithPrefetchMultiThread)
 {
   if (getenv ("NOTIMING") != nullptr)
@@ -626,16 +690,12 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamPODWithPrefetchMultiThread)
   sink_stream_in_single_process_pod<char[MESSAGE_SIZE]> (capacity, stats, rate, prefetch);
 
   auto &throughput = stats.throughput ().summary ();
-
-  BOOST_TEST_MESSAGE (throughput.to_string ());
-
   /*
    * Prefetch latency can be higher
    */
   BOOST_CHECK (throughput.messages_per_sec () > 1000);
 
-  BOOST_TEST_MESSAGE ("rate\t\t" << std::fixed << std::setprecision (3)
-                      << (rate/1.0e6) << " M msgs/sec");
+  BOOST_TEST_MESSAGE (throughput.to_string ());
 }
 
 BOOST_AUTO_TEST_CASE (LatencySinkStreamPODWithPrefetchMultiThread)
@@ -668,7 +728,7 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamPODWithPrefetchMultiThread)
     BOOST_TEST_MESSAGE (line);
   }
 }
-
+#endif
 void sink_stream_in_shared_memory (
     size_t            capacity,
     PerformanceStats &stats,
@@ -776,7 +836,7 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiProcess)
 
   BOOST_CHECK (throughput.messages_per_sec () > 1000);
 }
-
+#if 0
 BOOST_AUTO_TEST_CASE (ThroughputSinkStreamWithPrefetchMultiProcess)
 {
   if (getenv ("NOTIMING") != nullptr)
@@ -802,6 +862,7 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamWithPrefetchMultiProcess)
 
   BOOST_CHECK (throughput.megabytes_per_sec () > 200);
 }
+#endif
 
 BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiProcess)
 {
@@ -959,47 +1020,17 @@ BOOST_AUTO_TEST_CASE (MemoryCopy)
   size_t arrOut[max];
 
   size_t loops_uninitialized_copy_n = 0;
+  size_t loops_uninitialized_copy = 0;
   size_t loops_memcpy = 0;
   size_t loops_memmove = 0;
 
-  const size_t counter_check = 100;
+  const size_t counter_check = 1000;
 
   for (size_t i = 0; i < max; ++i)
   {
     arrIn[i] = i;
   }
 
-  {
-    Timer timer;
-
-    timer.start ();
-
-    size_t counter = 0;
-
-    while (true)
-    {
-
-      ++counter;
-
-      std::uninitialized_copy_n (arrIn, max, arrOut);
-
-      if (counter == counter_check)
-      {
-        counter = 0;
-        ++loops_uninitialized_copy_n;
-
-        if (to_seconds (timer.elapsed ()) > timeout.count ())
-        {
-          break;
-        }
-      }
-    }
-
-    timer.stop ();
-
-    BOOST_TEST_MESSAGE ("loops: " << loops_uninitialized_copy_n
-                        << " std::uninitialized_copy_n");
-  }
   {
     Timer timer;
 
@@ -1058,9 +1089,74 @@ BOOST_AUTO_TEST_CASE (MemoryCopy)
 
     BOOST_TEST_MESSAGE ("loops: " << loops_memmove << " std::memmove");
   }
+  {
+    Timer timer;
 
-  BOOST_CHECK (loops_memcpy > (loops_uninitialized_copy_n*5));
-  BOOST_CHECK (loops_memmove > (loops_uninitialized_copy_n*5));
+    timer.start ();
+
+    size_t counter = 0;
+
+    while (true)
+    {
+
+      ++counter;
+
+      std::uninitialized_copy_n (arrIn, max, arrOut);
+
+      if (counter == counter_check)
+      {
+        counter = 0;
+        ++loops_uninitialized_copy_n;
+
+        if (to_seconds (timer.elapsed ()) > timeout.count ())
+        {
+          break;
+        }
+      }
+    }
+
+    timer.stop ();
+
+    BOOST_TEST_MESSAGE ("loops: " << loops_uninitialized_copy_n
+                        << " std::uninitialized_copy_n");
+  }
+
+  {
+    Timer timer;
+
+    timer.start ();
+
+    size_t counter = 0;
+
+    auto arrEnd = arrIn+max;
+
+    while (true)
+    {
+
+      ++counter;
+
+      std::uninitialized_copy (arrIn, arrEnd, arrOut);
+
+      if (counter == counter_check)
+      {
+        counter = 0;
+        ++loops_uninitialized_copy;
+
+        if (to_seconds (timer.elapsed ()) > timeout.count ())
+        {
+          break;
+        }
+      }
+    }
+
+    timer.stop ();
+
+    BOOST_TEST_MESSAGE ("loops: " << loops_uninitialized_copy
+                        << " std::uninitialized_copy");
+  }
+
+  BOOST_CHECK (loops_memcpy > (loops_uninitialized_copy*5));
+  BOOST_CHECK (loops_memmove > (loops_uninitialized_copy*5));
 }
 
 void sink_stream_roundtrip_latency_threads (size_t capacity)
@@ -1203,29 +1299,7 @@ BOOST_AUTO_TEST_CASE (Modulus)
   int32_t modulus = 0;
   int32_t dummy = 0; // used to ensure the calculation isn't optimised away
 
-  modulus = 0;
-  dummy = 0;
-
-  auto warmup = std::thread ([&] () {
-
-    Timer timer;
-
-    for (int i = 0; i < cycles; ++i)
-    {
-      modulus = MODULUS(i, size);
-      dummy += modulus;
-    }
-
-    BOOST_TEST_MESSAGE ("warmup done");
-
-    modulus = dummy;
-  });
-
-  warmup.join ();
-
-  modulus = 0;
-  dummy = 0;
-  auto std_modulus = std::thread ([&] () {
+  std::thread ([&] () {
 
     std::modulus<int> f;
 
@@ -1246,13 +1320,12 @@ BOOST_AUTO_TEST_CASE (Modulus)
     BOOST_TEST_MESSAGE (per_call << " ns\tstd::modulus");
 
     modulus = dummy;
-  });
-
-  std_modulus.join ();
+  }).join ();
 
   modulus = 0;
   dummy = 0;
-  auto modulus_operation = std::thread ([&] () {
+
+  std::thread ([&] () {
 
     Timer timer;
 
@@ -1270,37 +1343,12 @@ BOOST_AUTO_TEST_CASE (Modulus)
     BOOST_TEST_MESSAGE (per_call << " ns\t% operation");
 
     modulus = dummy;
-  });
-
-  modulus_operation.join ();
-
-  modulus = 0;
-  dummy = 0;
-  auto remainder_template = std::thread ([&] () {
-
-    Timer timer;
-    for (int i = 0; i < cycles; ++i)
-    {
-      modulus = remainder<int32_t> (i, size);
-      dummy += modulus;
-    }
-
-    auto elapsed = timer.elapsed ();
-
-    auto per_call = (static_cast<double>(elapsed.nanoseconds ().count ())
-                      / static_cast<double>(cycles));
-
-    BOOST_TEST_MESSAGE (per_call << " ns\tremainder template");
-
-    modulus = dummy;
-  });
-
-  remainder_template.join ();
+  }).join ();
 
   modulus = 0;
   dummy = 0;
 
-  auto macro = std::thread ([&] () {
+  std::thread ([&] () {
 
     Timer timer;
 
@@ -1318,14 +1366,34 @@ BOOST_AUTO_TEST_CASE (Modulus)
     BOOST_TEST_MESSAGE (per_call << " ns\tremainder macro");
 
     dummy = modulus;
-  });
-
-  macro.join ();
+  }).join ();
 
   modulus = 0;
   dummy = 0;
 
-  auto hardwired = std::thread ([&] () {
+  std::thread ([&] () {
+
+    Timer timer;
+    for (int i = 0; i < cycles; ++i)
+    {
+      modulus = remainder<int32_t> (i, size);
+      dummy += modulus;
+    }
+
+    auto elapsed = timer.elapsed ();
+
+    auto per_call = (static_cast<double>(elapsed.nanoseconds ().count ())
+                      / static_cast<double>(cycles));
+
+    BOOST_TEST_MESSAGE (per_call << " ns\tremainder template");
+
+    modulus = dummy;
+  }).join ();
+
+  modulus = 0;
+  dummy = 0;
+
+  std::thread ([&] () {
 
     Timer timer;
     for (int i = 0; i < cycles; ++i)
@@ -1343,9 +1411,7 @@ BOOST_AUTO_TEST_CASE (Modulus)
 
     dummy = modulus;
     (void) dummy;
-  });
-
-  hardwired.join ();
+  }).join ();
 }
 
 BOOST_AUTO_TEST_CASE (ExpectCondition)
