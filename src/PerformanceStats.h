@@ -34,15 +34,9 @@ public:
   const PerformanceStats::Dropped &dropped () const;
 
   /*
-   * Update number of bytes sent at a time point
+   * Update number of bytes received sequence number at a time point
    */
   void update (uint64_t bytes, uint64_t seqNum, TimePoint timestamp);
-
-  /*
-   * Update when receiving a new message
-   */
-  void update (uint64_t header_size, uint64_t payload_size,
-               uint64_t seqNum, TimePoint timestamp);
 
   const ThroughputStats &throughput () const { return m_throughput; }
         ThroughputStats &throughput ()       { return m_throughput; }

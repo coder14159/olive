@@ -60,11 +60,4 @@ void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
   m_queue.push ({ m_sampled - timestamp });
 }
 
-inline
-void PerformanceStats::update (uint64_t header, uint64_t payload,
-                               uint64_t seqNum, TimePoint timestamp)
-{
-  update (header + payload, seqNum, timestamp);
-}
-
 } // namespace spmc {
