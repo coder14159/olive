@@ -90,12 +90,6 @@ void PerformanceStats::start ()
       {
         log_interval_stats ();
 
-        m_latency.interval ().write_data ();
-        m_latency.interval ().reset ();
-
-        m_throughput.interval ().write_data ();
-        m_throughput.interval ().reset ();
-
         lastLog = now;
       }
 
@@ -143,7 +137,7 @@ void PerformanceStats::log_interval_stats ()
   {
     log += m_latency.interval ().to_string ();
 
-    m_latency.interval ().reset ();
+    m_latency.interval ().write_data ().reset ();
   }
 
   if (m_throughput.interval ().is_running ())
