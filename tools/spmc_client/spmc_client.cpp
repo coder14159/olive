@@ -132,7 +132,7 @@ int main(int argc, char* argv[]) try
         continue;
       }
 
-      stats.update (sizeof (Header) + data.size (), header.seqNum,
+      stats.update (sizeof (Header) + header.size, header.seqNum,
                     timepoint_from_nanoseconds_since_epoch (header.timestamp));
       if (test)
       {

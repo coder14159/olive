@@ -17,8 +17,7 @@ BOOST_AUTO_TEST_CASE(ThroughputStatsUpdates)
 {
   spmc::ScopedLogLevel log (warning);
 
-  std::vector<int> payload;
-  payload.resize (10240);
+  size_t payload_size = 10240;
 
   PerformanceStats stats;
 
@@ -26,7 +25,7 @@ BOOST_AUTO_TEST_CASE(ThroughputStatsUpdates)
 
   for (int i = 1;; ++i)
   {
-    stats.update (sizeof (Header), payload.size (), i, Clock::now ());
+    stats.update (payload_size, i, Clock::now ());
 
     if ((Clock::now() - start) > Seconds (2))
     {
@@ -63,7 +62,7 @@ BOOST_AUTO_TEST_CASE (LatencyStatsUpdateIsFast)
     fs::path m_path;
   };
 
-  std::vector<int> payload (128);
+  uint8_t payload_size = 32;
 
   TempDir dir;
 
@@ -73,7 +72,7 @@ BOOST_AUTO_TEST_CASE (LatencyStatsUpdateIsFast)
 
   for (int i = 1;; ++i)
   {
-    stats.update (sizeof (Header), payload.size (), i, Clock::now ());
+    stats.update (payload_size, i, Clock::now ());
 
     if ((Clock::now () - start) > Seconds (2))
     {

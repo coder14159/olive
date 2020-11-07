@@ -385,7 +385,7 @@ void sink_stream_in_single_process (
     {
       if (stream.next (header, data))
       {
-        stats.update (sizeof (Header), data.size (), header.seqNum,
+        stats.update (sizeof (Header) + data.size (), header.seqNum,
                       TimePoint (Nanoseconds (header.timestamp)));
       }
     }
@@ -440,7 +440,7 @@ void sink_stream_in_single_process_pod (
     {
       if (stream.next (header, data))
       {
-        stats.update (sizeof (Header), data.size (), header.seqNum,
+        stats.update (sizeof (Header) + data.size (), header.seqNum,
                       TimePoint (Nanoseconds (header.timestamp)));
       }
     }
@@ -1194,8 +1194,8 @@ void sink_stream_roundtrip_latency_threads (size_t capacity)
 
       if (stream_ping.next (header, payload) && iterations > warmup)
       {
-        stats.update (sizeof (Header), payload.size (), header.seqNum,
-                        TimePoint (Nanoseconds (header.timestamp)));
+        stats.update (sizeof (Header) + payload.size (), header.seqNum,
+                      TimePoint (Nanoseconds (header.timestamp)));
       }
 
       sink_pong.next (payload);
