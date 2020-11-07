@@ -110,13 +110,18 @@ Latency::Latency (const std::string &directory, const std::string &filename)
 
   fs::path file_path = fs::path (directory) / fs::path (filename);
 
+  bool output_header = !fs::exists (file_path.string ());
+
   m_file.open (file_path.string (), std::ios::app|std::ios_base::out);
 
   ASSERT_SS (m_file.is_open (), "Failed to open file: " + file_path.string ());
 
   BOOST_LOG_TRIVIAL (info) << "Latency file: " << file_path.string ();
 
-  write_header ();
+  if (output_header)
+  {
+    write_header ();
+  }
 }
 
 Latency::~Latency ()
