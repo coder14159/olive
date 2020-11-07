@@ -100,8 +100,6 @@ public:
 
 private:
 
-  uint64_t       m_header     = 0;
-  uint64_t       m_payload    = 0;
   uint64_t       m_messages   = 0;
   uint64_t       m_bytes      = 0;
   uint64_t       m_seqNum     = 0;

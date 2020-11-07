@@ -17,8 +17,6 @@ namespace spmc {
 inline
 void Throughput::reset ()
 {
-  m_header     = 0;
-  m_payload    = 0;
   m_messages   = 0;
   m_bytes      = 0;
 
@@ -28,8 +26,6 @@ void Throughput::reset ()
 inline
 void Throughput::next (uint64_t header, uint64_t payload, uint64_t seqNum)
 {
-  m_payload += payload;
-
   next (header + payload, seqNum);
 }
 
@@ -54,6 +50,8 @@ void Throughput::next (uint64_t bytes, uint64_t seqNum)
   ++m_messages;
 
   m_bytes += bytes;
+
+  m_seqNum = seqNum;
 }
 
 } // namespace spmc

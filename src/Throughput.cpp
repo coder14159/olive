@@ -99,13 +99,18 @@ Throughput::Throughput (const std::string &directory,
 
   fs::path file_path = fs::path (directory) / fs::path (filename);
 
+  bool output_header = !fs::exists (file_path.string ());
+
   m_file.open (file_path.string (), std::ios::app|std::ios_base::out);
 
   ASSERT_SS (m_file.is_open (), "Failed to open file: " << file_path.string ());
 
   BOOST_LOG_TRIVIAL (info) << "Throughput file: " << file_path.string ();
 
-  write_header ();
+  if (output_header)
+  {
+    write_header ();
+  }
 }
 
 Throughput::~Throughput ()
@@ -156,10 +161,9 @@ Throughput &Throughput::write_data ()
     return *this;
   }
 
-  size_t avgPayload = (m_payload == 0) ? m_payload
-                                       : (m_bytes  / m_messages);
+  size_t avgMessageSize = (m_bytes  / m_messages);
 
-  m_file << avgPayload           << ","
+  m_file << avgMessageSize       << ","
          << megabytes_per_sec () << ','
          << messages_per_sec ()  << '\n';
 
