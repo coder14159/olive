@@ -15,9 +15,7 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (size_t capacity)
   ASSERT (capacity > sizeof (Header),
           "SPMCQueue capacity must be greater than header size");
 
-  m_producerBuf = &*m_buffer;
-
-  std::fill (m_producerBuf, m_producerBuf + m_capacity, 0);
+  std::fill (m_buffer, m_buffer + m_capacity, 0);
 }
 
 
@@ -31,9 +29,7 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
   ASSERT (capacity > sizeof (Header),
           "SPMCQueue capacity must be greater than header size");
 
-  m_producerBuf = &*m_buffer;
-
-  std::fill (m_producerBuf, m_producerBuf + m_capacity, 0);
+  std::fill (m_buffer, m_buffer + m_capacity, 0);
 }
 
 template <class Allocator, uint16_t MaxNoDropConsumers>
@@ -47,6 +43,13 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::~SPMCQueue ()
    */
   Allocator::deallocate (m_buffer, m_capacity);
 }
+
+template <class Allocator, uint16_t MaxNoDropConsumers>
+uint8_t *SPMCQueue<Allocator, MaxNoDropConsumers>::buffer () const
+{
+  return &*m_buffer;
+}
+
 
 template <class Allocator, uint16_t MaxNoDropConsumers>
 uint64_t SPMCQueue<Allocator, MaxNoDropConsumers>::committed () const

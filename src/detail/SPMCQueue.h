@@ -198,6 +198,15 @@ public:
 
   ~SPMCQueue ();
 
+  /*
+   * Return a pointer to the internal buffer shared between either processes
+   * or threads
+   */
+  uint8_t *buffer () const;
+
+  /*
+   * Return the current buffer size
+   */
   size_t size () const;
 
   /*
@@ -278,17 +287,6 @@ public:
             ProducerType  &producer,
             ConsumerType  &consumer,
             const uint8_t *buffer);
-#if 0
-  /*
-   * Append queue data to a consumer local data cache
-   */
-  template <typename BufferType>
-  bool pop_from_cache (BufferType &cache,
-            size_t         size,
-            ProducerType  &producer,
-            ConsumerType  &consumer,
-            const uint8_t *buffer);
-#endif
   /*
    * Unregister a consumer thread / process
    */
@@ -298,12 +296,6 @@ public:
    * Return true if the producer has restarted
    */
   bool producer_restarted (const ConsumerType &consumer) const;
-
-  /*
-   * Return a pointer to the internal buffer shared between either processes
-   * or threads
-   */
-  uint8_t *buffer () const { return &*m_buffer; }
 
 private:
   void reset_producer ();
