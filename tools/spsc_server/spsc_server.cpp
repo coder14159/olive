@@ -39,13 +39,13 @@ CxxOptsHelper parse (int argc, char* argv[])
     ("h,help", "Message producer for shared memory performance testing")
     ("name", "Shared memory name", cxxopts::value<std::string> ())
     ("clients", "Number of consumer clients", cxxopts::value<int> ())
-    ("messagesize", "Message size (bytes)",
+    ("message_size", "Message size (bytes)",
      cxxopts::value<size_t> ()->default_value (oneKB))
-    ("queuesize", "Size of queue (bytes)",
+    ("queue_size", "Size of queue (bytes)",
      cxxopts::value<size_t> ()->default_value (oneGB))
     ("rate", "msgs/sec (value=0 for maximum rate)",
      cxxopts::value<uint32_t> ()->default_value (rate))
-    ("l,loglevel", "Logging level",
+    ("l,log_level", "Logging level",
      cxxopts::value<std::string> ()->default_value (level))
     ("cpu", "bind main thread to a cpu processor id",
      cxxopts::value<int> ()->default_value (cpu));
@@ -152,11 +152,11 @@ int main(int argc, char *argv[]) try
 
   auto name        = options.required<std::string> ("name");
   auto clients     = options.required<int>         ("clients");
-  auto messageSize = options.required<size_t>      ("messagesize");
-  auto queueSize   = options.required<size_t>      ("queuesize");
+  auto messageSize = options.required<size_t>      ("message_size");
+  auto queueSize   = options.required<size_t>      ("queue_size");
   auto rate        = options.required<uint32_t>    ("rate");
   auto cpu         = options.value<int>            ("cpu", -1);
-  auto logLevel    = options.value<std::string>    ("loglevel", log_levels (),
+  auto logLevel    = options.value<std::string>    ("log_level", log_levels (),
                                                     "INFO");
 
   set_log_level (logLevel);
@@ -167,7 +167,7 @@ int main(int argc, char *argv[]) try
 
   /*
    * Create enough shared memory for each of the clients queues to fit plus some
-   * extra room for shared memory booking.
+   * extra room for shared memory book keeping.
    */
   size_t memorySize = (queueSize * clients)
                     + (SharedMemory::BOOK_KEEPING*clients);

@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) try
   auto allowDrops    = options.value<bool>           ("allow_drops", false);
   auto prefetchCache = options.value<size_t>         ("prefetch_size", 0);
   auto test          = options.value<bool>           ("test", false);
-  auto logLevel      = options.value<std::string>    ("loglevel",
+  auto logLevel      = options.value<std::string>    ("log_level",
                                                       log_levels (),"INFO");
   auto latency       = options.positional ("stats", "latency");
   auto throughput    = options.positional ("stats", "throughput");

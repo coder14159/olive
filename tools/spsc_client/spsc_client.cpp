@@ -39,7 +39,7 @@ CxxOptsHelper parse (int argc, char* argv[])
       cxxopts::value<std::vector<std::string>> (stats))
     ("test", "Enable basic tests for message validity",
       cxxopts::value<bool> ())
-    ("loglevel", "l,Logging level",
+    ("log_level", "l,Logging level",
       cxxopts::value<std::string> ()->default_value ("NOTICE"));
 
   CxxOptsHelper options (cxxopts.parse (argc, argv));
@@ -63,11 +63,11 @@ int main(int argc, char* argv[]) try
   auto options = parse (argc, argv);
 
   auto name            = options.required<std::string> ("name");
-  auto directory       = options.value<std::string> ("directory", "");
-  auto cpu             = options.value<int>    ("cpu", -1);
-  auto test            = options.value<bool>   ("test", false);
-  auto logLevel        = options.value<std::string> ("loglevel",
-                                                     log_levels (),"INFO");
+  auto directory       = options.value<std::string>    ("directory", "");
+  auto cpu             = options.value<int>            ("cpu", -1);
+  auto test            = options.value<bool>           ("test", false);
+  auto logLevel        = options.value<std::string>    ("log_level",
+                                                        log_levels (),"INFO");
   auto latency         = options.positional ("stats", "latency");
   auto throughput      = options.positional ("stats", "throughput");
   auto interval        = options.positional ("stats", "interval");

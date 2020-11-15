@@ -31,13 +31,13 @@ CxxOptsHelper parse (int argc, char* argv[])
   cxxopts.add_options ()
     ("h,help", "Produce messages for shared memory performance testing")
     ("name", "Shared memory name", cxxopts::value<std::string> ())
-    ("messagesize", "Message size (bytes)",
+    ("message_size", "Message size (bytes)",
      cxxopts::value<size_t> ()->default_value (oneKB))
-    ("queuesize", "Size of queue (bytes)",
+    ("queue_size", "Size of queue (bytes)",
      cxxopts::value<size_t> ()->default_value (oneGB))
     ("rate", "msgs/sec (value=0 for maximum rate)",
      cxxopts::value<uint32_t> ()->default_value (rate))
-    ("l,loglevel", "Logging level",
+    ("l,log_level", "Logging level",
      cxxopts::value<std::string> ()->default_value (level))
     ("cpu", "bind main thread to a cpu processor id",
      cxxopts::value<int> ()->default_value (cpu));
