@@ -115,8 +115,6 @@ Throughput::Throughput (const std::string &directory,
 
 Throughput::~Throughput ()
 {
-  write_data ();
-
   stop ();
 }
 
@@ -165,7 +163,8 @@ Throughput &Throughput::write_data ()
 
   m_file << avgMessageSize       << ","
          << megabytes_per_sec () << ','
-         << messages_per_sec ()  << '\n';
+         << messages_per_sec ()  << ','
+         << m_dropped            << '\n';
 
   return *this;
 }
@@ -200,8 +199,19 @@ std::string Throughput::to_string () const
 {
   auto duration = m_timer.elapsed ();
 
-  return throughput_bytes_to_pretty (m_bytes, duration) + " " +
-         throughput_messages_to_pretty (m_messages, duration);
+  std::string stats = throughput_bytes_to_pretty (m_bytes, duration) + " " +
+                      throughput_messages_to_pretty (m_messages, duration);
+  if (m_dropped > 0)
+  {
+    stats += " dropped: " + std::to_string (m_dropped);
+  }
+
+  return stats;
+}
+
+uint64_t Throughput::dropped () const
+{
+  return m_dropped;
 }
 
 } // namespace spmc

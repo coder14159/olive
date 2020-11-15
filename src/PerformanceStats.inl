@@ -27,20 +27,6 @@ void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
     return;
   }
 
-  /*
-   * Check for dropped messages
-   */
-  if (SPMC_EXPECT_TRUE (m_seqNum > 1))
-  {
-    auto diff = seqNum - m_seqNum;
-
-    if (SPMC_EXPECT_FALSE (diff > 1))
-    {
-      m_dropped.interval += diff;
-      m_dropped.summary  += diff;
-    }
-  }
-
   m_seqNum = seqNum;
 
   m_throughput.interval ().next (bytes, seqNum);

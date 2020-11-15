@@ -13,13 +13,6 @@ namespace spmc {
 class PerformanceStats
 {
 public:
-  struct Dropped
-  {
-    uint64_t interval = 0;
-    uint64_t summary  = 0;
-  };
-
-public:
   PerformanceStats ();
 
   PerformanceStats (const std::string &path);
@@ -27,11 +20,6 @@ public:
   ~PerformanceStats ();
 
   void output_directory (const std::string &path);
-
-  /*
-   * Messages dropped
-   */
-  const PerformanceStats::Dropped &dropped () const;
 
   /*
    * Update number of bytes received sequence number at a time point
@@ -59,8 +47,6 @@ private:
   void log_interval_stats ();
 
 private:
-
-  Dropped m_dropped;
 
   ThroughputStats m_throughput;
 

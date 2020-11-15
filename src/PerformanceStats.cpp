@@ -53,8 +53,10 @@ void PerformanceStats::start ()
     /*
      * Warmup for a few seconds before starting to take latency values
      */
-    Seconds warmupDuration (2);
+    const Seconds warmupDuration (2);
     bool warming = true;
+
+    BOOST_LOG_TRIVIAL (info) << "Start latency thread";
 
     while (!m_stop)
     {
@@ -75,13 +77,17 @@ void PerformanceStats::start ()
 
       now = Clock::now ();
 
-      if (warming && (now - lastLog) > warmupDuration)
-      {
-        warming = false;
-        lastLog = now;
+      auto duration = now - lastLog;
 
-        BOOST_LOG_TRIVIAL (info) << "Warmup completed, "
-                                 << "start logging performance statistics";
+      if (warming)
+      {
+        if ((now - lastLog) > warmupDuration)
+        {
+          warming = false;
+          lastLog = now;
+          BOOST_LOG_TRIVIAL (info) << "Warmup complete, "
+                                   << "start logging performance statistics";
+        }
 
         continue;
       }
@@ -114,19 +120,12 @@ PerformanceStats::~PerformanceStats ()
   {
     BOOST_LOG_TRIVIAL(info) <<
       boost::algorithm::trim_left_copy (m_throughput.summary ().to_string ());
-
-    BOOST_LOG_TRIVIAL(info) << m_dropped.summary << " dropped";
   }
 
   for (auto line : m_latency.summary ().to_strings ())
   {
     BOOST_LOG_TRIVIAL(info) << line;
   }
-}
-
-const PerformanceStats::Dropped& PerformanceStats::dropped () const
-{
-  return m_dropped;
 }
 
 void PerformanceStats::log_interval_stats ()
@@ -149,15 +148,13 @@ void PerformanceStats::log_interval_stats ()
     m_throughput.interval ().write_data ().reset ();
   }
 
-  if (m_dropped.interval > 0 &&
-     (m_latency.interval ().is_running () ||
-      m_throughput.interval ().is_running ()))
+  if  (m_throughput.interval ().dropped () > 0 &&
+       (m_latency.interval ().is_running () ||
+        m_throughput.interval ().is_running ()))
   {
     if (!log.empty ()) { log += "|"; }
 
-    log += std::to_string (m_dropped.interval);
-
-    m_dropped.interval = 0;
+    log += std::to_string (m_throughput.interval ().dropped ());
   }
 
   if (!log.empty ())

@@ -33,6 +33,12 @@ class Throughput
 {
 public:
 
+  struct Dropped
+  {
+    uint64_t interval = 0;
+    uint64_t summary  = 0;
+  };
+
   /*
    * Compute throughput values which can be requested via member function calls
    */
@@ -88,6 +94,7 @@ public:
 
   uint32_t megabytes_per_sec () const;
   uint32_t messages_per_sec () const;
+  uint64_t dropped () const;
 
   /*
    * Return a throughput string since start or last reset
@@ -100,9 +107,10 @@ public:
 
 private:
 
-  uint64_t       m_messages   = 0;
-  uint64_t       m_bytes      = 0;
-  uint64_t       m_seqNum     = 0;
+  uint64_t m_messages = 0;
+  uint64_t m_bytes    = 0;
+  uint64_t m_seqNum   = 0;
+  uint64_t m_dropped  = 0;
 
   Timer m_timer;
 

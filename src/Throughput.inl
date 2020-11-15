@@ -17,8 +17,9 @@ namespace spmc {
 inline
 void Throughput::reset ()
 {
-  m_messages   = 0;
-  m_bytes      = 0;
+  m_messages = 0;
+  m_bytes    = 0;
+  m_dropped  = 0;
 
   m_timer.reset ().start ();
 }
@@ -40,11 +41,21 @@ void Throughput::next (uint64_t bytes, uint64_t seqNum)
   /*
    * Reset on startup or if the server was restarted
    */
-  if (SPMC_EXPECT_FALSE (m_seqNum == 0 || seqNum == 1))
+  if (SPMC_EXPECT_FALSE (m_seqNum < 2 || seqNum < m_seqNum))
   {
     reset ();
 
     m_seqNum = seqNum;
+  }
+
+  /*
+   * Check for dropped messages
+   */
+  auto diff = seqNum - m_seqNum;
+
+  if (SPMC_EXPECT_FALSE (diff > 1))
+  {
+    m_dropped += diff;
   }
 
   ++m_messages;

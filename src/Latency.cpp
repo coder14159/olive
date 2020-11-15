@@ -126,8 +126,6 @@ Latency::Latency (const std::string &directory, const std::string &filename)
 
 Latency::~Latency ()
 {
-  write_data ();
-
   stop ();
 }
 

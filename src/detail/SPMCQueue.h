@@ -112,11 +112,6 @@ public:
   bool initialised () { return (m_bytes != Consumer::UnInitialised); }
 
   /*
-   * Return a reference to the number of bytes consumed by the consumer process
-   */
-  // uint64_t &consumed () { return m_bytes; }
-
-  /*
    * Return the number of bytes consumed by the consumer process
    */
   uint64_t  consumed () const { return m_bytes; }
@@ -210,7 +205,7 @@ public:
   size_t size () const;
 
   /*
-   * Return number of bytes which have been written to the queue by teh producer
+   * Return number of bytes which have been written to the queue by the producer
    * and are available to to be consumed.
    */
   uint64_t committed () const;
