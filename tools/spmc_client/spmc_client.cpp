@@ -29,11 +29,11 @@ CxxOptsHelper parse (int argc, char* argv[])
   cxxopts.add_options ()
     ("h,help", "Performance test consuming of shared memory messages")
     ("name", "Shared memory name", cxxopts::value<std::string> ())
-    ("allowdrops", "Allow message drops")
+    ("allow_drops", "Allow message drops")
     ("cpu", "Bind main thread to a cpu processor integer, "
             "use -1 for no binding",
       cxxopts::value<int> ()->default_value ("-1"))
-    ("prefetchcache", "Size of a prefetch cache",
+    ("prefetch_cache", "Size of a prefetch cache",
       cxxopts::value<size_t> ()->default_value ("0"))
     ("directory", "Directory for statistics files",
       cxxopts::value<std::string> ())
@@ -42,7 +42,7 @@ CxxOptsHelper parse (int argc, char* argv[])
     ("stats", "Statistics to log. "
      "Comma separated list (throughput,latency,interval)",
       cxxopts::value<std::vector<std::string>> (stats))
-    ("loglevel", "Logging level",
+    ("log_level", "Logging level",
       cxxopts::value<std::string> ()->default_value ("NOTICE"));
 
   CxxOptsHelper options (cxxopts.parse (argc, argv));
