@@ -904,10 +904,9 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerSingleConsumer)
   // test throughput against a relatively conservative value
   auto &summary = client.stats ().throughput ().summary ();
   BOOST_CHECK (summary.messages () > 100);
-  BOOST_CHECK_EQUAL (client.stats ().dropped ().summary, 0);
+  BOOST_CHECK_EQUAL (summary.dropped (), 0);
 
-  BOOST_TEST_MESSAGE ("messages dropped: "
-      << client.stats ().dropped ().summary);
+  BOOST_TEST_MESSAGE ("messages dropped: " << summary.dropped ());
 
   BOOST_TEST_MESSAGE ("throughput:\t" << summary.to_string ());
 }
@@ -939,7 +938,8 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerMessageDropsAllowed)
   server.stop ();
 
   auto print = [] (const PerformanceStats& stats) {
-    BOOST_TEST_MESSAGE ("messages dropped: " << stats.dropped ().summary);
+    BOOST_TEST_MESSAGE ("messages dropped: " << stats.throughput ()
+                                                     .summary ().dropped ());
 
     BOOST_TEST_MESSAGE ("throughput: "
           << stats.throughput ().summary ().to_string ());
@@ -1001,7 +1001,8 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerNoMesssageDropsAllowed)
   server.stop ();
 
   auto print = [] (const PerformanceStats& stats) {
-    BOOST_TEST_MESSAGE (" dropped:\t\t" << stats.dropped ().summary);
+    BOOST_TEST_MESSAGE (" dropped:\t\t"
+      << stats.throughput ().summary ().dropped ());
     BOOST_TEST_MESSAGE (" throughput:\t\t"
       << stats.throughput ().summary ().to_string ());
   };

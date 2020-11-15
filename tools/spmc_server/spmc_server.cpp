@@ -118,11 +118,11 @@ int main(int argc, char *argv[]) try
   auto options = parse (argc, argv);
 
   auto name        = options.required<std::string> ("name");
-  auto messageSize = options.required<size_t>      ("messagesize");
-  auto queueSize   = options.required<size_t>      ("queuesize");
+  auto messageSize = options.required<size_t>      ("message_size");
+  auto queueSize   = options.required<size_t>      ("queue_size");
   auto rate        = options.required<uint32_t>    ("rate");
   auto cpu         = options.value<int>            ("cpu", -1);
-  auto logLevel    = options.value<std::string>    ("loglevel", log_levels (),
+  auto logLevel    = options.value<std::string>    ("log_level", log_levels (),
                                                     "INFO");
 
   set_log_level (logLevel);
