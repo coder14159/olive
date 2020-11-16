@@ -15,9 +15,11 @@ import time
 def directory_path (directory):
     path = directory
     i = 0
-    while pathlib.Path (path).exists ():
+    while True:
         i = i + 1
         path = pathlib.Path (directory) / ("v" + str (i))
+        if not pathlib.Path (path).exists ():
+            break
 
     return path
 
@@ -46,31 +48,31 @@ exe_dir = os.path.join (base_dir, "build", platform.processor (), "bin")
 parser = argparse.ArgumentParser (description="Latency testing")
 
 # note only allowing one shared memory name
-parser.add_argument ("--name", help="shared memory name to delete")
-
+parser.add_argument ("--name", required=True, help="shared memory name to use")
 parser.add_argument ("--log_level", default="INFO",
                     choices=["TRACE", "DEBUG", "INFO", "WARNING",
                             "ERROR", "FATAL"],
                     help="Set the logging level")
-parser.add_argument ("--timeout", default=10, help="run time (secs)")
+parser.add_argument ("--timeout", required=True, help="run time (secs)")
 
 parser.add_argument ("--server_cpu",  type=int, default=-1,
                     help="bind spmc server to cpu id")
-parser.add_argument ("--server_queue_size",   help="queue size (bytes)")
-parser.add_argument ("--server_message_size", help="message size (bytes)")
-parser.add_argument ("--server_rate",         help="target messages per second")
+parser.add_argument ("--server_queue_size",   required=True, help="queue size (bytes)")
+parser.add_argument ("--server_message_size", required=True, help="message size (bytes)")
+parser.add_argument ("--server_rate", default=0,
+                    help="target messages per second (default is maximum)")
 
 parser.add_argument ("--client_cpu_list", nargs='+', type=int, default=-1,
                     help="bind spmc client(s) to cpu id list, "
                          "can be fewer than the total number of clients")
-parser.add_argument ("--client_count",  type=int,
+parser.add_argument ("--client_count",  type=int, required=True,
                     help="Number of consumer clients")
-parser.add_argument ("--client_stats", nargs='+', default="",
+parser.add_argument ("--client_stats", nargs='+', default=["latency"],
                     choices=["interval", "latency", "throughput"],
                     help="select statistics for output")
-parser.add_argument ("--client_directory",
+parser.add_argument ("--client_directory", required=True,
                     help="set output directory to write stats to file")
-parser.add_argument ("--allow_drops",
+parser.add_argument ("--client_allow_drops",
                     help="set output directory to write stats to file")
 
 args = parser.parse_args ()
