@@ -171,7 +171,7 @@ private:
   /*
    * Local pointer to data buffer shared between producer and consumers.
    *
-   * Dereferencing the boost shared memory offset pointer has a measuable cost,
+   * Dereferencing the boost shared memory offset pointer has a measurable cost,
    * so cache the dereferenced pointer in each client.
    */
   alignas (CACHE_LINE_SIZE)
