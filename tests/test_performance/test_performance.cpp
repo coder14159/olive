@@ -91,16 +91,18 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
   auto duration = get_test_duration ();
 
   auto stress_boost_circular_buffer = [&duration] (
-    size_t bufferSize, size_t messageSize) -> Throughput
+    size_t bufferCapacity, size_t messageSize) -> Throughput
   {
-    BOOST_CHECK (bufferSize > messageSize);
+    BOOST_CHECK (bufferCapacity > messageSize);
 
-    std::vector<uint8_t> message (messageSize);
+    boost::circular_buffer<uint8_t> buffer (bufferCapacity);
 
-    boost::circular_buffer<uint8_t> buffer (bufferSize);
+    std::vector<uint8_t> in;
+    in.resize (messageSize);
+    std::iota (std::begin (in), std::end (in), 1);
 
     std::vector<uint8_t> out;
-    out.reserve (bufferSize);
+    out.reserve (messageSize);
 
     uint64_t seqNum = 0;
 
@@ -114,39 +116,45 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
       {
         break;
       }
-      out.clear ();
 
       // insert data to the buffer
-      buffer.insert (buffer.end (), message.begin (), message.end ());
+      buffer.insert (buffer.end (), in.begin (), in.end ());
 
       // copy data out of circular buffer
       std::copy (buffer.begin (), buffer.end (), std::back_inserter (out));
 
-      // erase copied data from the buffer
-      buffer.clear ();
+      buffer.erase (buffer.begin (), buffer.end ());
+
+      BOOST_CHECK_EQUAL (in.size (), out.size ());
+      BOOST_CHECK_EQUAL (out.size (), messageSize);
 
       throughput.next (out.size (), ++seqNum);
+
+      out.clear ();
 
       ++i;
     }
 
     timer.stop ();
 
-    BOOST_TEST_MESSAGE ("    boost buffer  " << throughput.to_string ());
+    BOOST_TEST_MESSAGE (throughput.to_string () << "\tboost circular buffer" );
 
     return throughput;
   };
 
   auto stress_custom_buffer = [&duration] (
-    size_t bufferSize, size_t messageSize) -> Throughput
+    size_t bufferCapacity, size_t messageSize) -> Throughput
   {
-    BOOST_CHECK (bufferSize > messageSize);
+    BOOST_CHECK (bufferCapacity > messageSize);
 
-    std::vector<uint8_t> in (messageSize);
+    Buffer<std::allocator<uint8_t>> buffer (bufferCapacity);
+
+    std::vector<uint8_t> in;
+    in.resize (messageSize);
     std::iota (std::begin (in), std::end (in), 1);
 
-    Buffer<std::allocator<uint8_t>> buffer (bufferSize);
-    std::vector<uint8_t> out (bufferSize);
+    std::vector<uint8_t> out;
+    out.reserve (messageSize);
 
     uint64_t seqNum = 0;
 
@@ -167,31 +175,40 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
       // copy data out of custom circular buffer
       buffer.pop (out, in.size ());
 
-      buffer.clear ();
+      BOOST_CHECK_EQUAL (in.size (), out.size ());
+      BOOST_CHECK_EQUAL (out.size (), messageSize);
 
       throughput.next (out.size (), ++seqNum);
+
+      buffer.clear ();
+
+      out.clear ();
 
       ++i;
     }
 
-    BOOST_TEST_MESSAGE ("    custom buffer " << throughput.to_string ());
+    timer.stop ();
+
+    BOOST_TEST_MESSAGE (throughput.to_string () << "\tcustom circular buffer");
 
     return throughput;
   };
 
   auto stress_boost_small_vector = [&duration] (
-    size_t bufferSize, size_t messageSize) -> Throughput
+    size_t bufferCapacity, size_t messageSize) -> Throughput
   {
-    BOOST_CHECK (bufferSize > messageSize);
+    BOOST_CHECK (bufferCapacity > messageSize);
 
-    std::vector<uint8_t> message (messageSize);
+    const size_t MAX_SIZE = 10240;
 
-    const size_t MAX_SIZE = 1024;
+    boost::container::small_vector<uint8_t, MAX_SIZE> buffer;
 
-    boost::container::small_vector<uint8_t, MAX_SIZE> buffer (bufferSize);
+    std::vector<uint8_t> in;
+    in.resize (messageSize);
+    std::iota (std::begin (in), std::end (in), 1);
 
     std::vector<uint8_t> out;
-    out.reserve (bufferSize);
+    out.reserve (messageSize);
 
     uint64_t seqNum = 0;
 
@@ -205,30 +222,32 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
       {
         break;
       }
-      out.clear ();
 
       // insert data to the buffer
-      buffer.insert (buffer.end (), message.begin (), message.end ());
+      buffer.insert (buffer.end (), in.begin (), in.end ());
 
-      // copy data out of circular buffer
+      // copy data out of vector
       std::copy (buffer.begin (), buffer.end (), std::back_inserter (out));
 
-      // erase copied data from the buffer
-      buffer.clear ();
+      BOOST_CHECK_EQUAL (in.size (), out.size ());
 
       throughput.next (out.size (), ++seqNum);
+
+      buffer.erase (buffer.begin (), buffer.end ());
+
+      out.clear ();
 
       ++i;
     }
 
     timer.stop ();
 
-    BOOST_TEST_MESSAGE ("    boost small_vector  " << throughput.to_string ());
+    BOOST_TEST_MESSAGE (throughput.to_string () << "\tboost small_vector");
 
     return throughput;
   };
 
-  for (size_t bufferSize : { 10, 100, 10000, 20480, 409600})
+  for (size_t bufferSize : { 10, 100, 10000, 50000, 500000})
   {
     BOOST_TEST_MESSAGE ("buffer size: " << bufferSize);
 
@@ -243,16 +262,24 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
       }
       BOOST_TEST_MESSAGE ("  message size: " << messageSize);
 
-      auto custom = stress_custom_buffer (bufferSize, messageSize);
+      auto custom_msg_per_sec =
+        stress_custom_buffer (bufferSize, messageSize).messages_per_sec ();
 
-      auto boost = stress_boost_circular_buffer (bufferSize, messageSize);
+      auto boost_msg_per_sec =
+        stress_boost_circular_buffer (bufferSize, messageSize).messages_per_sec ();
 
-      stress_boost_small_vector (bufferSize, messageSize);
+      auto small_vector_msg_per_sec =
+        stress_boost_small_vector (bufferSize, messageSize).messages_per_sec ();
 
       /*
-       * Custom circular buffer is faster than the boost circular buffer
+       * Custom circular buffer is faster than the boost containers
        */
-      BOOST_CHECK (custom.messages_per_sec () > (2*boost.messages_per_sec ()));
+      std::cout << "custom_buffer.messages_per_sec (): " << custom_msg_per_sec << std::endl;
+      std::cout << "boost_buffer.messages_per_sec (): " << boost_msg_per_sec << std::endl;
+      std::cout << "small_vector.messages_per_sec (): " << small_vector_msg_per_sec << std::endl;
+
+      BOOST_CHECK (custom_msg_per_sec > boost_msg_per_sec);
+      BOOST_CHECK (custom_msg_per_sec > small_vector_msg_per_sec);
     }
   }
 }
@@ -515,6 +542,7 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiThread)
   PerformanceStats stats;
 
   stats.throughput ().summary ().enable (true);
+  stats.latency ().summary ().enable (true);
 
   sink_stream_in_single_process (capacity, stats, rate, prefetch);
 
@@ -598,6 +626,7 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamWithPrefetchMultiThread)
 
   BOOST_TEST_MESSAGE (throughput.to_string ());
 
+  BOOST_CHECK (latency_percentile_usecs (stats, 50.) > 0);
   BOOST_CHECK (latency_percentile_usecs (stats, 50.) < 10);
 
   for (auto &line : stats.latency ().summary ().to_strings ())
@@ -631,6 +660,7 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamPODMultiThread)
 
   BOOST_CHECK (throughput.megabytes_per_sec () > 100);
 
+  BOOST_CHECK (latency_percentile_usecs (stats, 50.) > 0);
   BOOST_CHECK (latency_percentile_usecs (stats, 50.) < 1000);
 
   for (auto &line : stats.latency ().summary ().to_strings ())
@@ -664,6 +694,7 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamPODMultiThread)
 
   BOOST_CHECK (throughput.megabytes_per_sec () > 100);
 
+  BOOST_CHECK (latency_percentile_usecs (stats, 50.) > 0);
   BOOST_CHECK (latency_percentile_usecs (stats, 50.) < 10);
 
   for (auto &line : stats.latency ().summary ().to_strings ())
