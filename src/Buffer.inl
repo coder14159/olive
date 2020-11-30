@@ -119,7 +119,7 @@ bool Buffer<Allocator>::push (const uint8_t* data, size_t size)
   }
   else
   {
-    // input data wraps the data buffer
+    // input data wraps the buffer
     size_t spaceToEnd = m_capacity - m_back + 1;
 
     std::memcpy (buffer + m_back - 1, data, spaceToEnd);
@@ -238,7 +238,7 @@ bool Buffer<Allocator>::pop (uint8_t* data, size_t size)
     resize (new_capacity);
   }
   /*
-   * Requesting a zero size is valid
+   * Requesting a zero size copy does not fail
    */
   if (size == 0)
   {
