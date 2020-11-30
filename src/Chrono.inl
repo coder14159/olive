@@ -1,5 +1,3 @@
-#include "Chrono.h"
-
 #include <boost/format.hpp>
 
 namespace spmc {
