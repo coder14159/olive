@@ -62,6 +62,8 @@ protected:
 
   /*
    * Array holding the bytes consumed for each non message dropping consumer
+   *
+   * TODO: Use boost::small_vector
    */
   std::array<uint64_t, MaxNoDropConsumers> m_consumed;
 
