@@ -56,7 +56,7 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer ()
   }
 
   /*
-   * If there are no unused slots use a new slot
+   * If there are no unused slots available use a new slot
    */
   if (!registered)
   {
