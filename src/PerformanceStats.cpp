@@ -54,7 +54,7 @@ void PerformanceStats::start ()
      * Warmup for a few seconds before starting to take latency values
      */
     const Seconds warmupDuration (2);
-    bool warming = true;
+    bool warmup = true;
 
     BOOST_LOG_TRIVIAL (info) << "Start latency thread";
 
@@ -77,13 +77,16 @@ void PerformanceStats::start ()
 
       now = Clock::now ();
 
-      auto duration = now - lastLog;
+      auto logDuration = now - lastLog;
 
-      if (warming)
+      /*
+       * Allow a warmup period of a few seconds before starting latency logging
+       */
+      if (warmup)
       {
-        if ((now - lastLog) > warmupDuration)
+        if (logDuration > warmupDuration)
         {
-          warming = false;
+          warmup = false;
           lastLog = now;
           BOOST_LOG_TRIVIAL (info) << "Warmup complete, "
                                    << "start logging performance statistics";
@@ -92,7 +95,7 @@ void PerformanceStats::start ()
         continue;
       }
 
-      if ((now - lastLog) > Seconds (1))
+      if (logDuration > Seconds (1))
       {
         log_interval_stats ();
 

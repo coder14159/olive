@@ -57,10 +57,13 @@ private:
   TimePoint m_sampled;
 
   TimePoint m_startTime;
-
-  const uint64_t QUEUE_SIZE = { 10 };
-
-  boost::lockfree::spsc_queue<Clock::duration> m_queue { QUEUE_SIZE };
+  /*
+   * Store sampled latency values
+   */
+  static const int QUEUE_CAPACITY = 10;
+  boost::lockfree::spsc_queue<Clock::duration,
+              boost::lockfree
+                   ::capacity<sizeof (Clock::duration)*QUEUE_CAPACITY>> m_queue;
 
   std::thread m_thread;
 
