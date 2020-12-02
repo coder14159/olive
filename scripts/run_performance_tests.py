@@ -11,32 +11,7 @@ import subprocess
 import sys
 import time
 
-# Return a unique path if directory path already exists
-def directory_path (directory):
-    path = directory
-    i = 0
-    while True:
-        i = i + 1
-        path = pathlib.Path (directory) / ("v" + str (i))
-        if not pathlib.Path (path).exists ():
-            break
-
-    return path
-
-
-# Update the CPU bind list to use -1 for clients which do not bind to a cpu
-NO_CPU_BIND = -1
-
-def cpu_bind_list (cpu_list, client_count):
-
-    while len (cpu_list) < client_count:
-        cpu_list.insert (0, NO_CPU_BIND)
-
-    return cpu_list
-
-
-################################################################################
-
+from test_utils import *
 
 cpu_count = multiprocessing.cpu_count ()
 
@@ -96,12 +71,10 @@ print ("client_stats:        " + ' '.join (args.client_stats))
 
 client_cpu_list = cpu_bind_list (args.client_cpu_list, args.client_count)
 
-directory = pathlib.Path (args.client_directory)    \
-    / "server_rate" / str (args.server_rate)        \
-    / "client_count" / str (args.client_count)      \
-    / "message_size" / str (args.server_message_size)
-
-directory = directory_path (directory)
+directory = output_directory (args.client_directory,
+                              args.server_rate,
+                              args.server_message_size,
+                              args.client_count)
 
 print ("client_directory:    " + str (directory))
 print ("")
@@ -113,14 +86,16 @@ subprocess.check_call ([pathlib.Path (exe_dir) / "remove_shared_memory",
 # Create the server command
 server_cmd = [
     os.path.join (exe_dir, "spmc_server"),
-    "--cpu",         str (args.server_cpu),
-    "--name",        args.name,
+    "--cpu",          str (args.server_cpu),
+    "--name",         args.name,
     "--message_size", str (args.server_message_size),
     "--queue_size",   str (args.server_queue_size),
-    "--rate",        str (args.server_rate),
+    "--rate",         str (args.server_rate),
     "--log_level",    args.log_level]
 
 # Run the server
+print ('%s' % ' '.join (map (str, server_cmd)))
+
 server = subprocess.Popen (server_cmd, stdout=subprocess.PIPE)
 
 # Allow the server time to start, then check if it is running
@@ -171,4 +146,6 @@ subprocess.check_call ([os.path.join (exe_dir, "remove_shared_memory"),
 
 print ("Latency tests finished")
 
-
+# plot
+import pandas as pd
+import plotly.express as px
