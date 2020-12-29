@@ -29,9 +29,10 @@ BASE_DIR   := $(CURDIR)
 BIN_DIR    := build/$(PROCESSOR)$(BUILD_SUFFIX)/bin
 LIB_DIR    := build/$(PROCESSOR)$(BUILD_SUFFIX)/lib
 
+# Third party libraries
 THIRD_PARTY_DIR := /home/ian/thirdparty
 
-# Third party libraries
+# Boost
 BOOST_BASE_DIR    := $(THIRD_PARTY_DIR)/boost_1_73_0
 BOOST_LIB_DIR     := $(BOOST_BASE_DIR)/build/lib
 BOOST_HEADER_DIR  := $(BOOST_BASE_DIR)/build/include
