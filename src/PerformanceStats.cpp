@@ -1,6 +1,4 @@
-#include "Chrono.h"
 #include "PerformanceStats.h"
-#include "TimeDuration.h"
 #include "detail/Utils.h"
 
 #include <boost/algorithm/string.hpp>
@@ -11,14 +9,10 @@
 using namespace std::chrono_literals;
 
 namespace spmc {
-namespace {
 
-static const Seconds RESET_DURATION (1);
-
-} // namespace spmc
-
-PerformanceStats::PerformanceStats ()
+PerformanceStats::PerformanceStats (TimeDuration warmup)
 : m_sampled (Clock::now ())
+, m_warmupDuration (warmup)
 {
   start ();
 }
@@ -27,6 +21,7 @@ PerformanceStats::PerformanceStats (const std::string &directory)
 : m_throughput (directory)
 , m_latency (directory)
 , m_sampled (Clock::now ())
+, m_warmupDuration (Seconds (2))
 {
   start ();
 }
@@ -53,7 +48,6 @@ void PerformanceStats::start ()
     /*
      * Warmup for a few seconds before starting to take latency values
      */
-    const Seconds warmupDuration (2);
     bool warmup = true;
 
     BOOST_LOG_TRIVIAL (info) << "Start latency thread";
@@ -84,7 +78,7 @@ void PerformanceStats::start ()
        */
       if (warmup)
       {
-        if (logDuration > warmupDuration)
+        if (logDuration > m_warmupDuration)
         {
           warmup = false;
           lastLog = now;
