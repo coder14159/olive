@@ -34,18 +34,18 @@ public:
             size_t             capacity);
 
   /*
-   * Send a packet of data, blocks until successful
+   * Serialise data to the queue
    */
   void next (const std::vector<uint8_t> &data);
 
   /*
-   * Send data of POD type
+   * Serialise POD data to the queue
    */
   template<typename POD>
   void next (const POD &data);
 
   /*
-   * Send a null message to keep the cache warm
+   * Send a header message to the queue intended to keep queue warm in the cache
    */
   void next_keep_warm ();
 
