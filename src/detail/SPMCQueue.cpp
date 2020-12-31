@@ -43,7 +43,7 @@ InprocessConsumer::~InprocessConsumer ()
   get_message_drops_allowed () = false;
 }
 
-bool InprocessConsumer::initialised ()
+bool InprocessConsumer::initialised () const
 {
   return (get_bytes () != Consumer::UnInitialised);
 }
