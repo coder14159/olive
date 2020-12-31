@@ -51,15 +51,18 @@ public:
   void stop ();
 
   /*
-   * Retrieve the next packet of data, blocks until successful
+   * Retrieve the next packet of data, non-blocking
    */
-  bool next (Header &header, std::vector<uint8_t> &data);
+  template<typename Vector>
+  bool next (Header &header, Vector &data);
+
   bool next (Header &header, Buffer<std::allocator<uint8_t>> &data);
 
   /*
    * Retrieve the next packet of data, non-blocking
    */
-  bool next_non_blocking (Header &header, std::vector<uint8_t> &data);
+  template<typename Vector>
+  bool next_non_blocking (Header &header, Vector &data);
 
 private:
 
@@ -74,10 +77,10 @@ private:
 
 private:
 
-  alignas (CACHE_LINE_SIZE)
+  bool m_registered = { false };
+
   std::atomic<bool> m_stop = { false };
 
-  alignas (CACHE_LINE_SIZE)
   std::unique_ptr<QueueType> m_queueObj;
 
   QueueType &m_queue;
