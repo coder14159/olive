@@ -11,7 +11,9 @@
 namespace spmc {
 
 /*
- * Single producer / multiple consumer queue
+ * Single producer / multiple consumer queue which wraps the functionality of
+ * the detail::SPMCQueue and adds some additional functionality whiich is local
+ * to the client consumer.
  *
  * The producers and consumers can be separate threads or processes.
  */
@@ -45,6 +47,14 @@ public:
   SPMCQueue (const std::string &memoryName,
              const std::string &queueName);
 
+  void register_consumer ();
+  /*
+   * Inform producer that a consumer is stopping.
+   *
+   * Called from the consumer context.
+   */
+  void unregister_consumer ();
+
   /*
    * Return the capacity of the queue in bytes
    */
@@ -76,6 +86,11 @@ public:
   uint64_t read_available () const;
 
   /*
+   * Return the size of data currently available in the queue
+   */
+  uint64_t write_available () const;
+
+  /*
    * Return the capacity of the consumer local data cache
    */
   size_t cache_capacity () const;
@@ -96,20 +111,13 @@ public:
   void resize_cache (size_t size);
 
   /*
-   * Inform producer that a consumer is stopping.
+   * Push a single POD type into the queue.
    *
-   * Called from the consumer context.
+   * Useful if the header type has no associated data. An example would be when
+   * sending warmup messages.
    */
-  void unregister_consumer ();
-
-  /*
-   * Push data into the queue, always succeeds unless there are slow consumers
-   * configured to be non-dropping.
-   *
-   * The queue should be larger than the data size + header size.
-   */
-  template <class Header>
-  bool push (const Header &header, const std::vector<uint8_t> &data);
+  template <class POD>
+  bool push (const POD &pod);
 
   /*
    * Push pod type data into the queue, always succeeds unless there are slow
@@ -121,19 +129,19 @@ public:
   bool push (const Header &header, const Data &data);
 
   /*
-   * Push just a header to the queue with no data.
+   * Push data into the queue, always succeeds unless there are slow consumers
+   * configured to be non-dropping.
    *
-   * Useful if the header type has no associated data. An example would be when
-   * sending warmup messages.
+   * The queue should be greater than or equal to data size + pod size.
    */
   template <class Header>
-  bool push (const Header &header);
+  bool push (const Header &header, const std::vector<uint8_t> &data);
 
   /*
    * Pop data out of the header and data from the queue
    */
-  template <class Header, class BufferType>
-  bool pop (Header &header, BufferType &data);
+  template <class POD, class BufferType>
+  bool pop (POD &pod, BufferType &data);
 
 private:
 
@@ -149,25 +157,21 @@ private:
    */
   boost::interprocess::managed_shared_memory m_memory;
 
-  alignas (CACHE_LINE_SIZE)
-  bool m_cacheEnabled  = false;
-
-  alignas (CACHE_LINE_SIZE)
   typename QueueType::ConsumerType m_consumer;
 
-  alignas (CACHE_LINE_SIZE)
   typename QueueType::ProducerType m_producer;
+
+  bool m_cacheEnabled  = false;
 
   typedef typename std::conditional<
           std::is_same<std::allocator<uint8_t>, Allocator>::value,
           std::unique_ptr<QueueType>,
           QueueType*>::type QueuePtr;
-
   /*
    * The shared queue
    */
+  alignas (CACHE_LINE_SIZE)
   QueuePtr m_queue;
-
   /*
    * Local pointer to data buffer shared between producer and consumers.
    *
@@ -175,8 +179,7 @@ private:
    * so cache the dereferenced pointer in each client.
    */
   alignas (CACHE_LINE_SIZE)
-  uint8_t *m_buffer = { nullptr };
-
+  uint8_t *m_buffer  { nullptr };
   /*
    * This data cache can optionally be used to store chunks of data taken from
    * the shared queue. This cache is local to each client.

@@ -1,4 +1,5 @@
 #include "Assert.h"
+#include "detail/GetSize.h"
 
 #include <boost/log/trivial.hpp>
 
@@ -20,7 +21,7 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
   const std::string &memoryName,
   const std::string &queueName,
   size_t capacity)
-  : m_memory (boost::interprocess::open_only, memoryName.c_str ())
+: m_memory (boost::interprocess::open_only, memoryName.c_str ())
 {
   namespace bi = boost::interprocess;
 
@@ -85,16 +86,16 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::message_drops_allowed () const
   return m_consumer.message_drops_allowed ();
 }
 
-// TODO: read_available should include data stored in the cache
 template <class Allocator, size_t MaxNoDropConsumers>
 uint64_t SPMCQueue<Allocator, MaxNoDropConsumers>::read_available () const
 {
-  if (m_consumer.consumed () != Consumer::UnInitialised)
-  {
-    return (m_queue->committed () - m_consumer.consumed () + m_cache.size ());
-  }
-
   return std::min (m_queue->committed (), m_queue->capacity ()) + m_cache.size ();
+}
+
+template <class Allocator, size_t MaxNoDropConsumers>
+uint64_t SPMCQueue<Allocator, MaxNoDropConsumers>::write_available () const
+{
+  return (m_queue->write_available ());
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
@@ -131,11 +132,12 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::cache_size () const
 
 template <class Allocator, size_t MaxNoDropConsumers>
 template <class Header>
-bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
-  const Header               &header,
-  const std::vector<uint8_t> &data)
+bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (const Header &header)
 {
-  return m_queue->push (header, data, m_buffer);
+  static_assert (std::is_trivially_copyable<Header>::value,
+                "Header type must be trivially copyable");
+
+  return m_queue->push (header);
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
@@ -144,21 +146,39 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
   const Header  &header,
   const Data    &data)
 {
-  return m_queue->push (header, data, m_buffer);
+  static_assert (std::is_trivially_copyable<Header>::value,
+                "Header type must be trivially copyable");
+  static_assert (std::is_trivially_copyable<Data>::value,
+                "Data type must be trivially copyable");
+
+  return m_queue->push_variadic (header, data);
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
 template <class Header>
-bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (const Header &header)
+bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
+  const Header &header,
+  const std::vector<uint8_t> &data)
 {
-  return m_queue->push (header, m_buffer);
-}
+  static_assert (std::is_trivially_copyable<Header>::value,
+                "Header type must be trivially copyable");
 
+  return m_queue->push_variadic (header, data);
+}
 
 template <class Allocator, size_t MaxNoDropConsumers>
 void SPMCQueue<Allocator, MaxNoDropConsumers>::allow_message_drops ()
 {
   m_consumer.allow_message_drops ();
+}
+
+
+template <class Allocator, size_t MaxNoDropConsumers>
+void SPMCQueue<Allocator, MaxNoDropConsumers>::register_consumer ()
+{
+  // TODO RETEST explicit registering and hoist shared queue pointer to this object
+  // should be faster
+  m_queue->consumer_checks (m_producer, m_consumer);
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
@@ -177,9 +197,39 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
    * The local data cache is only permitted if this consumer is not permitted to
    * drop messages.
    */
-  if (!m_cacheEnabled || m_consumer.message_drops_allowed ())
+  if (SPMC_EXPECT_TRUE (!m_cacheEnabled))
   {
-    return m_queue->pop (header, data, m_producer, m_consumer, m_buffer);
+    // TODO: is need message drops functionality required?
+    if (!m_consumer.message_drops_allowed ())
+    {
+      // Wait for data to become available
+      while (read_available () < sizeof (Header))
+      {}
+    }
+
+    // TODO: maybe use a single variadic pop
+    if (SPMC_EXPECT_TRUE (m_queue->pop (header, m_producer, m_consumer) > 0))
+    {
+      if (header.type == WARMUP_MESSAGE_TYPE)
+      {
+        return false;
+      }
+      /*
+       * If no message drops are permitted for the consumer then both header and
+       * data are available as they are pushed as one atomic unit.
+       *
+       * If dropping of messages by the client is permitted then failure to pop
+       * payload indicates the data has been overwritten in the shared data
+       * queue.
+       */
+      data.resize (header.size);
+
+      return m_queue->pop (data.data (), header.size, m_producer, m_consumer);
+    }
+    else
+    {
+      return false;
+    }
   }
 
   return pop_from_cache (header, data);
@@ -191,18 +241,17 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
   Header     &header,
   BufferType &data)
 {
-
   if (!m_cacheEnabled)
   {
     return false;
   }
-
-  if (m_queue->producer_restarted (m_consumer) && !m_cache.empty ())
-  {
-    BOOST_LOG_TRIVIAL (info)
-      << "Producer restarted. Clear the consumer prefetch cache.";
-    m_cache.clear ();
-  }
+  // TODO server restart is removed
+  // if (m_queue->producer_restarted (m_consumer) && !m_cache.empty ())
+  // {
+  //   BOOST_LOG_TRIVIAL (info)
+  //     << "Producer restarted. Clear the consumer prefetch cache.";
+  //   m_cache.clear ();
+  // }
 
   if (m_cache.size () < sizeof (Header))
   {
@@ -211,7 +260,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
      *
      * The cache will be increased in size if it is too small.
      */
-    m_queue->prefetch_to_cache (m_cache, m_producer, m_consumer, m_buffer);
+    m_queue->prefetch_to_cache (m_cache, m_producer, m_consumer);
   }
 
   if (m_cache.pop (header))
@@ -230,10 +279,10 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
 
       m_cache.pop (data, m_cache.size ());
 
-      std::vector<uint8_t> tmp (header.size);
+      std::vector<uint8_t> tmp (header.size - data.size ());
 
-      assert (m_queue->pop (tmp, header.size - data.size (),
-                            m_producer, m_consumer, m_buffer));
+      assert (m_queue->pop (tmp.data (), header.size - data.size (),
+                            m_producer, m_consumer));
 
       data.insert (data.end (), tmp.begin (), tmp.end ());
 
@@ -247,7 +296,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
      */
     while (m_cache.size () < header.size)
     {
-      m_queue->prefetch_to_cache (m_cache, m_producer, m_consumer, m_buffer);
+      m_queue->prefetch_to_cache (m_cache, m_producer, m_consumer);
     }
 
     return m_cache.pop (data, header.size);
