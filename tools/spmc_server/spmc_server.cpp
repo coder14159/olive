@@ -63,8 +63,12 @@ void server (const std::string& name,
    * Create enough shared memory for a single queue which is shared by all the
    * clients.
    */
+  size_t memory_size = queueSize
+                     + SharedMemory::BOOK_KEEPING
+                     + sizeof (SPMCQueue<SharedMemory::Allocator>);
+
   auto memory = bi::managed_shared_memory (bi::open_or_create, name.c_str(),
-                                    (queueSize) + (SharedMemory::BOOK_KEEPING));
+                                           memory_size);
 
   using Queue = SPMCQueue<SharedMemory::Allocator>;
   using Sink  = SPMCSink<Queue>;
@@ -107,7 +111,8 @@ void server (const std::string& name,
      * If throughput is not set to maximum rate, Throttle reduces message
      * throughput to the required rate.
      *
-     * Throttle also sends WARMUP_MESSAGE_TYPE messages to keep the cache warm.
+     * Throttle also periodically sends a WARMUP_MESSAGE_TYPE message to keep
+     * the cache warm.
      */
     throttle.throttle<Sink> (sink);
   }
