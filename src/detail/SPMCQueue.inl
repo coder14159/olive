@@ -382,7 +382,7 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
 
   auto *buffer = consumer.queue_ptr ();
 
-  if (spaceToEnd >= size)
+  if (SPMC_EXPECT_TRUE (spaceToEnd >= size))
   {
     std::memcpy (to,  buffer + index, size);
   }
@@ -398,7 +398,8 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
    * This is only relevant if the consumer is configured to allow message drops
    */
   if (SPMC_EXPECT_FALSE (consumer.message_drops_allowed ()) &&
-      SPMC_EXPECT_FALSE ((m_claimed.load (std::memory_order_acquire) - consumed + size) > m_capacity))
+      SPMC_EXPECT_FALSE ((m_claimed.load (std::memory_order_acquire)
+                            - consumed + size) > m_capacity))
   {
     consumer.consumed (m_committed);
 

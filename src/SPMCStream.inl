@@ -69,7 +69,8 @@ bool SPMCStream<QueueType>::next (Header &header, Vector &data)
 {
   while (!m_stop.load (std::memory_order_relaxed))
   {
-    if (SPMC_EXPECT_TRUE (m_queue.pop (header, data)))
+    if (SPMC_EXPECT_TRUE (m_queue.pop (header, data) &&
+                          header.type != WARMUP_MESSAGE_TYPE))
     {
       return true;
     }
