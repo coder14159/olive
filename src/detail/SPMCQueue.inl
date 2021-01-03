@@ -70,7 +70,7 @@ template <typename Allocator, uint16_t MaxNoDropConsumers>
 size_t SPMCQueue<Allocator, MaxNoDropConsumers>::size (
   const ConsumerType &consumer) const
 {
-  return m_committed - m_claimed;
+  return m_committed - consumer.consumed ();
 }
 
 template <typename Allocator, uint16_t MaxNoDropConsumers>

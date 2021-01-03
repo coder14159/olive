@@ -243,7 +243,8 @@ public:
   uint8_t *buffer () const;
 
   /*
-   * Return the current buffer size from the perspective of a consumer
+   * Return the size of data in the queue which is unconsumed by a given
+   * consumer
    */
   size_t size (const ConsumerType &consumer) const;
 
