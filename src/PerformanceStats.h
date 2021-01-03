@@ -14,9 +14,10 @@ namespace spmc {
 class PerformanceStats
 {
 public:
-  PerformanceStats (TimeDuration warmup = Seconds (2));
+  PerformanceStats (TimeDuration warmup = Seconds (0));
 
-  PerformanceStats (const std::string &path);
+  PerformanceStats (const std::string &path,
+                    TimeDuration warmup = Seconds (0));
 
   ~PerformanceStats ();
 

@@ -17,11 +17,12 @@ PerformanceStats::PerformanceStats (TimeDuration warmup)
   start ();
 }
 
-PerformanceStats::PerformanceStats (const std::string &directory)
+PerformanceStats::PerformanceStats (const std::string &directory,
+                                    TimeDuration warmup)
 : m_throughput (directory)
 , m_latency (directory)
 , m_sampled (Clock::now ())
-, m_warmupDuration (Seconds (2))
+, m_warmupDuration (warmup)
 {
   start ();
 }
