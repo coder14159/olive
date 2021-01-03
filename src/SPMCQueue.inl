@@ -199,15 +199,6 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
    */
   if (SPMC_EXPECT_TRUE (!m_cacheEnabled))
   {
-    // TODO: is need message drops functionality required?
-    if (!m_consumer.message_drops_allowed ())
-    {
-      // Wait for data to become available
-      while (read_available () < sizeof (Header))
-      {}
-    }
-
-    // TODO: maybe use a single variadic pop
     if (SPMC_EXPECT_TRUE (m_queue->pop (header, m_producer, m_consumer) > 0))
     {
       if (header.type == WARMUP_MESSAGE_TYPE)
