@@ -106,7 +106,8 @@ int main(int argc, char* argv[]) try
     }
   });
 
-  PerformanceStats stats (directory);
+  TimeDuration warmup (Seconds (2));
+  PerformanceStats stats (directory, warmup);
 
   stats.latency ().summary ().enable (latency);
   stats.latency ().interval ().enable (latency && interval);
