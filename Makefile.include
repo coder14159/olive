@@ -11,6 +11,11 @@ CXXFLAGS  += -DBOOST_LOG_DYN_LINK
 CXXFLAGS  += -DENABLE_ASSERTS=1
 CXXFLAGS  += -DSPMC_MODULUS=1
 
+# test assertion that -Bstatic could lead to faster code than -fPIC
+CXXFLAGS  += -Bstatic
+# CXXFLAGS_LIB := -fPIC
+
+
 # _GNU_SOURCE is required for pthreads
 CXXFLAGS  += -D_GNU_SOURCE
 
@@ -19,6 +24,35 @@ ifdef DEBUG
   BUILD_SUFFIX += .debug
 else
   CXXFLAGS     += -O3
+  # CXXFLAGS     += -Ofast # -Ofast enables all -O3 optimizations plus others
+endif
+
+# GCC has Profile-Guided Optimisations features.
+# first compile your program with -fprofile-generate.
+#
+# let the program run (the execution time will be significantly slower as the
+# code is also generating profile information into .gcda files).
+#
+# recompile the program with -fprofile-use. If your application is
+# multi-threaded also add the -fprofile-correction flag.
+#
+# PGO with GCC can give amazing results and really significantly boost performance
+# (I've seen a 15-20% speed increase on one of the projects I was recently
+# working on). Obviously the issue here is to have some data that is sufficiently
+# representative of your application's execution, which is not always available
+# or easy to obtain.
+#
+
+# Build an executable which will generate performance guided optimisation profile
+ifdef GENERATE_PGO
+  CXXFLAGS     += -fprofile-generate
+  BUILD_SUFFIX += .pgo
+endif
+
+# Use the previously generated performance guided optimisation profile
+ifdef USE_PGO
+  CXXFLAGS     += -fprofile-use -fprofile-correction
+  BUILD_SUFFIX += .pgo
 endif
 
 # -fno-omit-frame-pointer.. only used for for profiling
@@ -28,6 +62,11 @@ PROCESSOR  := $(shell uname -m)
 BASE_DIR   := $(CURDIR)
 BIN_DIR    := build/$(PROCESSOR)$(BUILD_SUFFIX)/bin
 LIB_DIR    := build/$(PROCESSOR)$(BUILD_SUFFIX)/lib
+
+ifdef USE_PGO
+  $(shell touch $(LIB_DIR))
+  $(shell touch $(BIN_DIR))
+endif
 
 # Third party libraries
 THIRD_PARTY_DIR := /home/ian/thirdparty
@@ -42,8 +81,6 @@ CXXFLAGS          += -Wl,-rpath=$(BOOST_LIB_DIR)
 # CxxOpts
 CXXOPTS_BASE_DIR   := $(THIRD_PARTY_DIR)/cxxopts-2.2.0
 CXXOPTS_HEADER_DIR := $(CXXOPTS_BASE_DIR)/include
-
-CXXFLAGS_LIB := -fPIC
 
 # Valgrind
 VALGRIND_BASE_DIR   := $(THIRD_PARTY_DIR)/valgrind/build/$(PROCESSOR)
