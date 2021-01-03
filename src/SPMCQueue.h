@@ -86,11 +86,6 @@ public:
   uint64_t read_available () const;
 
   /*
-   * Return the size of data currently available in the queue
-   */
-  uint64_t write_available () const;
-
-  /*
    * Return the capacity of the consumer local data cache
    */
   size_t cache_capacity () const;

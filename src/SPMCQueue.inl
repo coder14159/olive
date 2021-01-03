@@ -89,13 +89,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::message_drops_allowed () const
 template <class Allocator, size_t MaxNoDropConsumers>
 uint64_t SPMCQueue<Allocator, MaxNoDropConsumers>::read_available () const
 {
-  return std::min (m_queue->committed (), m_queue->capacity ()) + m_cache.size ();
-}
-
-template <class Allocator, size_t MaxNoDropConsumers>
-uint64_t SPMCQueue<Allocator, MaxNoDropConsumers>::write_available () const
-{
-  return (m_queue->write_available ());
+  return m_queue->size (m_consumer) + m_cache.size ();
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
