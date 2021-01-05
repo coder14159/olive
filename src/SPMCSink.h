@@ -66,7 +66,7 @@ private:
   uint64_t m_sequenceNumber = 0;
 
   alignas (CACHE_LINE_SIZE)
-  Header m_warmupHdr = {
+  const Header m_warmupHdr = {
       HEADER_VERSION,
       WARMUP_MESSAGE_TYPE,
       0,
