@@ -134,12 +134,13 @@ void server (const std::string& name,
 
   Throttle throttle (rate);
 
-  while (SPMC_EXPECT_FALSE (!stop))
+  while (SPMC_EXPECT_TRUE (!stop))
   {
     for (auto &sink : sinks)
     {
       sink->next (message);
     }
+
     throttle.throttle<SPSCSink> (*sinks.back ());
   }
 }

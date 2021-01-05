@@ -10,6 +10,10 @@ CXXFLAGS  += -lrt -lpthread
 CXXFLAGS  += -DBOOST_LOG_DYN_LINK
 CXXFLAGS  += -DENABLE_ASSERTS=1
 CXXFLAGS  += -DSPMC_MODULUS=1
+CXXFLAGS  += -march=native
+
+# CXXFLAGS_LIB := -Bstatic # counld be faster than -fPIC
+CXXFLAGS_LIB := -fPIC
 
 # _GNU_SOURCE is required for pthreads
 CXXFLAGS  += -D_GNU_SOURCE
@@ -19,19 +23,60 @@ ifdef DEBUG
   BUILD_SUFFIX += .debug
 else
   CXXFLAGS     += -O3
+  CXXFLAGS     += -Ofast
 endif
-
-# -fno-omit-frame-pointer.. only used for for profiling
-# CXXFLAGS  += -fno-omit-frame-pointer
 
 PROCESSOR  := $(shell uname -m)
 BASE_DIR   := $(CURDIR)
+
+################################################################################
+# Performance Guided Optimisation
+#
+# 1. build executables which generate profile data
+#    make PGO_PROFILE=1 build/x86_64.pgo_profile/bin/spmc_server
+#    make PGO_PROFILE=1 build/x86_64.pgo_profile/bin/spmc_client
+#
+# 2. Run the tests generating profile guiding data
+#    build/x86_64.pgo_profile/bin/spmc_server --name spmc --message_size 32 --queue_size 20480 --rate 0 --cpu 1
+#    build/x86_64.pgo_profile/bin/spmc_client --name spmc --log_level INFO --cpu 2  --stats latency,throughput,interval
+#
+# 3. create binaries utilising the generated profile binary data
+#    make PGO_RELEASE=1 build/x86_64.pgo_release/bin/spmc_server
+#    make PGO_RELEASE=1 build/x86_64.pgo_release/bin/spmc_client
+#
+# 4. Run the profile guided release
+#    ./build/x86_64/bin/remove_shared_memory --names spmc;
+#    build/x86_64.pgo_release/bin/spmc_server --name spmc --message_size 32 --queue_size 20480 --rate 0 --cpu 1
+#    build/x86_64.pgo_release/bin/spmc_client --name spmc --log_level INFO --cpu 2  --stats latency,throughput,interval
+################################################################################
+
+PGO_DATA=build/$(PROCESSOR).pgo_data
+
+# Build executables which will generate PGO profile data files (xxx.gcda)
+ifdef PGO_PROFILE
+  CXXFLAGS     += -fprofile-generate
+  CXXFLAGS     += -fprofile-correction
+  CXXFLAGS     += -fprofile-dir=$(PGO_DATA)
+  BUILD_SUFFIX += .pgo_profile
+endif
+
+# Use PGO profile data files to build pgo executable files
+ifdef PGO_RELEASE
+  CXXFLAGS     += -fprofile-use
+  CXXFLAGS     += -fprofile-correction
+  CXXFLAGS     += -fprofile-dir=$(PGO_DATA)
+  BUILD_SUFFIX += .pgo_release
+endif
+
+################################################################################
+
 BIN_DIR    := build/$(PROCESSOR)$(BUILD_SUFFIX)/bin
 LIB_DIR    := build/$(PROCESSOR)$(BUILD_SUFFIX)/lib
 
+# Third party libraries
 THIRD_PARTY_DIR := /home/ian/thirdparty
 
-# Third party libraries
+# Boost
 BOOST_BASE_DIR    := $(THIRD_PARTY_DIR)/boost_1_73_0
 BOOST_LIB_DIR     := $(BOOST_BASE_DIR)/build/lib
 BOOST_HEADER_DIR  := $(BOOST_BASE_DIR)/build/include
@@ -41,8 +86,6 @@ CXXFLAGS          += -Wl,-rpath=$(BOOST_LIB_DIR)
 # CxxOpts
 CXXOPTS_BASE_DIR   := $(THIRD_PARTY_DIR)/cxxopts-2.2.0
 CXXOPTS_HEADER_DIR := $(CXXOPTS_BASE_DIR)/include
-
-CXXFLAGS_LIB := -fPIC
 
 # Valgrind
 VALGRIND_BASE_DIR   := $(THIRD_PARTY_DIR)/valgrind/build/$(PROCESSOR)

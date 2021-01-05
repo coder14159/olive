@@ -3,8 +3,8 @@
 
 #if defined(__GNUC__)
     #define SPMC_COND_EXPECT(expr,c) (__builtin_expect((expr), c))
-    #define SPMC_EXPECT_TRUE(expr)   (SPMC_COND_EXPECT((expr), 1))
-    #define SPMC_EXPECT_FALSE(expr)  (SPMC_COND_EXPECT((expr), 0))
+    #define SPMC_EXPECT_TRUE(expr)   (SPMC_COND_EXPECT((expr), true))
+    #define SPMC_EXPECT_FALSE(expr)  (SPMC_COND_EXPECT((expr), false))
 #else
     #define SPMC_COND_EXPECT(expr,c) ((expr) == c)
     #define SPMC_EXPECT_TRUE(expr)   (SPMC_COND_EXPECT((expr), 1))

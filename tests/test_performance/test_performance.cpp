@@ -199,7 +199,7 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
   {
     BOOST_CHECK (bufferCapacity > messageSize);
 
-    const size_t MAX_SIZE = 10240;
+    const size_t MAX_SIZE = 1000;
 
     boost::container::small_vector<uint8_t, MAX_SIZE> buffer;
 
@@ -247,39 +247,43 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
     return throughput;
   };
 
-  for (size_t bufferSize : { 10, 100, 10000, 50000, 500000})
+  for (size_t bufferCapacity : { 100, 1000, 10000, 100000})
   {
-    BOOST_TEST_MESSAGE ("buffer size: " << bufferSize);
+    BOOST_TEST_MESSAGE ("buffer capacity: " << bufferCapacity);
 
     for (size_t messageSize : { 32, 64, 128, 512, 1024, 2048, 4096 })
     {
-      if (messageSize > bufferSize)
+      if (messageSize > bufferCapacity)
       {
         BOOST_TEST_MESSAGE ("message_size > buffer_size"
           << " message_size: " << messageSize
-          << " buffer_size: " << bufferSize);
+          << " buffer_size: " << bufferCapacity);
         continue;
       }
       BOOST_TEST_MESSAGE ("  message size: " << messageSize);
 
       auto custom_msg_per_sec =
-        stress_custom_buffer (bufferSize, messageSize).messages_per_sec ();
+        stress_custom_buffer (bufferCapacity, messageSize).messages_per_sec ();
 
       auto boost_msg_per_sec =
-        stress_boost_circular_buffer (bufferSize, messageSize).messages_per_sec ();
+        stress_boost_circular_buffer (bufferCapacity, messageSize).messages_per_sec ();
 
       auto small_vector_msg_per_sec =
-        stress_boost_small_vector (bufferSize, messageSize).messages_per_sec ();
+        stress_boost_small_vector (bufferCapacity, messageSize).messages_per_sec ();
 
       /*
        * Custom circular buffer is faster than the boost containers
        */
-      std::cout << "custom_buffer.messages_per_sec (): " << custom_msg_per_sec << std::endl;
-      std::cout << "boost_buffer.messages_per_sec (): " << boost_msg_per_sec << std::endl;
-      std::cout << "small_vector.messages_per_sec (): " << small_vector_msg_per_sec << std::endl;
-
       BOOST_CHECK (custom_msg_per_sec > boost_msg_per_sec);
-      BOOST_CHECK (custom_msg_per_sec > small_vector_msg_per_sec);
+
+      /*
+       * Small message sizes are faster when using small vector optimisation
+       * TODO: maybe add similar to the custom buffer
+       */
+      if (messageSize > 512)
+      {
+        BOOST_CHECK (custom_msg_per_sec > small_vector_msg_per_sec);
+      }
     }
   }
 }
@@ -335,23 +339,26 @@ BOOST_AUTO_TEST_CASE (VectorThroughput)
   auto run_test = [] (size_t batchSize) {
     using namespace boost::container;
 
-    size_t containerSize = 204800;
+    size_t containerCapacity = 204800;
+    const size_t staticVectorCapacity = 1024;
 
-    BOOST_TEST_MESSAGE ("  constainer size: " << containerSize);
+    BOOST_TEST_MESSAGE ("  container capacity: " << containerCapacity);
 
     BOOST_TEST_MESSAGE ("  batch size: " << batchSize);
 
+    BOOST_TEST_MESSAGE ("  static_capacity: " << staticVectorCapacity);
+
 
     ThroughputOfVector<std::vector<uint8_t>> (
-        containerSize, batchSize, "std::vector  ");
+        containerCapacity, batchSize, "std::vector  ");
 
-    ThroughputOfVector<small_vector<uint8_t, 1024>> (
-        containerSize, batchSize, "small_vector ");
+    ThroughputOfVector<small_vector<uint8_t, staticVectorCapacity>> (
+        containerCapacity, batchSize, "small_vector ");
 
-    if (batchSize <= 1024)
+    if (batchSize <= staticVectorCapacity)
     {
-      ThroughputOfVector<static_vector<uint8_t, 1024>> (
-          containerSize, batchSize, "static_vector");
+      ThroughputOfVector<static_vector<uint8_t, staticVectorCapacity>> (
+          containerCapacity, batchSize, "static_vector ");
     }
   };
 
@@ -382,13 +389,14 @@ void sink_stream_in_single_process (
 {
   std::atomic<bool> stop = { false };
 
-  SPMCSinkThread   sink (capacity);
-  SPMCStreamThread stream (sink.queue (), false, prefetch);
+  SPMCSinkThread sink (capacity);
 
   auto producer = std::thread ([&stop, &sink, &rate] () {
+
     Throttle throttle (rate);
 
     size_t message_size = MESSAGE_SIZE;
+
     std::vector<uint8_t> message (message_size, 0);
 
     std::iota (std::begin (message), std::end (message), 1);
@@ -399,18 +407,36 @@ void sink_stream_in_single_process (
 
       throttle.throttle ();
     }
+
+    sink.stop ();
   });
 
-  std::this_thread::sleep_for (5ms);
+  while (!producer.joinable ())
+  {
+    std::this_thread::sleep_for (5ms);
+  }
 
-  auto consumer = std::thread ([&stop, &stream, &stats] () {
+  std::unique_ptr<SPMCStreamThread> stream;
+
+  auto consumer = std::thread ([&stop, &stream, &sink, &stats, &prefetch] () {
+
+    bool allow_message_drops = false;
+    /*
+     * The stream must be initialised in the thread context in which it is used
+     */
+    stream = std::make_unique<SPMCStreamThread>
+                (sink.queue (), allow_message_drops, prefetch);
+
+    stats.throughput ().summary ().enable (true);
+    stats.latency ().summary ().enable (true);
+
     Header header;
 
     std::vector<uint8_t> data;
 
     while (!stop)
     {
-      if (stream.next (header, data))
+      if (stream->next (header, data))
       {
         stats.update (sizeof (Header) + data.size (), header.seqNum,
                       TimePoint (Nanoseconds (header.timestamp)));
@@ -420,10 +446,10 @@ void sink_stream_in_single_process (
 
   std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
 
-  stop = true;
-
-  stream.stop ();
+  stream->stop ();
   sink.stop ();
+
+  stop = true;
 
   consumer.join ();
   producer.join ();
@@ -438,14 +464,15 @@ void sink_stream_in_single_process_pod (
 {
   std::atomic<bool> stop = { false };
 
-  SPMCSinkThread   sink (capacity);
-  SPMCStreamThread stream (sink.queue (), false, prefetch);
+  SPMCSinkThread sink (capacity);
 
   auto producer = std::thread ([&stop, &sink, &rate] () {
 
     Throttle throttle (rate);
 
     POD payload;
+    std::iota (reinterpret_cast<uint8_t*> (&payload),
+               reinterpret_cast<uint8_t*> (&payload) + sizeof (payload), 1);
 
     while (!stop)
     {
@@ -455,9 +482,24 @@ void sink_stream_in_single_process_pod (
     }
   });
 
-  std::this_thread::sleep_for (5ms);
+  while (!producer.joinable ())
+  {
+    std::this_thread::sleep_for (5ms);
+  }
 
-  auto consumer = std::thread ([&stop, &stream, &stats] () {
+  std::unique_ptr<SPMCStreamThread> stream;
+
+  auto consumer = std::thread ([&stop, &sink, &stream, &prefetch, &stats] () {
+
+    bool allow_message_drops = false;
+    /*
+     * The stream must be initialised in the thread context in which it is used
+     */
+    stream = std::make_unique<SPMCStreamThread>
+                (sink.queue (), allow_message_drops, prefetch);
+
+    stats.throughput ().summary ().enable (true);
+    stats.latency ().summary ().enable (true);
 
     Header header;
 
@@ -465,7 +507,7 @@ void sink_stream_in_single_process_pod (
 
     while (!stop)
     {
-      if (stream.next (header, data))
+      if (stream->next (header, data))
       {
         stats.update (sizeof (Header) + data.size (), header.seqNum,
                       TimePoint (Nanoseconds (header.timestamp)));
@@ -475,13 +517,13 @@ void sink_stream_in_single_process_pod (
 
   std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
 
+  stream->stop ();
+  sink.stop ();
+
   stop = true;
 
   consumer.join ();
   producer.join ();
-
-  stream.stop ();
-  sink.stop ();
 }
 
 BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiThread)
@@ -505,8 +547,6 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiThread)
   size_t prefetch = 0;
 
   PerformanceStats stats;
-
-  stats.throughput ().summary ().enable (true);
 
   sink_stream_in_single_process (capacity, stats, rate, prefetch);
 
@@ -541,9 +581,6 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiThread)
 
   PerformanceStats stats;
 
-  stats.throughput ().summary ().enable (true);
-  stats.latency ().summary ().enable (true);
-
   sink_stream_in_single_process (capacity, stats, rate, prefetch);
 
   auto &throughput = stats.throughput ().summary ();
@@ -555,6 +592,7 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiThread)
 
   BOOST_TEST_MESSAGE (throughput.to_string ());
 
+  BOOST_CHECK (latency_percentile_usecs (stats, 50.) > 0);
   BOOST_CHECK (latency_percentile_usecs (stats, 50.) < 10);
 
   for (auto &line : stats.latency ().summary ().to_strings ())
@@ -702,7 +740,7 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamPODMultiThread)
     BOOST_TEST_MESSAGE (line);
   }
 }
-#if 0
+
 BOOST_AUTO_TEST_CASE (ThroughputSinkStreamPODWithPrefetchMultiThread)
 {
   if (getenv ("NOTIMING") != nullptr)
@@ -759,7 +797,7 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamPODWithPrefetchMultiThread)
     BOOST_TEST_MESSAGE (line);
   }
 }
-#endif
+
 void sink_stream_in_shared_memory (
     size_t            capacity,
     PerformanceStats &stats,
@@ -867,7 +905,7 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiProcess)
 
   BOOST_CHECK (throughput.messages_per_sec () > 1000);
 }
-#if 0
+
 BOOST_AUTO_TEST_CASE (ThroughputSinkStreamWithPrefetchMultiProcess)
 {
   if (getenv ("NOTIMING") != nullptr)
@@ -893,7 +931,6 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamWithPrefetchMultiProcess)
 
   BOOST_CHECK (throughput.megabytes_per_sec () > 200);
 }
-#endif
 
 BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiProcess)
 {
@@ -928,6 +965,11 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiProcess)
 
 BOOST_AUTO_TEST_CASE (ThreadIdentity)
 {
+  if (getenv ("NOTIMING") != nullptr)
+  {
+    return;
+  }
+
   int thread_id_count = 0;
   int thread_specific_count = 0;
   int thread_local_count = 0;
@@ -1190,132 +1232,6 @@ BOOST_AUTO_TEST_CASE (MemoryCopy)
   BOOST_CHECK (loops_memmove > (loops_uninitialized_copy*5));
 }
 
-void sink_stream_roundtrip_latency_threads (size_t capacity)
-{
-  bool stop = { false };
-
-  auto duration = get_test_duration ();
-
-  BOOST_TEST_MESSAGE ("stream capacity: " << capacity);
-
-  bool allow_drops = false;
-  size_t prefetch_size = 0;
-
-  SPMCSinkThread   sink_ping (capacity);
-  SPMCStreamThread stream_ping (sink_ping.queue (), allow_drops, prefetch_size);
-
-  SPMCSinkThread   sink_pong (capacity);
-  SPMCStreamThread stream_pong (sink_pong.queue (), allow_drops, prefetch_size);
-
-  PerformanceStats stats;
-
-  int warmup = 1000000;
-
-  auto pong = std::thread ([&] () {
-
-    Header header;
-
-    std::vector<uint8_t> payload (1);
-
-    int iterations = 0;
-
-    while (!stop)
-    {
-      ++iterations;
-
-      if (stream_ping.next (header, payload) && iterations > warmup)
-      {
-        stats.update (sizeof (Header) + payload.size (), header.seqNum,
-                      TimePoint (Nanoseconds (header.timestamp)));
-      }
-
-      sink_pong.next (payload);
-    }
-
-    BOOST_TEST_MESSAGE ("test iterations: " << (iterations-warmup));
-
-  });
-
-  auto ping = std::thread ([&] () {
-
-    Header header;
-
-    std::vector<uint8_t> payload (1);
-
-    while (!stop)
-    {
-      sink_ping.next (payload);
-
-      stream_pong.next (header, payload);
-    }
-  });
-
-  std::this_thread::sleep_for (duration.nanoseconds ());
-
-  stop = true;
-
-  sink_ping.stop ();
-  sink_pong.stop ();
-
-  stream_ping.stop ();
-  stream_pong.stop ();
-
-  ping.join ();
-  pong.join ();
-
-  BOOST_TEST_MESSAGE ("throughput (msgs/sec): "
-    << stats.throughput ().summary ().messages_per_sec ());
-
-  BOOST_TEST_MESSAGE ("throughput (MB/sec): "
-    << stats.throughput ().summary ().megabytes_per_sec ());
-
-  auto &quantiles = stats.latency ().summary ().quantiles ();
-
-  BOOST_CHECK (quantiles.empty () == false);
-
-  auto median = static_cast<int64_t> (
-                  boost::accumulators::p_square_quantile (quantiles.at (50)));
-
-  /*
-   * Check latency expectations
-   */
-  BOOST_CHECK (Nanoseconds (median) < 1us);
-
-  BOOST_TEST_MESSAGE ("latency percentiles");
-
-  for (auto &line : stats.latency ().summary ().to_strings ())
-  {
-    BOOST_TEST_MESSAGE (line);
-  }
-}
-
-/*
- * Test round trip latencies for in-process sink/stream models are reasonable
- */
-BOOST_AUTO_TEST_CASE (RoundtripLatency)
-{
-  if (getenv ("NOTIMING") != nullptr)
-  {
-    return;
-  }
-
-  std::string log_level = "ERROR";
-
-  if (getenv ("LOG_LEVEL") != nullptr)
-  {
-    log_level = getenv ("LOG_LEVEL");
-  }
-
-  spmc::ScopedLogLevel log (log_level);
-
-  std::vector<size_t> capacities { 100, 1000, 10000, 10000 };
-
-  for (auto capacity : capacities)
-  {
-    sink_stream_roundtrip_latency_threads (capacity);
-  }
-}
-
 template<typename T>
 T remainder (T num, T divisor)
 {
@@ -1324,6 +1240,9 @@ T remainder (T num, T divisor)
 
 BOOST_AUTO_TEST_CASE (Modulus)
 {
+  BOOST_TEST_MESSAGE (
+    "Modulus calculation performance - smaller times are better");
+
   const int32_t size = 8192;
   const int32_t cycles = std::numeric_limits<int32_t>::max ()/2;
 

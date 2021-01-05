@@ -2,6 +2,7 @@
 #define IPC_PERFORMANCE_STATS_H
 
 #include "LatencyStats.h"
+#include "TimeDuration.h"
 #include "ThroughputStats.h"
 
 #include <boost/lockfree/spsc_queue.hpp>
@@ -13,9 +14,10 @@ namespace spmc {
 class PerformanceStats
 {
 public:
-  PerformanceStats ();
+  PerformanceStats (TimeDuration warmup = Seconds (0));
 
-  PerformanceStats (const std::string &path);
+  PerformanceStats (const std::string &path,
+                    TimeDuration warmup = Seconds (0));
 
   ~PerformanceStats ();
 
@@ -57,6 +59,8 @@ private:
   TimePoint m_sampled;
 
   TimePoint m_startTime;
+
+  TimeDuration m_warmupDuration;
   /*
    * Store sampled latency values
    */

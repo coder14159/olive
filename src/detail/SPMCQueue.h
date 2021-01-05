@@ -15,6 +15,32 @@
 #include <vector>
 
 namespace spmc {
+
+/*
+ * Use this enum to when pushing data to the shared queue.
+ *
+ * If more than one data structure should be contiguous in the queue when pushed
+ * use AcquireSpace::YESYes
+ */
+enum AcquireRelease
+{
+  /*
+   * A single push of data to the queue will acquire necessary space in the
+   * queue for serialised data and make it available in a single call
+   *
+   * See also methods
+   *
+   * detail::SPMCQueue::acquire_space (..)  and
+   * detail::SPMCQueue::release_space (..)
+   */
+  Yes,
+  /*
+   * If items are copied to the queue in a single call there is no need to
+   * acquire space, push data items and then release space explcitly.
+   */
+  No
+};
+
 namespace detail {
 
 /*
@@ -73,7 +99,11 @@ class InprocessConsumer
 public:
   ~InprocessConsumer ();
 
-  bool initialised ();
+  const uint8_t *queue_ptr () const { return m_queue; }
+
+  void queue_ptr (const uint8_t *queue) { m_queue = queue; }
+
+  bool initialised () const;
 
   /*
    * Return the number of bytes consumed by the consumer thread
@@ -101,6 +131,10 @@ public:
    */
   void allow_message_drops ();
 
+private:
+
+  const uint8_t *m_queue = { nullptr };
+
 };
 
 /*
@@ -109,12 +143,17 @@ public:
 class SharedMemoryConsumer
 {
 public:
-  bool initialised () { return (m_bytes != Consumer::UnInitialised); }
+
+  const uint8_t *queue_ptr () const { return m_queue; }
+
+  void queue_ptr (const uint8_t *queue) { m_queue = queue; }
+
+  bool initialised () const { return (m_bytes != Consumer::UnInitialised); }
 
   /*
    * Return the number of bytes consumed by the consumer process
    */
-  uint64_t  consumed () const { return m_bytes; }
+  uint64_t consumed () const { return m_bytes; }
 
   /*
    * Set the number of bytes consumed by the consumer process
@@ -138,15 +177,18 @@ public:
   void allow_message_drops () { m_messageDropsAllowed = true; }
 
 private:
-  /*
-   * Number of bytes of data consumed
-   */
-  uint64_t m_bytes = Consumer::UnInitialised;
 
   /*
    * True is message drops are permitted for a consumer
    */
   bool m_messageDropsAllowed = false;
+
+  const uint8_t *m_queue = nullptr;
+
+  /*
+   * Number of bytes of data consumed
+   */
+  uint64_t m_bytes = Consumer::UnInitialised;
 
 };
 
@@ -156,7 +198,7 @@ private:
  * Supports shared memory inter-process or inter-thread communication between
  * a producer and multiple consumers.
  */
-template <class Allocator,
+template <typename Allocator,
           uint16_t MaxNoDropConsumers = MAX_NO_DROP_CONSUMERS_DEFAULT>
 class SPMCQueue : private Allocator
 {
@@ -167,6 +209,7 @@ private:
   SPMCQueue (const SPMCQueue &) = delete;
 
 public:
+
   typedef typename std::conditional<
           std::is_same<std::allocator<uint8_t>, Allocator>::value,
           InprocessProducer,
@@ -200,11 +243,21 @@ public:
   uint8_t *buffer () const;
 
   /*
-   * Return the current buffer size
+   * Return the size of data in the queue which is unconsumed by a given
+   * consumer
    */
-  size_t size () const;
+  size_t size (const ConsumerType &consumer) const;
 
   /*
+   * Unregister a consumer thread / process
+   */
+  void unregister_consumer (size_t index);
+
+  /*
+   * Acquire a chunk of queue data for writing
+   *
+   * Returns false free data chunk isSpaceAcquired
+   *
    * Return number of bytes which have been written to the queue by the producer
    * and are available to to be consumed.
    */
@@ -216,44 +269,80 @@ public:
   size_t capacity () const;
 
   void consumer_checks (ProducerType &producer, ConsumerType &consumer);
+
   /*
-   * Push data into the queue, always succeeds unless no drops is enabled and
-   * a consumer is slow.
+   * Use acquire/release space methods to atomically push more than one data
+   * object onto the queue as a single contiguous unit.
    *
-   * The queue should be larger than the data size + header size
+   * This is typically useful to atomically push header and payload data.
+   *
+   * See methods acquire_space (), release_space () and push ()
+   *
+   * Acquire space in the queue before pushing data. Publish the data using
+   * the release_space () method.
+   *
+   * Only required for writing more than one data type as a contiguous unit in
+   * the internal queue eg header and data
    */
-  template <typename Header>
-  bool push (const Header &header,
-             const std::vector<uint8_t> &data,
-             uint8_t *buffer);
+  bool acquire_space (size_t size);
 
   /*
-   * Push data into the queue, always succeeds unless no drops is enabled
-   * and a consumer is slow.
-
-   * The queue should be larger than the data size + header size
+   * Release space for consuming after being acquired via acquire_space
    */
-  template <typename Header>
-  bool push (const Header  &header,
-             const uint8_t *data,
-             const size_t   size,
-             uint8_t *buffer);
+  void release_space ();
+
+private:
+  /*
+   * Copy a POD type to the end of the queue.
+   *
+   * Space in the queue should already have been claimed by the public
+   * push_variadic () method.
+   *
+   * Use offset if pushing multiple data items as one atomic unit with a call to
+   * acquire_space before pushing the data items and then publish the data using
+   * a release_space call afterwards.
+   */
+  template <typename T>
+  size_t push_variadic_item (const T &pod, size_t offset = 0);
 
   /*
-   * Push POD data into the queue, always succeeds unless no drops is enabled
-   * and a consumer is slow.
-
-   * The queue should be larger than the data size + header size
+   * Push data from a vector to the queue
    */
-  template <typename Header, typename Data>
-  bool push (const Header &header, const Data &data, uint8_t *buffer);
+  size_t push_variadic_item (const std::vector<uint8_t> &data,
+                             size_t offset = 0);
+
+public:
+  /*
+   * Push one or more data items to the queue. The data is published for
+   * consuming once all the data items have been copied to the queue.
+   */
+  template<typename Head, typename...Tail>
+  bool push_variadic (const Head &head, const Tail&...tail);
 
   /*
-   * Push a Header pod onto the queue.
-   * Typically used to keep the data cache warm during lower throughput rates.
+   * Copy a data array to the end of the queue
+   *
+   * If space in the queue has already been reserved using then set
+   * space_acquired to true. See acquire_space () method.
+   *
+   * Use offset if pushing multiple data items as one atomic unit with a call to
+   * acquire_space before consuming the data items and release_space call after.
    */
-  template <typename Header>
-  bool push (const Header &header, uint8_t *buffer);
+  template <typename POD>
+  size_t push (const POD &data,
+             AcquireRelease acquire_release = AcquireRelease::Yes,
+             size_t offset = 0);
+
+  size_t push (const uint8_t *data, size_t size,
+             AcquireRelease acquire_release = AcquireRelease::Yes,
+             size_t offset = 0);
+public:
+
+  template<typename POD>
+  bool pop (POD &pod, ProducerType &producer, ConsumerType &consumer);
+
+  bool pop (uint8_t *buffer, size_t size,
+            ProducerType &producer, ConsumerType &consumer);
   /*
    * Pop data out of the queue, header and data must popped in a single call
    */
@@ -263,7 +352,6 @@ public:
             ProducerType  &producer,
             ConsumerType  &consumer,
             const uint8_t *buffer);
-
   /*
    * Pop data of specified size out of the queue into a data buffer
    */
@@ -273,24 +361,19 @@ public:
             ProducerType  &producer,
             ConsumerType  &consumer,
             const uint8_t *buffer);
-
   /*
    * Prefetch a chunk of data for caching in a local non-shared circular buffer
    */
   template <typename BufferType>
   bool prefetch_to_cache (BufferType &cache,
-            ProducerType  &producer,
-            ConsumerType  &consumer,
-            const uint8_t *buffer);
-  /*
-   * Unregister a consumer thread / process
-   */
-  void unregister_consumer (size_t index);
-
+            ProducerType &producer,
+            ConsumerType &consumer);
   /*
    * Return true if the producer has restarted
    */
   bool producer_restarted (const ConsumerType &consumer) const;
+
+  void print_debug () const;
 
 private:
   void reset_producer ();
@@ -303,9 +386,7 @@ private:
   void copy_to_buffer (const uint8_t *from, uint8_t* to, size_t size,
                        size_t offset = 0);
 
-  size_t copy_from_buffer (const uint8_t* from, uint8_t *to, size_t size,
-                           ConsumerType &consumer,
-                           bool messageDropsAllowed);
+  size_t copy_from_buffer (uint8_t *to, size_t size, ConsumerType &consumer);
 
   template <typename Buffer>
   bool copy_from_buffer (const uint8_t* from, Buffer &to, size_t size,
@@ -323,9 +404,31 @@ private:
           SPMCBackPressure<SharedMemoryMutex,
                            MaxNoDropConsumers>>::type BackPressureType;
 
+  /*
+   * Pointer to data in either local memory or shared memory
+   */
   typedef typename Allocator::pointer Pointer;
 
   const size_t m_capacity;
+
+  /*
+   * Structure used by consumers exert back pressure on the producer
+   */
+  BackPressureType m_backPressure;
+
+  /*
+   * A local pointer to data either shared memory or local memory data.
+   *
+   * An optimisation if data is in shared memory.
+   */
+  typedef uint8_t* LocalPointer;
+
+  /*
+   * A buffer held in shared or heap memory used by the producer to pass data
+   * to the consumers
+   */
+  alignas (CACHE_LINE_SIZE)
+  Pointer m_buffer = { nullptr };
 
   /*
    * Counter used to claim a data range by the producer before writing data.
@@ -343,25 +446,12 @@ private:
   std::atomic<uint64_t> m_committed = { 0 };
 
   /*
-   * Cache the producer buffer pointer to avoid the shared memory not
-   * insignificant dereferencing cost
+   * Cache the producer buffer pointer to avoid the dereferencing cost when used
+   * with shared memory
    */
   alignas (CACHE_LINE_SIZE)
-  uint8_t *m_producerBuf = { 0 };
-
-  /*
-   * A buffer held in shared or heap memory used by the producer to pass data
-   * to the consumers
-   */
-  alignas (CACHE_LINE_SIZE)
-  Pointer m_buffer = { nullptr };
-
-  /*
-   * Structure used by consumers exert back pressure on the consumer
-   */
-  BackPressureType m_backPressure;
+  LocalPointer m_bufferProducer = { nullptr };
 };
-
 
 } // namespace detail {
 } // namespace spmc {

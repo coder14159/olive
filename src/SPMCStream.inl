@@ -53,6 +53,8 @@ void SPMCStream<QueueType>::init (bool allowMessageDrops, size_t prefetchSize)
   {
     m_queue.resize_cache (prefetchSize);
   }
+
+  m_queue.register_consumer ();
 }
 
 template <typename QueueType>
@@ -62,12 +64,13 @@ void SPMCStream<QueueType>::stop ()
 }
 
 template <typename QueueType>
-bool SPMCStream<QueueType>::next (Header &header, std::vector<uint8_t> &data)
+template<typename Vector>
+bool SPMCStream<QueueType>::next (Header &header, Vector &data)
 {
   while (!m_stop.load (std::memory_order_relaxed))
   {
     if (SPMC_EXPECT_TRUE (m_queue.pop (header, data) &&
-        header.type != WARMUP_MESSAGE_TYPE))
+                          header.type != WARMUP_MESSAGE_TYPE))
     {
       return true;
     }
@@ -82,8 +85,7 @@ bool SPMCStream<QueueType>::next (Header &header,
 {
   while (!m_stop.load (std::memory_order_relaxed))
   {
-    if (SPMC_EXPECT_TRUE (m_queue.pop (header, data) &&
-        header.type != WARMUP_MESSAGE_TYPE))
+    if (SPMC_EXPECT_TRUE (m_queue.pop (header, data)))
     {
       return true;
     }
@@ -93,8 +95,8 @@ bool SPMCStream<QueueType>::next (Header &header,
 }
 
 template <typename QueueType>
-bool SPMCStream<QueueType>::next_non_blocking (Header &header,
-                                               std::vector<uint8_t> &data)
+template<typename Vector>
+bool SPMCStream<QueueType>::next_non_blocking (Header &header, Vector &data)
 {
   return (SPMC_EXPECT_TRUE (m_queue.pop (header, data)));
 }

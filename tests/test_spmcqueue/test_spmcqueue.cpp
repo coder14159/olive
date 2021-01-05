@@ -244,27 +244,29 @@ BOOST_AUTO_TEST_CASE (BufferConsumesFromSPSCQueue)
 
 BOOST_AUTO_TEST_CASE (SPMCQueueBasicTest)
 {
+  ScopedLogLevel log (error);
+
   SPMCQueue<std::allocator<uint8_t>> queue (100);
 
-  queue.allow_message_drops ();
+  queue.register_consumer ();
 
-  Header header;
+  std::vector<uint8_t> payloadIn (8);
+  std::iota (std::begin (payloadIn), std::end (payloadIn), 1);
+
+  Header headerIn;
+  headerIn.version = 1;
+  headerIn.type = 2;
+  headerIn.size = payloadIn.size ();
 
   // test pushing enough data to wrap the buffer a few times
   for (int i = 1; i < 6; ++i)
   {
     {
-      Header header;
-      header.version = 1;
-      header.type = 2;
-      header.size = 5;
-      header.seqNum = i;
+      headerIn.seqNum = i;
 
-      header.timestamp = nanoseconds_since_epoch (Clock::now ());
+      headerIn.timestamp = nanoseconds_since_epoch (Clock::now ());
 
-      const std::vector<uint8_t> payload =  { 0, 1, 2, 3, 4 };
-
-      bool success = queue.push (header, payload);
+      bool success = queue.push (headerIn, payloadIn);
 
       BOOST_CHECK_EQUAL (success, true);
     }
@@ -276,23 +278,23 @@ BOOST_AUTO_TEST_CASE (SPMCQueueBasicTest)
       bool success = queue.pop (header, payload);
 
       BOOST_CHECK_EQUAL (success, true);
-      BOOST_CHECK_EQUAL (header.version, 1);
-      BOOST_CHECK_EQUAL (header.type,    2);
+      BOOST_CHECK_EQUAL (header.version, headerIn.version);
+      BOOST_CHECK_EQUAL (header.type,    headerIn.type);
       BOOST_CHECK_EQUAL (header.seqNum,  i);
 
-      BOOST_CHECK_EQUAL (payload.size (), 5);
-      BOOST_CHECK_EQUAL (payload[0], 0);
-      BOOST_CHECK_EQUAL (payload[1], 1);
-      BOOST_CHECK_EQUAL (payload[2], 2);
-      BOOST_CHECK_EQUAL (payload[3], 3);
-      BOOST_CHECK_EQUAL (payload[4], 4);
+      BOOST_CHECK_EQUAL (payload.size (), payloadIn.size ());
+      BOOST_CHECK (payload == payloadIn);
     }
   }
 }
 
 BOOST_AUTO_TEST_CASE (SPMCQueuePushPod)
 {
+  ScopedLogLevel log (error);
+
   SPMCQueue<std::allocator<uint8_t>> queue (100);
+
+  queue.register_consumer ();
 
   struct Payload
   {
@@ -304,58 +306,67 @@ BOOST_AUTO_TEST_CASE (SPMCQueuePushPod)
 
   auto time = nanoseconds_since_epoch (Clock::now ());
 
-  Header  headerIn  = { 1, 2, sizeof (Payload), 3, time };
+  Header headerIn  = { 1, 2, sizeof (Payload), 3, time };
 
-  BOOST_CHECK (queue.push (headerIn, payloadIn));
+  bool success = queue.push (headerIn, payloadIn);
+  BOOST_CHECK (success);
 
   std::vector<uint8_t> data;
 
   Header headerOut;
-
-  BOOST_CHECK (queue.pop (headerOut, data));
+  success = queue.pop (headerOut, data);
+  BOOST_CHECK (success);
   BOOST_CHECK_EQUAL (headerIn.version, headerOut.version);
 
   Payload *payloadOut = reinterpret_cast<Payload*> (data.data ());
 
   BOOST_CHECK_EQUAL (payloadIn.i, payloadOut->i);
   BOOST_CHECK_EQUAL (payloadIn.c, payloadOut->c);
-
 }
 
-BOOST_AUTO_TEST_CASE (SlowConsumer)
+BOOST_AUTO_TEST_CASE (SlowConsumerAllowDrops)
 {
   ScopedLogLevel log (error);
 
   SPMCQueue<std::allocator<uint8_t>> queue (100);
 
   queue.allow_message_drops ();
+  queue.register_consumer ();
+
+  // Size of Header (32) + message size (8) = 40
+  std::vector<uint8_t> payloadProducer (8, 0);
+
+  std::iota (std::begin (payloadProducer), std::end (payloadProducer), 1);
 
   Header headerProducer;
   headerProducer.version = 1;
   headerProducer.type = 2;
-  headerProducer.size = 5;
   headerProducer.seqNum = 1;
   headerProducer.timestamp = nanoseconds_since_epoch (Clock::now ());
-
-  std::vector<uint8_t> payloadProducer = { 0, 1, 2, 3, 4 };
+  headerProducer.size = payloadProducer.size ();
 
   queue.push (headerProducer, payloadProducer);
+
   Header header;
   std::vector<uint8_t> payload;
 
-  BOOST_CHECK_EQUAL (queue.pop (header, payload), true);
+  bool success = queue.pop (header, payload);
+  BOOST_CHECK_EQUAL (success, true);
 
   BOOST_CHECK_EQUAL (header.version,    headerProducer.version);
   BOOST_CHECK_EQUAL (header.type,       headerProducer.type);
   BOOST_CHECK_EQUAL (header.timestamp,  headerProducer.timestamp);
 
-  BOOST_CHECK_EQUAL (payload.size (), 5);
+  BOOST_CHECK_EQUAL (payload.size (), 8);
   for (size_t i = 0; i < payload.size (); ++i)
   {
     BOOST_CHECK_EQUAL (payload[i], payloadProducer[i]);
   }
 
-  // send enough data to wrap the buffer and cause the consumer to drop
+  /*
+   * Send enough data to wrap the buffer.
+   * This causes the consumer to drop messages as it doesn't exert back-pressure
+   */
   queue.push (headerProducer, payloadProducer);
   queue.push (headerProducer, payloadProducer);
   queue.push (headerProducer, payloadProducer);
@@ -383,9 +394,13 @@ struct Packet
 class BlockingQueueWrapper
 {
 public:
+  BlockingQueueWrapper () = delete;
+  BlockingQueueWrapper (const BlockingQueueWrapper &) = delete;
+
   BlockingQueueWrapper (size_t capacity, size_t cache_size)
   : m_queue (capacity)
   {
+    m_queue.register_consumer ();
     m_queue.resize_cache (cache_size);
   }
 
@@ -403,10 +418,10 @@ public:
   {
     {
       const std::scoped_lock<std::mutex> lock (m_mutex);
+
       while (!m_stop && !m_queue.push (packet.header, packet.payload))
       {
-        // TODO change to a wake-up condition event
-        std::this_thread::sleep_for (Milliseconds (1000));
+        std::this_thread::sleep_for (Milliseconds (1));
       }
     }
     m_event.notify_all ();
@@ -416,7 +431,7 @@ public:
   {
     std::unique_lock<std::mutex> lock (m_mutex);
 
-    while (m_queue.empty ())
+    if (m_queue.empty ())
     {
       if (m_stop)
       {
@@ -428,8 +443,6 @@ public:
     Packet packet;
 
     m_queue.pop (packet.header, packet.payload);
-
-    m_event.notify_all ();
 
     return packet;
   }
@@ -444,7 +457,7 @@ private:
   std::atomic_bool m_stop = { false };
 };
 
-BOOST_AUTO_TEST_CASE (SlowConsumerPrefetch)
+BOOST_AUTO_TEST_CASE (SlowConsumerWithPrefetch)
 {
   ScopedLogLevel log (error);
 
@@ -483,7 +496,6 @@ BOOST_AUTO_TEST_CASE (SlowConsumerPrefetch)
    */
   std::mutex server_mutex;
   std::condition_variable server_condition;
-
   /*
    * Run the server in a separate thread
    */
@@ -495,8 +507,6 @@ BOOST_AUTO_TEST_CASE (SlowConsumerPrefetch)
     in.header.seqNum = 0;
     in.header.size = payload.size ();
     in.payload = payload;
-
-    // should BlockingQueueWrapper be created in the server thread/process?
 
     while (!stop)
     {
@@ -510,19 +520,19 @@ BOOST_AUTO_TEST_CASE (SlowConsumerPrefetch)
         blocking_queue.push (in);
         --serve_count;
 
-        server_condition.notify_all ();
+        lock.unlock ();
+        server_condition.notify_one ();
       }
     }
   });
 
-   auto serve_one = [&] () -> bool {
+  auto serve_one = [&] () -> bool {
     ++serve_count;
-    std::stringstream msg;
 
     while (serve_count > 0)
     {
       std::unique_lock<std::mutex> lock (server_mutex);
-      bool status = server_condition.wait_for (lock, Seconds (1),
+      bool status = server_condition.wait_for (lock, Seconds (10),
                                  [&] { return serve_count == 0; });
       if (!status)
       {
@@ -544,8 +554,8 @@ BOOST_AUTO_TEST_CASE (SlowConsumerPrefetch)
    * data moved to the client local cache
    */
   BOOST_CHECK (blocking_queue.queue ().empty ());
-  BOOST_CHECK_EQUAL (blocking_queue.queue ().read_available (), 0);
   BOOST_CHECK_EQUAL (blocking_queue.queue ().cache_size (), 0);
+  BOOST_CHECK_EQUAL (blocking_queue.queue ().read_available (), 0);
 
   serve_one ();
   BOOST_CHECK_EQUAL (blocking_queue.queue ().cache_size (), 0);
@@ -605,6 +615,7 @@ BOOST_AUTO_TEST_CASE (ConsumerPrefetchSmallerThanMessageSize)
   ScopedLogLevel log (error);
 
   SPMCQueue<std::allocator<uint8_t>> queue (1024);
+  queue.register_consumer ();
 
   size_t payloadSize = 128;
 
@@ -632,7 +643,8 @@ BOOST_AUTO_TEST_CASE (ConsumerPrefetchSmallerThanMessageSize)
 
   BOOST_CHECK (!queue.cache_enabled ());
   /*
-   * Pop should fail as the cache size is too small
+   * The next call to pop should fail as the cache size is too small.
+   *
    * The cache should be disabled at this point and consuming continues without
    * the use of the cache.
    */
@@ -674,7 +686,10 @@ BOOST_AUTO_TEST_CASE (ConsumerPrefetchSmallerThanMessageSize)
 
 BOOST_AUTO_TEST_CASE (SlowConsumerNoMessageDrops)
 {
+  ScopedLogLevel log (error);
+
   SPMCQueue<std::allocator<uint8_t>> queue (128);
+  queue.register_consumer ();
 
   Header headerProducer;
   headerProducer.version = 1;
@@ -804,11 +819,13 @@ public:
   {
     m_thread = std::thread ([this] () {
 
-      auto &throughput =  m_stats.throughput ().summary ();
-      auto &latency    =  m_stats.latency ().summary ();
-
       try
       {
+        m_queue.register_consumer ();
+
+        auto &throughput =  m_stats.throughput ().summary ();
+        auto &latency    =  m_stats.latency ().summary ();
+
         Header header;
 
         if (m_messageDropsAllowed)
@@ -888,7 +905,7 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerSingleConsumer)
   queue.resize_cache (1024);
 
   size_t   messageSize = 96+sizeof (Header);  // typical BBA message size
-  uint32_t throughput  = 8e6;   // 4 M message/sec
+  uint32_t throughput  = 8e6;   // 8 M message/sec
 
   DefaultClient client (queue, messageSize);
   DefaultServer server (queue, messageSize, throughput);
@@ -1036,7 +1053,7 @@ BOOST_AUTO_TEST_CASE (TooManyConsumers)
   ScopedLogLevel log (error);
 
   /*
-   * Set the maximum number of consumers to be three
+   * Set the maximum number of consumers to be two
    */
   const size_t maxClients = 2;
 
@@ -1157,10 +1174,6 @@ BOOST_AUTO_TEST_CASE (RestartClient)
   }
 }
 
-
-/*
- * TODO: Server restart without client restart needs further work
- */
 BOOST_AUTO_TEST_CASE (RestartServer)
 {
   ScopedLogLevel log (error);
@@ -1175,7 +1188,6 @@ BOOST_AUTO_TEST_CASE (RestartServer)
    * Restart the server a few times. The client should detect the restart, reset
    * and consume the new data.
    */
-
   Client<QueueType> client (queue, messageSize);
 
   for (int i = 0; i < 4; ++i)
@@ -1293,4 +1305,27 @@ BOOST_AUTO_TEST_CASE (SinkStreamInSharedMemory)
   }
 
   producer.join ();
+}
+
+BOOST_AUTO_TEST_CASE (VariadicGetSize)
+{
+  uint8_t i = 3;
+
+  BOOST_CHECK_EQUAL (get_size (i), sizeof (uint8_t));
+  BOOST_CHECK_EQUAL (get_size (i), 1);
+
+  Header header;
+
+  BOOST_CHECK_EQUAL (get_size (header), sizeof (Header));
+
+  std::vector<uint8_t> v1, v2;
+  v1.resize (2);
+  v2.resize (5);
+
+  BOOST_CHECK_EQUAL (get_size (v1), v1.size ());
+
+  BOOST_CHECK_EQUAL (get_size (header, v1), sizeof (Header)+ v1.size ());
+
+  BOOST_CHECK_EQUAL (get_size (header, v1, v2),
+                     sizeof (Header) + v1.size () + v2.size ());
 }

@@ -8,6 +8,7 @@
 #include "detail/SharedMemory.h"
 #include "detail/Utils.h"
 
+#include <boost/container/small_vector.hpp>
 #include <boost/log/trivial.hpp>
 
 #include <exception>
@@ -72,7 +73,7 @@ int main(int argc, char* argv[]) try
   auto directory     = options.value<std::string>    ("directory", "");
   auto cpu           = options.value<int>            ("cpu", -1);
   auto allowDrops    = options.value<bool>           ("allow_drops", false);
-  auto prefetchCache = options.value<size_t>         ("prefetch_size", 0);
+  auto prefetchCache = options.value<size_t>         ("prefetch_cache", 0);
   auto test          = options.value<bool>           ("test", false);
   auto logLevel      = options.value<std::string>    ("log_level",
                                                       log_levels (),"INFO");
@@ -84,6 +85,15 @@ int main(int argc, char* argv[]) try
 
   BOOST_LOG_TRIVIAL (info) <<  "Start spmc_client";
   BOOST_LOG_TRIVIAL (info) <<  "Consume from shared memory named: " << name;
+  if (allowDrops)
+  {
+    BOOST_LOG_TRIVIAL (info) <<  "Allow dropping of messages";
+  }
+  if (prefetchCache > 0)
+  {
+    BOOST_LOG_TRIVIAL (info) <<  "Use prefetch cache size: " << prefetchCache;
+  }
+
 
   using Queue  = SPMCQueue<SharedMemory::Allocator>;
   using Stream = SPMCStream<Queue>;
@@ -108,7 +118,8 @@ int main(int argc, char* argv[]) try
     }
   });
 
-  PerformanceStats stats (directory);
+  TimeDuration warmup (Seconds (2));
+  PerformanceStats stats (directory, warmup);
 
   stats.latency ().summary ().enable (latency);
   stats.latency ().interval ().enable (interval && latency);
@@ -123,18 +134,14 @@ int main(int argc, char* argv[]) try
   std::vector<uint8_t> data;
   std::vector<uint8_t> expected;
 
-  while (SPMC_EXPECT_FALSE (!stop))
+  while (SPMC_EXPECT_TRUE (!stop))
   {
     if (stream.next (header, data))
     {
-      if (header.type == WARMUP_MESSAGE_TYPE)
-      {
-        continue;
-      }
-
       stats.update (sizeof (Header) + header.size, header.seqNum,
                     timepoint_from_nanoseconds_since_epoch (header.timestamp));
-      if (test)
+
+      if (SPMC_EXPECT_FALSE (test))
       {
         ASSERT_SS (header.size == data.size (), "Unexpected payload size: "
                   << data.size () << " expected: " << header.size);

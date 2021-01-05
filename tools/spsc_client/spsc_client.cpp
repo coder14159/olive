@@ -106,7 +106,8 @@ int main(int argc, char* argv[]) try
     }
   });
 
-  PerformanceStats stats (directory);
+  TimeDuration warmup (Seconds (2));
+  PerformanceStats stats (directory, warmup);
 
   stats.latency ().summary ().enable (latency);
   stats.latency ().interval ().enable (latency && interval);
@@ -130,7 +131,7 @@ int main(int argc, char* argv[]) try
         continue;
       }
 
-      stats.update (sizeof (Header) + data.size (), header.seqNum,
+      stats.update (sizeof (Header) + header.size, header.seqNum,
                     timepoint_from_nanoseconds_since_epoch (header.timestamp));
       if (test)
       {

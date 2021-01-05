@@ -26,28 +26,15 @@ public:
 
   std::string pretty () const;
 
+  friend bool operator< (const TimeDuration lhs, const TimeDuration rhs)
+  {
+    return lhs.nanoseconds () < rhs.nanoseconds ();
+  }
+
 private:
 
   Nanoseconds m_nanoseconds;
 };
-
-inline
-bool operator< (TimeDuration lhs, TimeDuration rhs)
-{
-  return lhs.nanoseconds () < rhs.nanoseconds ();
-}
-
-inline
-bool operator> (TimeDuration lhs, TimeDuration rhs)
-{
-  return lhs.nanoseconds () > rhs.nanoseconds ();
-}
-
-inline
-bool operator== (TimeDuration lhs, TimeDuration rhs)
-{
-  return lhs.nanoseconds () == rhs.nanoseconds ();
-}
 
 /*
  * Cast TimeDuration to floating point time duration values
