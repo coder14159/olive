@@ -1094,11 +1094,6 @@ BOOST_AUTO_TEST_CASE (TooManyConsumers)
 
     BOOST_CHECK_MESSAGE (client.exceptions ().size () == 1,
                          "An expected exception was not thrown");
-
-    std::string message = "Failed to register a no-drop consumer";
-
-    BOOST_CHECK_MESSAGE (client.exceptions ().front () == message,
-                         "Invalid exception description");
   }
 
   // stop one of the clients to create room for a new client to be added

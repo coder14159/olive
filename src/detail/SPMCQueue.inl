@@ -505,9 +505,13 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::initialise_consumer (
     {
       auto consumerIndex = m_backPressure.register_consumer ();
 
-      ASSERT (consumerIndex != Consumer::UnInitialised,
-              "Failed to register a no-drop consumer");
-
+      if (consumerIndex == Consumer::UnInitialised)
+      {
+        BOOST_LOG_TRIVIAL (warning)
+          << "consumerIndex != Consumer::UnInitialised:"
+          << " Failed to register a no-drop consumer - too many consumers";
+        return;
+      }
       producer.index (consumerIndex);
     }
 
