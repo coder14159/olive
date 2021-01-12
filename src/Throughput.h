@@ -20,7 +20,7 @@ throughput_bytes_to_pretty (uint64_t bytes, TimeDuration duration);
  * Create a pretty format string for message throughput
  */
 std::string
-throughput_messages_to_pretty (uint64_t bytes, TimeDuration duration);
+throughput_messages_to_pretty (uint64_t messages, TimeDuration duration);
 
 /*
  * Computes message throughput and persist data to file
@@ -112,11 +112,11 @@ private:
   uint64_t m_seqNum   = 0;
   uint64_t m_dropped  = 0;
 
+  bool m_stop = { false };
+
   Timer m_timer;
 
   std::ofstream m_file;
-
-  bool m_stop { false };
 };
 
 }
