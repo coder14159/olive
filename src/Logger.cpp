@@ -33,12 +33,12 @@ void set_log_level (const std::string &level)
 {
   auto log_level = boost::to_upper_copy (level);
 
-  if      (log_level == "TRACE")   { set_log_level (log::trivial::trace);   }
-  else if (log_level == "DEBUG")   { set_log_level (log::trivial::debug);   }
-  else if (log_level == "INFO")		 { set_log_level (log::trivial::info);    }
+  if      (log_level == "TRACE"  ) { set_log_level (log::trivial::trace);   }
+  else if (log_level == "DEBUG"  ) { set_log_level (log::trivial::debug);   }
+  else if (log_level == "INFO"   ) { set_log_level (log::trivial::info);    }
   else if (log_level == "WARNING") { set_log_level (log::trivial::warning); }
-  else if (log_level == "ERROR")	 { set_log_level (log::trivial::error);   }
-  else if (log_level == "FATAL")	 { set_log_level (log::trivial::fatal);   }
+  else if (log_level == "ERROR"  ) { set_log_level (log::trivial::error);   }
+  else if (log_level == "FATAL"  ) { set_log_level (log::trivial::fatal);   }
   else
   {
   	std::string message = "Invalid log level: " + log_level;
