@@ -39,8 +39,10 @@ using namespace spmc;
 const size_t MESSAGE_SIZE = 128;
 
 /*
- * Override time to run each performance test from the environment variable
- * "TIMEOUT" which should contain a value in seconds.
+ * Override time to run each performance test from by modifing the "TIMEOUT"
+ * environment variable with a value in seconds.
+ *
+ * eg TIMEOUT=10 ./build/x86_64/bin/test_performance
  */
 TimeDuration get_test_duration ()
 {
@@ -526,6 +528,90 @@ void sink_stream_in_single_process_pod (
   producer.join ();
 }
 
+BOOST_AUTO_TEST_CASE (PerformanceCoreQueueMultiThread)
+{
+  std::string log_level = "ERROR";
+
+  if (getenv ("LOG_LEVEL") != nullptr)
+  {
+    log_level = getenv ("LOG_LEVEL");
+  }
+
+  ScopedLogLevel scoped_log_level (log_level);
+
+  const size_t capacity = 256;
+
+  using QueueType = detail::SPMCQueue<std::allocator<uint8_t>>;
+
+  QueueType queue (capacity);
+
+  bool stop { false };
+
+  Timer timer;
+
+  uint64_t messages_consumed = 0;
+
+  int64_t min = Nanoseconds::max ().count ();
+  int64_t max = Nanoseconds::min ().count ();
+
+  auto consumer = std::thread ([&] () {
+
+    QueueType::ProducerType producer_info;
+    QueueType::ConsumerType consumer_info;
+
+    queue.consumer_checks (producer_info, consumer_info);
+
+    int64_t timestamp;
+
+    for (int64_t i = 0; ; ++i)
+    {
+      if (stop)
+      {
+        break;
+      }
+
+      if (queue.pop (timestamp, producer_info, consumer_info))
+      {
+        ++messages_consumed;
+
+        if ((i % 1000) == 0)
+        {
+          int64_t diff = nanoseconds_since_epoch (Clock::now ()) - timestamp;
+
+          min = (min < diff) ? min : diff;
+          max = (max > diff) ? max : diff;
+        }
+      }
+    }
+  });
+
+  auto producer = std::thread ([&stop, &queue] () {
+
+    while (!stop)
+    {
+      if (queue.push (nanoseconds_since_epoch (Clock::now ())))
+      {
+        std::this_thread::sleep_for (Microseconds (1));
+      }
+    }
+  });
+
+  std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
+
+  stop = true;
+
+  producer.join ();
+  consumer.join ();
+
+  BOOST_CHECK ((messages_consumed/to_seconds (get_test_duration ())) > 1000);
+
+  BOOST_CHECK (messages_consumed > 1e3);
+
+  // values are in nanoseconds
+  BOOST_CHECK (min < 1e6);   // min < 1 us
+  BOOST_CHECK (max < 1e9);   // max < 1 ms
+}
+
 BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiThread)
 {
   if (getenv ("NOTIMING") != nullptr)
@@ -542,7 +628,7 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiThread)
 
   spmc::ScopedLogLevel log (log_level);
 
-  size_t capacity = 2048000;
+  size_t capacity = 20480;
   size_t rate     = 0;
   size_t prefetch = 0;
 
@@ -682,7 +768,7 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamPODMultiThread)
 
   spmc::ScopedLogLevel log (error);
 
-  size_t capacity = 2048000;
+  size_t capacity = 20480;
   size_t rate     = 0;
   size_t prefetch = 0;
 
@@ -698,8 +784,10 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamPODMultiThread)
 
   BOOST_CHECK (throughput.megabytes_per_sec () > 100);
 
+  std::cout << latency_percentile_usecs (stats, 50.) << std::endl;
+
   BOOST_CHECK (latency_percentile_usecs (stats, 50.) > 0);
-  BOOST_CHECK (latency_percentile_usecs (stats, 50.) < 1000);
+  BOOST_CHECK (latency_percentile_usecs (stats, 50.) < 100);
 
   for (auto &line : stats.latency ().summary ().to_strings ())
   {
@@ -870,7 +958,7 @@ void sink_stream_in_shared_memory (
     }
   });
 
-  // consume messages from the shared memory queue
+  // Sleep while producer/consumer threads run
   std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
 
   stream.stop ();
