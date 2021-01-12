@@ -8,7 +8,6 @@
 #include "detail/SharedMemory.h"
 #include "detail/Utils.h"
 
-#include <boost/container/small_vector.hpp>
 #include <boost/log/trivial.hpp>
 
 #include <exception>

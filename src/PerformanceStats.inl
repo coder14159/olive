@@ -16,7 +16,7 @@ inline
 void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
                                TimePoint timestamp)
 {
-  if (seqNum < m_seqNum)
+  if (SPMC_EXPECT_FALSE (seqNum < m_seqNum))
   {
     /*
      * Assume the message producer has restarted if the sequence number is lower
@@ -27,11 +27,8 @@ void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
     return;
   }
 
-  m_seqNum = seqNum;
-
   m_throughput.interval ().next (bytes, seqNum);
   m_throughput.summary ().next (bytes, seqNum);
-
   /*
    * Sample latency values as requesting a timestamp too often impacts
    * performance
@@ -44,6 +41,8 @@ void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
   m_sampled = Clock::now ();
 
   m_queue.push ({ m_sampled - timestamp });
+
+  m_seqNum = seqNum;
 }
 
 } // namespace spmc {

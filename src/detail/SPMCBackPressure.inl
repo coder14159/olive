@@ -1,4 +1,5 @@
 #include "Assert.h"
+#include "Utils.h"
 
 #include <boost/log/trivial.hpp>
 
@@ -133,7 +134,7 @@ uint64_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::min_consumed ()
   m_lastIndex = ((m_lastIndex + 1) > consumers) ? 0 : m_lastIndex + 1;
 
   // There are no consumers with "no message drop" configuration
-  if (min == Consumer::Stopped)
+  if (SPMC_EXPECT_FALSE (min == Consumer::Stopped))
   {
     m_hasNonDropConsumers = false;
   }
@@ -146,7 +147,7 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::consumed (uint64_t bytes, size
 {
   m_consumed[index] = bytes;
 
-  if (bytes == Consumer::Stopped)
+  if (SPMC_EXPECT_FALSE (bytes == Consumer::Stopped))
   {
     std::lock_guard<Mutex> g (m_mutex);
     --m_consumerCount;

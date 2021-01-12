@@ -97,7 +97,6 @@ void server (const std::string& name,
   std::vector<uint8_t> message (messageSize, 0);
 
   std::iota (std::begin (message), std::end (message), 1);
-
   /*
    * If rate is not set to the maximum rate Throttle sends null messages to keep
    * the fast path warm

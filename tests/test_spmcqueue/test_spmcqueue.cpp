@@ -894,8 +894,8 @@ private:
   std::vector<std::string> m_exceptions;
 };
 
-using DefaultServer = Server<SPMCQueue<std::allocator<uint8_t>>>;
-using DefaultClient = Client<SPMCQueue<std::allocator<uint8_t>>>;
+using TestServer = Server<SPMCQueue<std::allocator<uint8_t>>>;
+using TestClient = Client<SPMCQueue<std::allocator<uint8_t>>>;
 
 BOOST_AUTO_TEST_CASE (ThreadedProducerSingleConsumer)
 {
@@ -907,8 +907,8 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerSingleConsumer)
   size_t   messageSize = 96+sizeof (Header);  // typical BBA message size
   uint32_t throughput  = 8e6;   // 8 M message/sec
 
-  DefaultClient client (queue, messageSize);
-  DefaultServer server (queue, messageSize, throughput);
+  TestClient client (queue, messageSize);
+  TestServer server (queue, messageSize, throughput);
 
   std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
 
@@ -935,17 +935,17 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerMessageDropsAllowed)
   SPMCQueue<std::allocator<uint8_t>> queue (1024*1024*10);
 
   size_t messageSize = 128;
-  std::vector<std::unique_ptr<DefaultClient>> clients;
+  std::vector<std::unique_ptr<TestClient>> clients;
 
   // 2 consumer clients
-  clients.push_back (std::make_unique<DefaultClient> (queue, 0));
-  clients.push_back (std::make_unique<DefaultClient> (queue, 0));
+  clients.push_back (std::make_unique<TestClient> (queue, 10));
+  clients.push_back (std::make_unique<TestClient> (queue, 10));
 
   // allow the clients to initialise
   std::this_thread::sleep_for (Milliseconds (10));
 
   uint32_t throughput = 1e6;
-  DefaultServer server (queue, messageSize, throughput);
+  TestServer server (queue, messageSize, throughput);
 
   BOOST_TEST_MESSAGE ("server throughput:\t" << throughput);
   BOOST_TEST_MESSAGE ("message size:\t\t"    << messageSize);
@@ -995,11 +995,11 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerNoMesssageDropsAllowed)
 
   int clientCount = 2;
   size_t messageSize = 32;
-  std::vector<std::unique_ptr<DefaultClient>> clients;
+  std::vector<std::unique_ptr<TestClient>> clients;
 
   for (int i = 0; i < clientCount; ++i)
   {
-    auto client = std::make_unique<DefaultClient>(queue, 0);
+    auto client = std::make_unique<TestClient>(queue, 0);
 
     clients.push_back(std::move (client));
   }
@@ -1008,7 +1008,7 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerNoMesssageDropsAllowed)
   std::this_thread::sleep_for (Milliseconds (10));
 
   uint32_t throughput = 1e6;
-  DefaultServer server (queue, messageSize, throughput);
+  TestServer server (queue, messageSize, throughput);
 
   BOOST_TEST_MESSAGE ("server throughput:\t" << throughput);
   BOOST_TEST_MESSAGE ("message size:\t\t"    << messageSize);
