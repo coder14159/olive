@@ -179,16 +179,15 @@ public:
 private:
 
   /*
-   * True is message drops are permitted for a consumer
-   */
-  bool m_messageDropsAllowed = false;
-
-  const uint8_t *m_queue = nullptr;
-
-  /*
    * Number of bytes of data consumed
    */
   uint64_t m_bytes = Consumer::UnInitialised;
+
+  const uint8_t *m_queue = nullptr;
+  /*
+   * Set to true if message drops are permitted for a consumer
+   */
+  bool m_messageDropsAllowed = false;
 
 };
 
@@ -252,16 +251,6 @@ public:
    * Unregister a consumer thread / process
    */
   void unregister_consumer (size_t index);
-
-  /*
-   * Acquire a chunk of queue data for writing
-   *
-   * Returns false free data chunk isSpaceAcquired
-   *
-   * Return number of bytes which have been written to the queue by the producer
-   * and are available to to be consumed.
-   */
-  uint64_t committed () const;
 
   /*
    * Return the capacity of the queue
@@ -337,30 +326,17 @@ public:
              AcquireRelease acquire_release = AcquireRelease::Yes,
              size_t offset = 0);
 public:
-
+  /*
+   * Pop a POD type from the queue
+   */
   template<typename POD>
   bool pop (POD &pod, ProducerType &producer, ConsumerType &consumer);
 
+  /*
+   * Pop seralised data from the queue
+   */
   bool pop (uint8_t *buffer, size_t size,
             ProducerType &producer, ConsumerType &consumer);
-  /*
-   * Pop data out of the queue, header and data must popped in a single call
-   */
-  template <typename Header, typename Buffer>
-  bool pop (Header        &header,
-            Buffer        &data,
-            ProducerType  &producer,
-            ConsumerType  &consumer,
-            const uint8_t *buffer);
-  /*
-   * Pop data of specified size out of the queue into a data buffer
-   */
-  template <typename Buffer>
-  bool pop (Buffer        &data,
-            size_t         size,
-            ProducerType  &producer,
-            ConsumerType  &consumer,
-            const uint8_t *buffer);
   /*
    * Prefetch a chunk of data for caching in a local non-shared circular buffer
    */
@@ -404,24 +380,22 @@ private:
           SPMCBackPressure<SharedMemoryMutex,
                            MaxNoDropConsumers>>::type BackPressureType;
 
-  /*
-   * Pointer to data in either local memory or shared memory
-   */
-  typedef typename Allocator::pointer Pointer;
-
   const size_t m_capacity;
-
   /*
    * Structure used by consumers exert back pressure on the producer
    */
   BackPressureType m_backPressure;
-
   /*
-   * A local pointer to data either shared memory or local memory data.
+   * Counter used to claim a data range by the producer before writing data.
    *
-   * An optimisation if data is in shared memory.
+   * Consumer threads use this counter to check if a producer has begun
+   * ovewriting a range which the consumer has just read.
    */
-  typedef uint8_t* LocalPointer;
+  uint64_t m_claimed  { 0 };
+  /*
+   * Pointer to data in either local memory or shared memory
+   */
+  typedef typename Allocator::pointer Pointer;
 
   /*
    * A buffer held in shared or heap memory used by the producer to pass data
@@ -431,19 +405,17 @@ private:
   Pointer m_buffer = { nullptr };
 
   /*
-   * Counter used to claim a data range by the producer before writing data.
-   *
-   * Consumer threads use this counter to check if a producer has begun
-   * ovewriting a range which the consumer has just read.
-   */
-  alignas (CACHE_LINE_SIZE)
-  std::atomic<uint64_t> m_claimed = { 0 };
-
-  /*
    * Counter used by the producer to publish a data range
    */
   alignas (CACHE_LINE_SIZE)
   std::atomic<uint64_t> m_committed = { 0 };
+
+  /*
+   * A local pointer to data either shared memory or local memory data.
+   *
+   * An optimisation if data is in shared memory.
+   */
+  typedef uint8_t* LocalPointer;
 
   /*
    * Cache the producer buffer pointer to avoid the dereferencing cost when used

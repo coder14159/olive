@@ -55,12 +55,6 @@ uint8_t *SPMCQueue<Allocator, MaxNoDropConsumers>::buffer () const
 }
 
 template <typename Allocator, uint16_t MaxNoDropConsumers>
-uint64_t SPMCQueue<Allocator, MaxNoDropConsumers>::committed () const
-{
-  return m_committed.load (std::memory_order_acquire);
-}
-
-template <typename Allocator, uint16_t MaxNoDropConsumers>
 size_t SPMCQueue<Allocator, MaxNoDropConsumers>::capacity () const
 {
   return m_capacity;
@@ -82,9 +76,9 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::acquire_space (size_t size)
    * There is only one producer so there should be no ABA issues updating the
    * claimed variable.
    */
-  const uint64_t claim = m_claimed.load (std::memory_order_acquire) + size;
+  const uint64_t claim = m_claimed + size;
 
-  if (m_backPressure.has_non_drop_consumers ())
+  if (SPMC_EXPECT_TRUE (m_backPressure.has_non_drop_consumers ()))
   {
 
     uint64_t minConsumed = m_backPressure.min_consumed ();
@@ -117,7 +111,8 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::acquire_space (size_t size)
    * A queue data range has been successfully claimed so overwriting the range
    * should always be successful.
    */
-  m_claimed.store (claim, std::memory_order_release);
+  // m_claimed.store (claim, std::memory_order_release);
+  m_claimed = claim;
 
   return true;
 }
@@ -125,8 +120,9 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::acquire_space (size_t size)
 template <typename Allocator, uint16_t MaxNoDropConsumers>
 void SPMCQueue<Allocator, MaxNoDropConsumers>::release_space ()
 {
-  m_committed.store (m_claimed.load (std::memory_order_relaxed),
-                     std::memory_order_release);
+  // m_committed.store (m_claimed.load (std::memory_order_relaxed),
+  //                    std::memory_order_release);
+  m_committed.store (m_claimed, std::memory_order_release);
 }
 
 template <typename Allocator, uint16_t MaxNoDropConsumers>
@@ -260,15 +256,22 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
 {
   uint64_t consumed = consumer.consumed ();
   /*
-   * Acquire the committed data variable to ensure the data stored in the queue
-   * by the producer thread is visible
+   * Check to see if new data is available. Avoid using synchronisation if no
+   * new data is available.
    *
    * Return false if data is not yet available in the queue
    */
-  if ((m_committed.load (std::memory_order_acquire) - consumed) < size)
+  if (SPMC_EXPECT_TRUE (
+      (m_committed.load (std::memory_order_relaxed) - consumed) < size))
   {
     return false;
   }
+
+  /*
+   * Acquire the committed data variable to ensure the data stored in the queue
+   * by the producer thread is visible
+   */
+  m_committed.load (std::memory_order_acquire);
 
   /*
    * Cache a variable for the duration of the call for a small performance
@@ -398,8 +401,7 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
    * This is only relevant if the consumer is configured to allow message drops
    */
   if (SPMC_EXPECT_FALSE (consumer.message_drops_allowed ()) &&
-      SPMC_EXPECT_FALSE ((m_claimed.load (std::memory_order_acquire)
-                            - consumed + size) > m_capacity))
+      SPMC_EXPECT_FALSE ((m_claimed - consumed + size) > m_capacity))
   {
     consumer.consumed (m_committed);
 
@@ -479,6 +481,9 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::initialise_consumer (
   ProducerType &producer,
   ConsumerType &consumer)
 {
+  /*
+   * Store a local pointer to the shared memory data buffer
+   */
   consumer.queue_ptr (&*m_buffer);
 
   if (consumer.message_drops_allowed ())
