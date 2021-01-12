@@ -784,8 +784,6 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamPODMultiThread)
 
   BOOST_CHECK (throughput.megabytes_per_sec () > 100);
 
-  std::cout << latency_percentile_usecs (stats, 50.) << std::endl;
-
   BOOST_CHECK (latency_percentile_usecs (stats, 50.) > 0);
   BOOST_CHECK (latency_percentile_usecs (stats, 50.) < 100);
 
