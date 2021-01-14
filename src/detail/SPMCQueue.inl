@@ -111,7 +111,6 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::acquire_space (size_t size)
    * A queue data range has been successfully claimed so overwriting the range
    * should always be successful.
    */
-  // m_claimed.store (claim, std::memory_order_release);
   m_claimed = claim;
 
   return true;
@@ -120,8 +119,6 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::acquire_space (size_t size)
 template <typename Allocator, uint16_t MaxNoDropConsumers>
 void SPMCQueue<Allocator, MaxNoDropConsumers>::release_space ()
 {
-  // m_committed.store (m_claimed.load (std::memory_order_relaxed),
-  //                    std::memory_order_release);
   m_committed.store (m_claimed, std::memory_order_release);
 }
 
