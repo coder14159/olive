@@ -13,6 +13,10 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (size_t capacity)
 {
   ASSERT (m_queue.get () != nullptr, "In-process SPMCQueue initialisation failed");
 
+  ASSERT (capacity > sizeof (Header),
+        "SPMCQueue capacity must be greater than header size");
+
+
   m_buffer = m_queue->buffer ();
 }
 
@@ -23,6 +27,9 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
   size_t capacity)
 : m_memory (boost::interprocess::open_only, memoryName.c_str ())
 {
+  ASSERT (capacity > sizeof (Header),
+        "SPMCQueue capacity must be greater than header size");
+
   namespace bi = boost::interprocess;
 
   SharedMemory::Allocator allocator (m_memory.get_segment_manager ());
