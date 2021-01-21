@@ -14,7 +14,7 @@ namespace spmc {
  *
  * It exerts back pressure on the producer if required.
  */
-template<class Mutex, uint16_t MaxNoDropConsumers = MAX_NO_DROP_CONSUMERS_DEFAULT>
+template<class Mutex, uint8_t MaxNoDropConsumers = MAX_NO_DROP_CONSUMERS_DEFAULT>
 class SPMCBackPressure
 {
 public:
@@ -61,6 +61,10 @@ protected:
   Mutex m_mutex;
 
   /*
+   * Count of consumers not allowed to drop messages
+   */
+  uint8_t m_maxConsumerIndex = { 0 };
+  /*
    * Array holding the bytes consumed for each non message dropping consumer
    *
    * TODO: Use boost::small_vector
@@ -75,22 +79,17 @@ protected:
   /*
    * The maximum number of non message dropping consumers configured
    */
-  uint16_t m_maxNoDropConsumers;
-
-  /*
-   * Count of consumers not allowed to drop messages
-   */
-  uint16_t m_maxConsumerIndex = { 0 };
+  uint8_t m_maxNoDropConsumers = { 0 };
 
   /*
    * Current number of consumers
    */
-  uint16_t m_consumerCount = { 0 };
+  uint8_t m_consumerCount = { 0 };
 
   /*
    * Index used to implement fair servicing of the ConsumerArray
    */
-  uint64_t m_lastIndex = { 0 };
+  uint8_t m_lastIndex = { 0 };
 
 };
 
