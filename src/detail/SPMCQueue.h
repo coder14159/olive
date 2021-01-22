@@ -177,13 +177,14 @@ public:
   void allow_message_drops () { m_messageDropsAllowed = true; }
 
 private:
-
+  /*
+   * Local pointer to the shared queue
+   */
+  const uint8_t *m_queue = nullptr;
   /*
    * Number of bytes of data consumed
    */
   uint64_t m_bytes = Consumer::UnInitialised;
-
-  const uint8_t *m_queue = nullptr;
   /*
    * Set to true if message drops are permitted for a consumer
    */
@@ -408,7 +409,7 @@ private:
    * Counter used by the producer to publish a data range
    */
   alignas (CACHE_LINE_SIZE)
-  std::atomic<uint64_t> m_committed = { 0 };
+  uint64_t m_committed = { 0 };
 
   /*
    * A local pointer to data either shared memory or local memory data.

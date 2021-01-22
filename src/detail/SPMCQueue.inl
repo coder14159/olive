@@ -14,8 +14,7 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (size_t capacity)
 , m_buffer (Allocator::allocate (capacity))
 , m_bufferProducer (&*m_buffer)
 {
-  ASSERT (capacity > sizeof (Header),
-          "SPMCQueue capacity must be greater than header size");
+  ASSERT (capacity > 0, "Invalid capacity");
 
   std::fill (m_bufferProducer, m_bufferProducer + m_capacity, 0);
 }
@@ -30,8 +29,7 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
 , m_buffer (Allocator::allocate (capacity))
 , m_bufferProducer (&*m_buffer)
 {
-  ASSERT (capacity > sizeof (Header),
-          "SPMCQueue capacity must be greater than header size");
+  ASSERT (capacity > 0, "Invalid capacity");
 
   std::fill (m_bufferProducer, m_bufferProducer + m_capacity, 0);
 }
@@ -119,7 +117,9 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::acquire_space (size_t size)
 template <typename Allocator, uint16_t MaxNoDropConsumers>
 void SPMCQueue<Allocator, MaxNoDropConsumers>::release_space ()
 {
-  m_committed.store (m_claimed, std::memory_order_release);
+  std::atomic_thread_fence(std::memory_order_release);
+
+  m_committed = m_claimed;
 }
 
 template <typename Allocator, uint16_t MaxNoDropConsumers>
@@ -229,7 +229,9 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::push (
    */
   if (acquire_release == AcquireRelease::Yes)
   {
-    m_committed.fetch_add (size, std::memory_order_release);
+    std::atomic_thread_fence(std::memory_order_release);
+
+    m_committed += size;
   }
 
   return size;
@@ -258,18 +260,16 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
    *
    * Return false if data is not yet available in the queue
    */
-  if (SPMC_EXPECT_TRUE (
-      (m_committed.load (std::memory_order_relaxed) - consumed) < size))
+  if (SPMC_EXPECT_FALSE ((m_committed - consumed) < size))
   {
     return false;
   }
 
   /*
-   * Acquire the committed data variable to ensure the data stored in the queue
-   * by the producer thread is visible
+   * Use acquire fence to ensure the data stored in the queue by the producer
+   * thread is visible after the fence
    */
-  m_committed.load (std::memory_order_acquire);
-
+  std::atomic_thread_fence (std::memory_order_acquire);
   /*
    * Cache a variable for the duration of the call for a small performance
    * improvement, particularly for the in-process consumer as thread-local
@@ -277,19 +277,16 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
    *
    * TODO: move value from consumer.message_drops_allowed to member variable
    */
-  auto bytesCopied = copy_from_buffer (data, size, consumer);
+  size_t bytesCopied = copy_from_buffer (data, size, consumer);
 
-  if (bytesCopied == 0)
-  {
-    return false;
-  }
-
-  if (!consumer.message_drops_allowed ())
+  if (SPMC_EXPECT_TRUE (!consumer.message_drops_allowed () && (bytesCopied > 0)))
   {
     m_backPressure.consumed (consumed + bytesCopied, producer.index ());
+
+    return true;
   }
 
-  return true;
+  return (bytesCopied > 0);
 }
 
 template <typename Allocator, uint16_t MaxNoDropConsumers>
@@ -303,20 +300,15 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::prefetch_to_cache (
           "Consumer message drops facility should not be enabled");
 
   auto consumed = consumer.consumed ();
-  /*
-   * Acquire the committed data variable to ensure the data stored in the queue
-   * by the producer thread is visible to the consumer.
-   */
-  auto committed = m_committed.load (std::memory_order_acquire);
 
-  size_t available = committed - consumed;
+  size_t available = m_committed - consumed;
 
   if (available == 0)
   {
     return false;
   }
   /*
-   * Append as much available data as possible
+   * Append as much available data as possible to the cache
    */
   size_t size = std::min (cache.capacity () - cache.size (), available);
 
@@ -338,8 +330,7 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::copy_to_buffer (
    * m_commit is synchronised after this call in the producer thread so relaxed
    * memory ordering is ok here.
    */
-  size_t index = MODULUS (
-    (m_committed.load (std::memory_order_relaxed) + offset), m_capacity);
+  size_t index = MODULUS ((m_committed + offset), m_capacity);
 
   size_t spaceToEnd = m_capacity - index;
 
@@ -523,14 +514,11 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::initialise_consumer (
      * If producer wrapped the queue before the producer could be informed of
      * the consumer progress then begin consuming at the most recent data.
      */
-    while ((m_committed.load (std::memory_order_acquire) - consumer.consumed ())
-              > m_capacity)
+    while ((m_committed - consumer.consumed ()) > m_capacity)
     {
-      uint64_t committed = m_committed;
+      m_backPressure.consumed (m_committed, producer.index ());
 
-      m_backPressure.consumed (committed, producer.index ());
-
-      consumer.consumed (committed);
+      consumer.consumed (m_committed);
     }
   }
 }
@@ -578,7 +566,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::producer_restarted (
    * The producer has been restarted if the consumed value is larger than
    * the committed index.
    */
-  return (consumer.consumed () > m_committed.load (std::memory_order_relaxed));
+  return (consumer.consumed () > m_committed);
 }
 
 } // namespace detail
