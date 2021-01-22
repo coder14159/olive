@@ -46,7 +46,7 @@ const size_t MESSAGE_SIZE = 128;
  */
 TimeDuration get_test_duration ()
 {
-  Seconds duration (1s);
+  Seconds duration (3s);
 
   if (getenv ("TIMEOUT") != nullptr)
   {
@@ -539,13 +539,13 @@ BOOST_AUTO_TEST_CASE (PerformanceCoreQueueMultiThread)
 
   ScopedLogLevel scoped_log_level (log_level);
 
-  const size_t capacity = 256;
+  const size_t capacity = 8;
 
   using QueueType = detail::SPMCQueue<std::allocator<uint8_t>>;
 
   QueueType queue (capacity);
 
-  bool stop { false };
+  std::atomic<bool> stop { false };
 
   Timer timer;
 
@@ -554,6 +554,10 @@ BOOST_AUTO_TEST_CASE (PerformanceCoreQueueMultiThread)
   int64_t min = Nanoseconds::max ().count ();
   int64_t max = Nanoseconds::min ().count ();
 
+  bool send { false };
+
+  int64_t total_latency = 0;
+
   auto consumer = std::thread ([&] () {
 
     QueueType::ProducerType producer_info;
@@ -561,37 +565,44 @@ BOOST_AUTO_TEST_CASE (PerformanceCoreQueueMultiThread)
 
     queue.consumer_checks (producer_info, consumer_info);
 
-    int64_t timestamp;
+    int64_t timestamp = 0;
+
+    Timer timer;
 
     for (int64_t i = 0; ; ++i)
     {
       if (stop)
       {
+        timer.stop ();
         break;
       }
 
       if (queue.pop (timestamp, producer_info, consumer_info))
       {
+        int64_t diff = nanoseconds_since_epoch (Clock::now ()) - timestamp;
+
+        total_latency += diff;
+
+        min = (min < diff) ? min : diff;
+        max = (max > diff) ? max : diff;
+
         ++messages_consumed;
 
-        if ((i % 1000) == 0)
-        {
-          int64_t diff = nanoseconds_since_epoch (Clock::now ()) - timestamp;
-
-          min = (min < diff) ? min : diff;
-          max = (max > diff) ? max : diff;
-        }
+        send = true;
       }
     }
+
+    send = false;
   });
 
-  auto producer = std::thread ([&stop, &queue] () {
+  auto producer = std::thread ([&stop, &queue, &send] () {
 
-    while (!stop)
+    while (!stop.load (std::memory_order_relaxed))
     {
       if (queue.push (nanoseconds_since_epoch (Clock::now ())))
       {
-        std::this_thread::sleep_for (Microseconds (1));
+        while (!send && !stop)
+        {}
       }
     }
   });
@@ -603,13 +614,27 @@ BOOST_AUTO_TEST_CASE (PerformanceCoreQueueMultiThread)
   producer.join ();
   consumer.join ();
 
-  BOOST_CHECK ((messages_consumed/to_seconds (get_test_duration ())) > 1000);
+  BOOST_CHECK ((messages_consumed/to_seconds (timer.elapsed ())) > 1000);
 
   BOOST_CHECK (messages_consumed > 1e3);
 
   // values are in nanoseconds
-  BOOST_CHECK (min < 1e6);   // min < 1 us
-  BOOST_CHECK (max < 1e9);   // max < 1 ms
+  BOOST_CHECK (min < 1e3);    // min <  1 us
+  BOOST_CHECK (max < 20e6);   // max < 20 ms
+
+  BOOST_TEST_MESSAGE ("Latency");
+  BOOST_TEST_MESSAGE ("min:\t" << nanoseconds_to_pretty (min));
+  BOOST_TEST_MESSAGE ("avg:\t" << nanoseconds_to_pretty (
+                      total_latency / messages_consumed));
+  BOOST_TEST_MESSAGE ("max:\t" << nanoseconds_to_pretty (max));
+  BOOST_TEST_MESSAGE ("---");
+
+  auto rate = static_cast<uint64_t>((messages_consumed/1e6)
+                                      / to_seconds (timer.elapsed ()));
+
+  BOOST_CHECK (rate > 1);   // rate > 1 M ops/sec
+  BOOST_TEST_MESSAGE ("Rate:\t" << rate << " M ops/sec");
+
 }
 
 BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiThread)
@@ -1157,7 +1182,10 @@ BOOST_AUTO_TEST_CASE (ThreadIdentity)
       }
     });
 
-    std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
+    /*
+     * Test for a short period only otherwise count exceeds max counter value
+     */
+    std::this_thread::sleep_for (Seconds (1));
 
     stop = true;
     test_bare.join ();
