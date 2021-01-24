@@ -110,7 +110,7 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::unregister_consumer (size_t in
 template<class Mutex, uint8_t MaxNoDropConsumers>
 bool SPMCBackPressure<Mutex, MaxNoDropConsumers>::has_non_drop_consumers () const
 {
-  return m_hasNonDropConsumers;
+  return m_hasNonDropConsumers.load (std::memory_order_relaxed);
 }
 
 template<class Mutex, uint8_t MaxNoDropConsumers>
