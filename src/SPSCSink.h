@@ -24,9 +24,17 @@ public:
             size_t             queueSize);
 
   /*
-   * Send a data packet to the shared memory queue
+   * Send a data packet to a shared memory queue
    */
   void next (const std::vector<uint8_t> &data);
+
+  /*
+   * Send a data packet to a shared memory queue.
+   *
+   * If sending to multiple queues it is more accurate to use ther same
+   * timestamp for each queue.
+   */
+  void next (const std::vector<uint8_t> &data, TimePoint timestamp);
 
   /*
    * Send a null message to keep the cache warm
@@ -40,16 +48,14 @@ public:
 private:
   std::string m_name;
 
-  SharedMemory::SPSCQueue *m_queue = { nullptr };
+  boost::interprocess::managed_shared_memory m_memory;
 
-  uint64_t m_sequenceNumber = 0;
+  SharedMemory::Allocator m_allocator;
 
   alignas (CACHE_LINE_SIZE)
   std::atomic<bool> m_stop = { false };
 
-  boost::interprocess::managed_shared_memory m_memory;
-
-  SharedMemory::Allocator m_allocator;
+  uint64_t m_sequenceNumber = 0;
 
   alignas (CACHE_LINE_SIZE)
   Header m_warmupHdr = {
@@ -59,6 +65,8 @@ private:
       0,
       DEFAULT_TIMESTAMP
   };
+
+  SharedMemory::SPSCQueue *m_queue = { nullptr };
 };
 
 }

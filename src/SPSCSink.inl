@@ -8,9 +8,9 @@ SPSCSink::SPSCSink (const std::string &memoryName,
                     const std::string &objectName,
                     size_t             queueSize)
 
-: m_name (objectName),
-  m_memory (bi::managed_shared_memory (bi::open_only, memoryName.c_str())),
-  m_allocator (m_memory.get_segment_manager ())
+: m_name (objectName)
+, m_memory (bi::managed_shared_memory (bi::open_only, memoryName.c_str()))
+, m_allocator (m_memory.get_segment_manager ())
 {
   // TODO clients could create queue and notify sink/server
   // TODO maybe support multiple queues in a single sink
@@ -32,13 +32,19 @@ void SPSCSink::stop ()
 inline
 void SPSCSink::next (const std::vector<uint8_t> &data)
 {
+  next (data, Clock::now ());
+}
+
+inline
+void SPSCSink::next (const std::vector<uint8_t> &data, TimePoint timestamp)
+{
   ++m_sequenceNumber;
 
   Header header;
 
   header.size      = data.size ();
   header.seqNum    = m_sequenceNumber;
-  header.timestamp = Clock::now ().time_since_epoch ().count ();
+  header.timestamp = timestamp.time_since_epoch ().count ();
 
   auto &queue = *m_queue;
   /*
