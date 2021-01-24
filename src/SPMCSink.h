@@ -60,7 +60,7 @@ public:
 private:
 
   alignas (CACHE_LINE_SIZE)
-  bool m_stop = { false };
+  std::atomic<bool> m_stop = { false };
 
   alignas (CACHE_LINE_SIZE)
   uint64_t m_sequenceNumber = 0;
