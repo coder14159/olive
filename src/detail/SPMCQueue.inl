@@ -330,9 +330,9 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::copy_to_buffer (
    * m_commit is synchronised after this call in the producer thread so relaxed
    * memory ordering is ok here.
    */
-  size_t index = MODULUS ((m_committed + offset), m_capacity);
+  const size_t index = MODULUS ((m_committed + offset), m_capacity);
 
-  size_t spaceToEnd = m_capacity - index;
+  const size_t spaceToEnd = m_capacity - index;
 
   if (size <= spaceToEnd)
   {
