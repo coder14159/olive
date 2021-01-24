@@ -78,7 +78,7 @@ void server (const std::string& name,
   // initialise the sinks for sending
   std::vector<std::unique_ptr<SPSCSink>> sinks;
 
-  for (int i = 1; i < numClients+1; ++i)
+  for (int i = 1; i <= numClients; ++i)
   {
     std::string objectName = name + ":sink:" + std::to_string (i);
 
@@ -106,9 +106,14 @@ void server (const std::string& name,
   // wait for clients to be ready
   SharedMemoryCounter clientsReady (name + ":client:ready", name);
 
-  BOOST_LOG_TRIVIAL (info) << "Waiting for " << numClients << " clients..";
-
   int toConnect = numClients;
+
+  auto log_waiting_for_clients = [&toConnect] () {
+    BOOST_LOG_TRIVIAL (info) << "Waiting for " << toConnect
+                             << ((toConnect > 1) ? " clients.." : " client..");
+  };
+
+  log_waiting_for_clients ();
 
   while (clientsReady.get () < numClients && !stop)
   {
@@ -117,15 +122,17 @@ void server (const std::string& name,
     if ((numClients - clientsReady.get ()) != toConnect)
     {
       toConnect = numClients - clientsReady.get ();
-
       if (toConnect > 0)
       {
-        BOOST_LOG_TRIVIAL (info) << "Waiting for " << toConnect << " clients..";
+        log_waiting_for_clients ();
       }
     }
   }
 
-  BOOST_LOG_TRIVIAL (info) << numClients << " client ready";
+  BOOST_LOG_TRIVIAL (info)
+    << ((numClients > 1) ? (std::to_string (numClients) + " clients")
+                         : "Client")
+    << " ready";
 
   // create a reusable test message
   std::vector<uint8_t> message (messageSize, 0);
@@ -134,14 +141,26 @@ void server (const std::string& name,
 
   Throttle throttle (rate);
 
+  size_t first = 0;
+  size_t sinkCount = sinks.size ();
+
+  TimePoint timestamp;
+
   while (SPMC_EXPECT_TRUE (!stop))
   {
-    for (auto &sink : sinks)
+    timestamp = Clock::now ();
+    /*
+     * Rotate the queue which receives data first for fair data distribution of
+     * message latencies and throttling
+     */
+    for (size_t i = first; i < first + sinkCount; ++i)
     {
-      sink->next (message);
+      sinks[MODULUS (i, sinkCount)]->next (message, timestamp);
     }
 
-    throttle.throttle<SPSCSink> (*sinks.back ());
+    throttle.throttle<SPSCSink> (*sinks[first]);
+
+    first = ((first + 1) < sinkCount) ? first + 1 : 0;
   }
 }
 
