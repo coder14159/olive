@@ -81,7 +81,7 @@ private:
 
   std::atomic<bool> m_stop = { false };
 
-  std::unique_ptr<QueueType> m_queueObj;
+  std::unique_ptr<QueueType> m_queuePtr;
 
   QueueType &m_queue;
 
