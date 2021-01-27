@@ -23,10 +23,11 @@ namespace spmc {
 template <typename QueueType>
 class SPMCStream
 {
-public:
+private:
   SPMCStream (const SPMCStream &) = delete;
   SPMCStream & operator= (const SPMCStream &) = delete;
 
+public:
   /*
    * Initialise a stream consuming from named shared memory
    */
