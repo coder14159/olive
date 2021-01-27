@@ -4,7 +4,8 @@ namespace bi = ::boost::interprocess;
 
 using namespace ::std::literals::chrono_literals;
 
-SPSCSink::SPSCSink (const std::string &memoryName,
+template <typename Allocator>
+SPSCSink<Allocator>::SPSCSink (const std::string &memoryName,
                     const std::string &objectName,
                     size_t             queueSize)
 
@@ -23,20 +24,20 @@ SPSCSink::SPSCSink (const std::string &memoryName,
             "shared memory object initialisation failed: " << objectName);
 }
 
-
-void SPSCSink::stop ()
+template <typename Allocator>
+void SPSCSink<Allocator>::stop ()
 {
   m_stop = true;
 }
 
-inline
-void SPSCSink::next (const std::vector<uint8_t> &data)
+template <typename Allocator>
+void SPSCSink<Allocator>::next (const std::vector<uint8_t> &data)
 {
   next (data, Clock::now ());
 }
 
-inline
-void SPSCSink::next (const std::vector<uint8_t> &data, TimePoint timestamp)
+template <typename Allocator>
+void SPSCSink<Allocator>::next (const std::vector<uint8_t> &data, TimePoint timestamp)
 {
   ++m_sequenceNumber;
 
@@ -61,7 +62,8 @@ void SPSCSink::next (const std::vector<uint8_t> &data, TimePoint timestamp)
   queue.push (data.data (), header.size);
 }
 
-void SPSCSink::next_keep_warm ()
+template <typename Allocator>
+void SPSCSink<Allocator>::next_keep_warm ()
 {
   // TODO store the queue pointer
   auto &queue = *m_queue;
