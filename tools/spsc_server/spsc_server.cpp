@@ -76,13 +76,13 @@ void server (const std::string& name,
   // TODO a single multi sink could encapsulate sending to all streams
 
   // initialise the sinks for sending
-  std::vector<std::unique_ptr<SPSCSink>> sinks;
+  std::vector<std::unique_ptr<SPSCSinkProcess>> sinks;
 
   for (int i = 1; i <= numClients; ++i)
   {
     std::string objectName = name + ":sink:" + std::to_string (i);
 
-    auto sink = std::make_unique<SPSCSink> (name, objectName, queueSize);
+    auto sink = std::make_unique<SPSCSinkProcess> (name, objectName, queueSize);
 
     sinks.push_back (std::move (sink));
   }
@@ -158,7 +158,7 @@ void server (const std::string& name,
       sinks[MODULUS (i, sinkCount)]->next (message, timestamp);
     }
 
-    throttle.throttle<SPSCSink> (*sinks[first]);
+    throttle.throttle<SPSCSinkProcess> (*sinks[first]);
 
     first = ((first + 1) < sinkCount) ? first + 1 : 0;
   }
