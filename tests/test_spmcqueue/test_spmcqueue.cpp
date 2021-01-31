@@ -1124,13 +1124,13 @@ BOOST_AUTO_TEST_CASE (TooManyConsumers)
 }
 
 /*
- * Restart the client consuming from the same server
+ * Restart the client consuming data from a server
  */
 BOOST_AUTO_TEST_CASE (RestartClient)
 {
   ScopedLogLevel log (error);
 
-  using QueueType = SPMCQueue<std::allocator<uint8_t>>;
+  using QueueType = SPMCQueue<std::allocator<uint8_t>, 4>;
   QueueType queue (500);
 
   size_t   messageSize = 68; // packet size is 100 bytes including header
