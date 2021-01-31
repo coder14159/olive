@@ -27,7 +27,7 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
 : Allocator  (allocator)
 , m_capacity (capacity)
 , m_buffer (Allocator::allocate (capacity))
-, m_bufferProducer (&*m_buffer)
+, m_bufferProducer (buffer ())
 {
   ASSERT (capacity > 0, "Invalid capacity");
 
