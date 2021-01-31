@@ -203,20 +203,18 @@ template <typename Allocator,
 class SPMCQueue : private Allocator
 {
 private:
-  static_assert (std::is_same<typename Allocator::value_type, uint8_t>::value,
-                 "Invalid allocator value_type");
 
   SPMCQueue (const SPMCQueue &) = delete;
 
 public:
 
   typedef typename std::conditional<
-          std::is_same<std::allocator<uint8_t>, Allocator>::value,
+          std::is_same<std::allocator<typename Allocator::value_type>, Allocator>::value,
           InprocessProducer,
           SharedMemoryProducer>::type ProducerType;
 
   typedef typename std::conditional<
-          std::is_same<std::allocator<uint8_t>, Allocator>::value,
+          std::is_same<std::allocator<typename Allocator::value_type>, Allocator>::value,
           InprocessConsumer,
           SharedMemoryConsumer>::type ConsumerType;
 
@@ -371,11 +369,8 @@ private:
 
 private:
 
-  static_assert (std::is_same<typename Allocator::value_type, uint8_t>::value,
-                 "value_type for the allocator must be uint8_t");
-
   typedef typename std::conditional<
-          std::is_same<std::allocator<uint8_t>, Allocator>::value,
+          std::is_same<std::allocator<typename Allocator::value_type>, Allocator>::value,
           SPMCBackPressure<std::mutex,
                            MaxNoDropConsumers>,
           SPMCBackPressure<SharedMemoryMutex,
@@ -392,29 +387,28 @@ private:
    * Consumer threads use this counter to check if a producer has begun
    * ovewriting a range which the consumer has just read.
    */
+  alignas (CACHE_LINE_SIZE)
   uint64_t m_claimed  { 0 };
   /*
-   * Pointer to data in either local memory or shared memory
+   * Definition of a pointer to shared data in either local or shared memory
    */
   typedef typename Allocator::pointer Pointer;
-
   /*
    * A buffer held in shared or heap memory used by the producer to pass data
    * to the consumers
    */
   alignas (CACHE_LINE_SIZE)
   Pointer m_buffer = { nullptr };
-
   /*
    * Counter used by the producer to publish a data range
    */
   alignas (CACHE_LINE_SIZE)
-  uint64_t m_committed = { 0 };
-
+  std::atomic<uint64_t> m_committed = { 0 };
   /*
-   * A local pointer to data either shared memory or local memory data.
+   * A thread or process local pointer to shared memory data.
    *
-   * An optimisation if data is in shared memory.
+   * If data is in shared memory access is faster if a pointer to the
+   * de-referenced memory is stored
    */
   typedef uint8_t* LocalPointer;
 

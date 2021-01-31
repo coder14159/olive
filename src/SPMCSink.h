@@ -17,10 +17,11 @@ namespace spmc {
 template <typename QueueType>
 class SPMCSink
 {
-public:
+private:
   SPMCSink (const SPMCSink &) = delete;
   SPMCSink & operator= (const SPMCSink &) = delete;
 
+public:
   /*
    * Create a sink object for use in a single process by multiple threads
    */
@@ -60,6 +61,9 @@ public:
 private:
 
   alignas (CACHE_LINE_SIZE)
+  QueueType m_queue;
+
+  alignas (CACHE_LINE_SIZE)
   std::atomic<bool> m_stop = { false };
 
   alignas (CACHE_LINE_SIZE)
@@ -73,8 +77,6 @@ private:
       0,
       DEFAULT_TIMESTAMP
   };
-
-  QueueType m_queue;
 };
 
 /*

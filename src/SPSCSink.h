@@ -16,12 +16,24 @@ namespace spmc {
 /*
  * Use SPSCSink to put data into the shared memory queue.
  */
+template <class Allocator>
 class SPSCSink
 {
+private:
+  SPSCSink (const SPSCSink &) = delete;
+  SPSCSink & operator= (const SPSCSink &) = delete;
 public:
+  /*
+   * Create a sink object for use in a single process by multiple threads
+   */
+  SPSCSink (size_t capacity);
+
+  /*
+   * Create a sink object in shared memory for use by multiple processes
+   */
   SPSCSink (const std::string &memoryName,
             const std::string &objectName,
-            size_t             queueSize);
+            size_t             capacity);
 
   /*
    * Send a data packet to a shared memory queue
@@ -69,7 +81,13 @@ private:
   SharedMemory::SPSCQueue *m_queue = { nullptr };
 };
 
-}
+/*
+ * Helper types
+ */
+using SPSCSinkProcess = SPSCSink<SharedMemory::Allocator>;
+using SPSCSinkThread  = SPSCSink<std::allocator<uint8_t>>;
+
+} // spmc
 
 #include "SPSCSink.inl"
 

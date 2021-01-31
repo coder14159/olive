@@ -4,10 +4,11 @@ namespace spmc {
 
 namespace bi = boost::interprocess;
 
-SPSCStream::SPSCStream (const std::string &name)
+template <typename Allocator>
+SPSCStream<Allocator>::SPSCStream (const std::string &memoryName)
 {
 	// open an existing shared memory segment
-  m_memory = bi::managed_shared_memory (bi::open_only, name.c_str());
+  m_memory = bi::managed_shared_memory (bi::open_only, memoryName.c_str());
 
   // swap in a valid segment manager
 
@@ -15,7 +16,7 @@ SPSCStream::SPSCStream (const std::string &name)
    std::make_unique<SharedMemory::Allocator> (m_memory.get_segment_manager ());
 
   // increment the counter indicating when the client is ready
-  std::string readyCounterName = name + ":client:ready";
+  std::string readyCounterName = memoryName + ":client:ready";
   auto readyCounter =
     m_memory.find<SharedMemory::Counter> (readyCounterName.c_str ()).first;
 
@@ -23,22 +24,21 @@ SPSCStream::SPSCStream (const std::string &name)
     "client ready counter initialisation failed: " << readyCounterName);
 
   // create a queue for streaming data
-  std::string queueCounterName = name + ":queue:counter";
+  std::string queueCounterName = memoryName + ":queue:counter";
   auto queueCounter =
     m_memory.find_or_construct<SharedMemory::Counter> (queueCounterName.c_str ())();
 
   ASSERT_SS (queueCounter != nullptr,
     "queue counter initialisation failed: " << queueCounterName);
 
-  auto &counter = *queueCounter;
-  int index = ++counter;
+  int index = ++(*queueCounter);
 
-  auto queueName = name + ":sink:" + std::to_string (index);
+  auto queueName = memoryName + ":sink:" + std::to_string (index);
 
-  m_queue = m_memory.find_or_construct<SharedMemory::SPSCQueue> (
+  m_queuePtr = m_memory.find_or_construct<SharedMemory::SPSCQueue> (
                                         queueName.c_str())(1, *m_allocator);
 
-  ASSERT_SS (m_queue != nullptr,
+  ASSERT_SS (m_queuePtr != nullptr,
     "Failed to create shared memory queue: " << queueName);
 
   BOOST_LOG_TRIVIAL(info) << "SPSCStream constructed " << queueName;
@@ -46,12 +46,14 @@ SPSCStream::SPSCStream (const std::string &name)
   ++(*readyCounter);
 }
 
-SPSCStream::~SPSCStream ()
+template <typename Allocator>
+SPSCStream<Allocator>::~SPSCStream ()
 {
   stop ();
 }
 
-void SPSCStream::stop ()
+template <typename Allocator>
+void SPSCStream<Allocator>::stop ()
 {
   if (!m_stop)
   {
@@ -59,7 +61,8 @@ void SPSCStream::stop ()
   }
 }
 
-bool SPSCStream::next (Header &header, std::vector<uint8_t> &data)
+template <typename Allocator>
+bool SPSCStream<Allocator>::next (Header &header, std::vector<uint8_t> &data)
 {
   while (!m_stop.load (std::memory_order_relaxed))
   {
@@ -68,13 +71,13 @@ bool SPSCStream::next (Header &header, std::vector<uint8_t> &data)
       continue;
     }
 
-    if (header.type != WARMUP_MESSAGE_TYPE && header.size > 0)
+    if (SPMC_EXPECT_TRUE (header.type != WARMUP_MESSAGE_TYPE && header.size > 0))
     {
       data.resize (header.size);
 
       while (!m_stop.load (std::memory_order_relaxed))
       {
-        if (pop (data.data (), header.size) > 0)
+        if (SPMC_EXPECT_TRUE (pop (data.data (), header.size) > 0))
         {
           return true;
         }
@@ -85,18 +88,20 @@ bool SPSCStream::next (Header &header, std::vector<uint8_t> &data)
   return false;
 }
 
+template <typename Allocator>
 template<typename POD>
-bool SPSCStream::pop (POD &pod)
+bool SPSCStream<Allocator>::pop (POD &pod)
 {
   return pop (reinterpret_cast<uint8_t*> (&pod), sizeof (POD));
 }
 
-bool SPSCStream::pop (uint8_t *data, size_t size)
+template <typename Allocator>
+bool SPSCStream<Allocator>::pop (uint8_t *data, size_t size)
 {
   /*
    * The queue potentially in shared memory
    */
-  auto &queue = *m_queue;
+  auto &queue = *m_queuePtr;
 
   auto available = queue.read_available ();
 
@@ -111,63 +116,5 @@ bool SPSCStream::pop (uint8_t *data, size_t size)
 
   return popped_size;
 }
-
-#if 0
-size_t SPSCStream::receive (uint8_t* data, size_t size)
-{
-  /*
-   * The queue potentially in shared memory
-   */
-  auto &queue = *m_queue;
-
-
-  // TODO need receive policies (eg backoff/yield)
-  auto available = queue.read_available ();
-
-  if (available == 0)
-  {
-    return 0;
-  }
-
-  if (!m_cacheEnabled)
-  {
-    if (available >= size)
-    {
-      return queue.pop (data, size);
-    }
-    return false;
-  }
-
-  /*
-   * TODO: needs work - drain the cache before disabling
-   */
-  if (m_cache.capacity () < size)
-  {
-    BOOST_LOG_TRIVIAL (info)
-      << "Disabling local SPSCStream cache as it is too small"
-      << " (cache capacity: " << m_cache.capacity ()
-      << " message size " << size << ")";
-
-    m_cacheEnabled = false;
-
-    return false;
-  }
-
-  /*
-   * The cache is enabled
-   */
-  if (m_cache.size () < size)
-  {
-    /*
-     * Push a batch of data taken from the queue into the cache.
-     */
-    m_cache.push (queue);
-  }
-
-  m_cache.pop (static_cast<uint8_t*> (data), size);
-
-  return size;
-}
-#endif
 
 } // namespace spmc {

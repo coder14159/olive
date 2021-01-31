@@ -87,7 +87,7 @@ int main(int argc, char* argv[]) try
     BOOST_LOG_TRIVIAL (info) << "Bind to CPU: " << cpu;
   }
 
-  SPSCStream stream (name);
+  SPSCStreamProcess stream (name);
 
   bool stop = { false };
 
@@ -126,11 +126,6 @@ int main(int argc, char* argv[]) try
   {
     if (stream.next (header, data))
     {
-      if (header.type == WARMUP_MESSAGE_TYPE)
-      {
-        continue;
-      }
-
       stats.update (sizeof (Header) + header.size, header.seqNum,
                     timepoint_from_nanoseconds_since_epoch (header.timestamp));
       if (test)

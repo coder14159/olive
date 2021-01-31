@@ -6,8 +6,6 @@
 #include <iomanip>
 #include <memory>
 
-namespace bi = boost::interprocess;
-
 namespace spmc {
 
 template <typename QueueType>
@@ -15,8 +13,8 @@ SPMCStream<QueueType>::SPMCStream (const std::string &memoryName,
                         const std::string &queueName,
                         bool allowMessageDrops,
                         size_t prefetchSize)
-: m_queueObj (std::make_unique<QueueType> (memoryName, queueName)),
-  m_queue (*m_queueObj)
+: m_queuePtr (std::make_unique<QueueType> (memoryName, queueName)),
+  m_queue (*m_queuePtr)
 {
   init (allowMessageDrops, prefetchSize);
 }
@@ -69,8 +67,7 @@ bool SPMCStream<QueueType>::next (Header &header, Vector &data)
 {
   while (!m_stop.load (std::memory_order_relaxed))
   {
-    if (SPMC_EXPECT_TRUE (m_queue.pop (header, data) &&
-                          header.type != WARMUP_MESSAGE_TYPE))
+    if (SPMC_EXPECT_TRUE (m_queue.pop (header, data)))
     {
       return true;
     }

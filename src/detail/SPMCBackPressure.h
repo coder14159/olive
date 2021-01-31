@@ -67,8 +67,9 @@ protected:
   /*
    * Array holding the bytes consumed for each non message dropping consumer
    *
-   * TODO: Use boost::small_vector
+   * TODO: Maybe use boost::small_vector
    */
+  alignas (CACHE_LINE_SIZE)
   std::array<uint64_t, MaxNoDropConsumers> m_consumed;
 
   /*

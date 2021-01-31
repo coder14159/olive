@@ -19,10 +19,15 @@ namespace spmc {
 /*
  * Stream shared memory data from a single producer / single consumer queue
  */
+template <typename Allocator>
 class SPSCStream
 {
+private:
+  SPSCStream (const SPSCStream &) = delete;
+  SPSCStream & operator= (const SPSCStream &) = delete;
+
 public:
-  SPSCStream (const std::string &name);
+  SPSCStream (const std::string &memoryName);
   ~SPSCStream ();
 
   /*
@@ -44,6 +49,8 @@ private:
 
 private:
 
+  std::atomic<bool> m_stop = { false };
+
   using QueueType = SharedMemory::SPSCQueue;
 
   /*
@@ -52,21 +59,20 @@ private:
    * inter-thread communication.
    */
   alignas (CACHE_LINE_SIZE)
-  QueueType *m_queue = { nullptr };
-
-  bool m_allowDrops = false;
-
-  std::atomic<bool> m_stop = { false };
+  QueueType *m_queuePtr = { nullptr };
 
   alignas (CACHE_LINE_SIZE)
   std::unique_ptr<SharedMemory::Allocator> m_allocator;
 
-  alignas (CACHE_LINE_SIZE)
-  Buffer<std::allocator<uint8_t>> m_cache;
-
   boost::interprocess::managed_shared_memory m_memory;
 
 };
+
+/*
+ * Helper types
+ */
+using SPSCStreamProcess = SPSCStream<SharedMemory::Allocator>;
+using SPSCStreamThread  = SPSCStream<std::allocator<uint8_t>>;
 
 } // namespace spmc
 

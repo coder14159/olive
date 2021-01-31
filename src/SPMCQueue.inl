@@ -202,7 +202,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   {
     if (SPMC_EXPECT_TRUE (m_queue->pop (header, m_producer, m_consumer) > 0))
     {
-      if (header.type == WARMUP_MESSAGE_TYPE)
+      if (SPMC_EXPECT_FALSE (header.type == WARMUP_MESSAGE_TYPE))
       {
         return false;
       }

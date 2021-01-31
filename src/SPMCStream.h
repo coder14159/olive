@@ -23,10 +23,11 @@ namespace spmc {
 template <typename QueueType>
 class SPMCStream
 {
-public:
+private:
   SPMCStream (const SPMCStream &) = delete;
   SPMCStream & operator= (const SPMCStream &) = delete;
 
+public:
   /*
    * Initialise a stream consuming from named shared memory
    */
@@ -81,7 +82,7 @@ private:
 
   std::atomic<bool> m_stop = { false };
 
-  std::unique_ptr<QueueType> m_queueObj;
+  std::unique_ptr<QueueType> m_queuePtr;
 
   QueueType &m_queue;
 
