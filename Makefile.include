@@ -87,11 +87,29 @@ CXXFLAGS          += -Wl,-rpath=$(BOOST_LIB_DIR)
 CXXOPTS_BASE_DIR   := $(THIRD_PARTY_DIR)/cxxopts-2.2.0
 CXXOPTS_HEADER_DIR := $(CXXOPTS_BASE_DIR)/include
 
+# Intel VTune
+ifdef VTUNE
+  CXXFLAGS  += -DVTUNE=1
+
+  VTUNE_DIR := /run/media/ian/Elements/thirdparty/intel/dev_tools/sw_dev_tools/vtune_profiler_2020.2.0.610396
+  CXXFLAGS  += -I$(VTUNE_DIR)/include
+  CXXFLAGS  += -L$(VTUNE_DIR)/sdk/lib64
+  CXXFLAGS  += -Wl,-rpath=$(VTUNE_DIR)/sdk/lib64
+  CXXFLAGS  += -L$(VTUNE_DIR)/lib64/runtime
+
+  THIRD_PARTY_LIBS += $(LIB_VTUNE_NOTIFY)
+endif
+
 # Valgrind
 ifdef VALGRIND
   VALGRIND_BASE_DIR   := $(THIRD_PARTY_DIR)/valgrind/build/$(PROCESSOR)
   VALGRIND_HEADER_DIR := $(VALGRIND_BASE_DIR)/include
   CXXFLAGS            += -I$(VALGRIND_HEADER_DIR)
 endif
+
+#ifdef MOODYCAMEL
+  MOODYCAMEL_DIR := thirdparty
+  CXXFLAGS       += -I$(MOODYCAMEL_DIR)
+#endif
 
 ROOT_DIR := $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
