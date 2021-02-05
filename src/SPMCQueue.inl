@@ -200,12 +200,9 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
    */
   if (SPMC_EXPECT_TRUE (!m_cacheEnabled))
   {
-    if (SPMC_EXPECT_TRUE (m_queue->pop (header, m_producer, m_consumer) > 0))
+    if (SPMC_EXPECT_TRUE (m_queue->pop (header, m_producer, m_consumer) > 0 &&
+                          header.type != WARMUP_MESSAGE_TYPE))
     {
-      if (SPMC_EXPECT_FALSE (header.type == WARMUP_MESSAGE_TYPE))
-      {
-        return false;
-      }
       /*
        * If no message drops are permitted for the consumer then both header and
        * data are available as they are pushed as one atomic unit.
@@ -255,7 +252,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
     m_queue->prefetch_to_cache (m_cache, m_producer, m_consumer);
   }
 
-  if (m_cache.pop (header))
+  if (m_cache.pop (header) && header.type != WARMUP_MESSAGE_TYPE)
   {
     if (m_cache.capacity () < (header.size))
     {
