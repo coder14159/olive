@@ -388,9 +388,10 @@ private:
    * ovewriting a range which the consumer has just read.
    */
   alignas (CACHE_LINE_SIZE)
-  uint64_t m_claimed  { 0 };
+  uint64_t m_claimed = { 0 };
   /*
-   * Definition of a pointer to shared data in either local or shared memory
+   * Definition of a pointer to data accessed by either multiple threads or
+   * mulitple processes
    */
   typedef typename Allocator::pointer Pointer;
   /*

@@ -64,13 +64,6 @@ protected:
    * Count of consumers not allowed to drop messages
    */
   uint8_t m_maxConsumerIndex = { 0 };
-  /*
-   * Array holding the bytes consumed for each non message dropping consumer
-   *
-   * TODO: Maybe use boost::small_vector
-   */
-  alignas (CACHE_LINE_SIZE)
-  std::array<uint64_t, MaxNoDropConsumers> m_consumed;
 
   /*
    * True if there are any non message dropping consumers
@@ -92,6 +85,11 @@ protected:
    */
   uint8_t m_lastIndex = { 0 };
 
+  /*
+   * Array holding the bytes consumed for each non message dropping consumer
+   */
+  alignas (CACHE_LINE_SIZE)
+  std::array<uint64_t, MaxNoDropConsumers> m_consumed;
 };
 
 } // namespace spmc {
