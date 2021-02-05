@@ -30,7 +30,7 @@ enum AcquireRelease
    *
    * See also methods
    *
-   * detail::SPMCQueue::acquire_space (..)  and
+   * detail::SPMCQueue::acquire_space (..)
    * detail::SPMCQueue::release_space (..)
    */
   Yes,
