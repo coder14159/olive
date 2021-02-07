@@ -10,6 +10,7 @@
 
 #include <boost/log/trivial.hpp>
 
+#include <bits/stdc++.h>
 #include <thread>
 
 using namespace spmc;
@@ -60,6 +61,11 @@ CxxOptsHelper parse (int argc, char* argv[])
 
 int main(int argc, char* argv[]) try
 {
+  /*
+   * Improve I/O latency by switching off synchronisation
+   */
+  std::ios_base::sync_with_stdio (false);
+
   auto options = parse (argc, argv);
 
   auto name            = options.required<std::string> ("name");

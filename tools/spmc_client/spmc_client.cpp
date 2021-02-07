@@ -10,6 +10,7 @@
 
 #include <boost/log/trivial.hpp>
 
+#include <bits/stdc++.h>
 #include <exception>
 #include <set>
 
@@ -63,6 +64,11 @@ CxxOptsHelper parse (int argc, char* argv[])
 
 int main(int argc, char* argv[]) try
 {
+  /*
+   * Improve I/O latency by switching off synchronisation
+   */
+  std::ios_base::sync_with_stdio (false);
+
   auto options = parse (argc, argv);
 
   /*
@@ -109,9 +115,9 @@ int main(int argc, char* argv[]) try
 
     if (!stop)
     {
-      stop = true;
-
       stream.stop ();
+
+      stop = true;
 
       std::cout << "Stopping spmc_client" << std::endl;
     }
