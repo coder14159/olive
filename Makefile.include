@@ -109,9 +109,4 @@ ifdef VALGRIND
   CXXFLAGS            += -I$(VALGRIND_HEADER_DIR)
 endif
 
-#ifdef MOODYCAMEL
-  MOODYCAMEL_DIR := thirdparty
-  CXXFLAGS       += -I$(MOODYCAMEL_DIR)
-#endif
-
 ROOT_DIR := $(dir $(realpath $(firstword $(MAKEFILE_LIST))))

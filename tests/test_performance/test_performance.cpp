@@ -15,8 +15,6 @@
 #include <boost/container/static_vector.hpp>
 #include <boost/log/trivial.hpp>
 
-#include "moodycamel/concurrentqueue.h"
-
 #include <cstdlib>
 #include <ext/numeric>
 #include <functional>
@@ -1640,120 +1638,6 @@ BOOST_AUTO_TEST_CASE (PerformanceSPSCQueue)
                       total_latency / messages_consumed));
   BOOST_TEST_MESSAGE ("  max:\t\t" << nanoseconds_to_pretty (max));
 
-  BOOST_TEST_MESSAGE ("Enqueue blocked: "
-    << throughput_messages_to_pretty (enqueue_fail, timer.elapsed ()));
-  BOOST_TEST_MESSAGE (" ");
-}
-
-BOOST_AUTO_TEST_CASE (PerformanceMoodyCamel)
-{
-  BOOST_TEST_MESSAGE ("PerformanceMoodyCamel");
-  std::string log_level = "ERROR";
-
-  if (getenv ("LOG_LEVEL") != nullptr)
-  {
-    log_level = getenv ("LOG_LEVEL");
-  }
-
-  ScopedLogLevel scoped_log_level (log_level);
-
-  const size_t capacity = 64;
-
-  moodycamel::ConcurrentQueue<int64_t> queue (capacity);
-
-  std::atomic<bool> stop { false };
-
-  Timer timer;
-  uint64_t enqueue_fail = 0;
-  uint64_t messages_consumed = 0;
-
-  int64_t min = Nanoseconds::max ().count ();
-  int64_t max = Nanoseconds::min ().count ();
-
-  std::atomic<bool> send { false };
-
-  int64_t total_latency = 0;
-
-  auto consumer = std::thread ([&] () {
-    int64_t timestamp = 0;
-
-    Timer timer;
-
-    send = true;
-    for (int64_t i = 0; ; ++i)
-    {
-      if (stop)
-      {
-        timer.stop ();
-        send = false;
-        break;
-      }
-
-      if (queue.try_dequeue (timestamp))
-      {
-        int64_t diff = nanoseconds_since_epoch (Clock::now ()) - timestamp;
-
-        total_latency += diff;
-
-        min = (min < diff) ? min : diff;
-        max = (max > diff) ? max : diff;
-
-        ++messages_consumed;
-
-        send = true;
-      }
-    }
-
-    send = false;
-  });
-
-  std::this_thread::sleep_for (1ms);
-
-  auto producer = std::thread ([&] () {
-
-    while (!stop.load (std::memory_order_relaxed))
-    {
-      const auto timestamp = nanoseconds_since_epoch (Clock::now ());
-
-      while (send)
-      {
-        if (queue.try_enqueue (timestamp))
-        {
-          break;
-        }
-        else
-        {
-          ++enqueue_fail;
-        }
-      }
-    }
-  });
-
-  std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
-
-  stop = true;
-
-  producer.join ();
-  consumer.join ();
-
-  BOOST_CHECK ((messages_consumed/to_seconds (timer.elapsed ())) > 1000);
-
-  BOOST_CHECK (messages_consumed > 1e3);
-
-  // values are in nanoseconds
-  BOOST_CHECK (Nanoseconds (min) < 10us);   // min < 10 us
-  BOOST_CHECK (Nanoseconds (max) < 20ms);   // max < 20 ms
-
-  auto rate = static_cast<uint64_t>((messages_consumed/1e6)
-                                      / to_seconds (timer.elapsed ()));
-  BOOST_CHECK (rate > 1);   // rate > 1 M ops/sec
-  BOOST_TEST_MESSAGE ("Throughput:\t"
-      << throughput_messages_to_pretty (messages_consumed, timer.elapsed ()));
-  BOOST_TEST_MESSAGE ("Latency");
-  BOOST_TEST_MESSAGE ("  min:\t\t" << nanoseconds_to_pretty (min));
-  BOOST_TEST_MESSAGE ("  avg:\t\t" << nanoseconds_to_pretty (
-                      total_latency / messages_consumed));
-  BOOST_TEST_MESSAGE ("  max:\t\t" << nanoseconds_to_pretty (max));
   BOOST_TEST_MESSAGE ("Enqueue blocked: "
     << throughput_messages_to_pretty (enqueue_fail, timer.elapsed ()));
   BOOST_TEST_MESSAGE (" ");

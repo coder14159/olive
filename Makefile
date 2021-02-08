@@ -152,7 +152,7 @@ $(BIN_DIR)/test_allocator: Makefile tests/test_allocator/test_allocator.cpp $(LI
 	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) tests/test_allocator/test_allocator.cpp -o $@ -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_THREAD) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
 
 $(BIN_DIR)/test_performance: Makefile tests/test_performance/test_performance.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -I$(FASTRANGE_BASE_DIR) tests/test_performance/test_performance.cpp -o $@ -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_THREAD) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
+	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) tests/test_performance/test_performance.cpp -o $@ -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_THREAD) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
 
 $(BIN_DIR)/test_spmcqueue: Makefile tests/test_spmcqueue/test_spmcqueue.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
 	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) tests/test_spmcqueue/test_spmcqueue.cpp -o $@ -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_THREAD) $(LIB_BOOST_FILESYSTEM)
