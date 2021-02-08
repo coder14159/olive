@@ -11,14 +11,15 @@ import subprocess
 import sys
 import time
 
-from test_utils import *
+from utils import *
 
 cpu_count = multiprocessing.cpu_count ()
 
 script_dir = os.path.dirname (os.path.realpath(__file__))
 
 base_dir = os.path.normpath (script_dir + "/../")
-exe_dir = os.path.join (base_dir, "build", platform.processor (), "bin")
+
+exe_dir = os.path.join (base_dir, "build", platform.processor () + ".pgo_release", "bin")
 
 parser = argparse.ArgumentParser (description="Latency testing")
 
@@ -42,13 +43,13 @@ parser.add_argument ("--client_cpu_list", nargs='+', type=int, default=-1,
                          "can be fewer than the total number of clients")
 parser.add_argument ("--client_count",  type=int, required=True,
                     help="Number of consumer clients")
-parser.add_argument ("--client_stats", nargs='+', default=["latency"],
+parser.add_argument ("--client_stats", nargs='+', default=["latency,throughput"],
                     choices=["interval", "latency", "throughput"],
                     help="select statistics for output")
-parser.add_argument ("--client_directory", required=True,
+parser.add_argument ("--client_directory", required=False,
                     help="set output directory to write stats to file")
 parser.add_argument ("--client_allow_drops",
-                    help="set output directory to write stats to file")
+                    help="allow clients to drop messages TODO: DELETE THIS FUNCTIONALITY")
 
 args = parser.parse_args ()
 
@@ -71,13 +72,16 @@ print ("client_stats:        " + ' '.join (args.client_stats))
 
 client_cpu_list = cpu_bind_list (args.client_cpu_list, args.client_count)
 
-directory = output_directory (args.client_directory,
-                              args.server_rate,
-                              args.server_message_size,
-                              args.client_count)
+directory = None
 
-print ("client_directory:    " + str (directory))
-print ("")
+if args.client_directory is not None:
+    directory = output_directory (args.client_directory,
+                                  args.server_rate,
+                                  args.server_message_size,
+                                  args.client_count)
+
+    print ("client_directory:    " + str (directory))
+    print ("")
 
 # Delete shared memory if it exists
 subprocess.check_call ([pathlib.Path (exe_dir) / "remove_shared_memory",
@@ -128,7 +132,7 @@ for client_index in range (args.client_count):
 
     print ('%s' % ' '.join (map (str, client_cmd)))
 
-    clients.append (subprocess.Popen (client_cmd, stdout=subprocess.PIPE))
+    clients.append (subprocess.Popen (client_cmd))
 
 time.sleep (int (args.timeout))
 
@@ -145,7 +149,3 @@ subprocess.check_call ([os.path.join (exe_dir, "remove_shared_memory"),
                         "--names", args.name])
 
 print ("Latency tests finished")
-
-# plot
-import pandas as pd
-import plotly.express as px
