@@ -115,9 +115,9 @@ int main(int argc, char* argv[]) try
 
     if (!stop)
     {
-      stream.stop ();
-
       stop = true;
+
+      stream.stop ();
 
       std::cout << "Stopping spmc_client" << std::endl;
     }
@@ -154,9 +154,10 @@ int main(int argc, char* argv[]) try
         }
         else if (!allowDrops)
         {
-          ASSERT_SS (header.seqNum - testHeader.seqNum != 1,
+          ASSERT_SS ((header.seqNum - testHeader.seqNum) == 1,
             "Invalid sequence number: header.seqNum: " << header.seqNum <<
             " testHeader.seqNum: " << testHeader.seqNum);
+          testHeader = header;
         }
 
         ASSERT_SS (header.size == data.size (), "Unexpected payload size: "
