@@ -9,15 +9,12 @@ namespace spmc {
 
 template <class Allocator, size_t MaxNoDropConsumers>
 SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (size_t capacity)
-: m_queue (std::make_unique<QueueType> (capacity))
+: m_queue (std::make_unique<QueueType> (capacity + 1))
 {
   ASSERT (m_queue.get () != nullptr, "In-process SPMCQueue initialisation failed");
 
   ASSERT (capacity > sizeof (Header),
         "SPMCQueue capacity must be greater than header size");
-
-
-  m_buffer = m_queue->buffer ();
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
@@ -38,14 +35,9 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
     << queueName << " in named shared memory: " << memoryName;
 
   m_queue = m_memory.find_or_construct<QueueType> (queueName.c_str())
-                                                  (capacity, allocator);
+                                                  (capacity + 1, allocator);
   ASSERT_SS (m_queue != nullptr,
              "Shared memory object initialisation failed: " << queueName);
-
-  BOOST_LOG_TRIVIAL(info) << "Found or created queue named '"
-    << queueName << "' with capacity of " << m_queue->capacity () << " bytes";
-
-  m_buffer = m_queue->buffer ();
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
@@ -71,8 +63,6 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
    */
   ASSERT_SS (memory.second == 1,
              "Queue object: " << queueName << " should not be an array");
-
-  m_buffer = m_queue->buffer ();
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
@@ -82,21 +72,17 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::capacity () const
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
-bool SPMCQueue<Allocator, MaxNoDropConsumers>::empty () const
+bool SPMCQueue<Allocator, MaxNoDropConsumers>::empty (
+  detail::ConsumerState &consumer) const
 {
-  return (read_available () == 0);
+  return (read_available (consumer) == 0);
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
-bool SPMCQueue<Allocator, MaxNoDropConsumers>::message_drops_allowed () const
+uint64_t SPMCQueue<Allocator, MaxNoDropConsumers>::read_available (
+  detail::ConsumerState &consumer) const
 {
-  return m_consumer.message_drops_allowed ();
-}
-
-template <class Allocator, size_t MaxNoDropConsumers>
-uint64_t SPMCQueue<Allocator, MaxNoDropConsumers>::read_available () const
-{
-  return m_queue->size (m_consumer) + m_cache.size ();
+  return m_queue->read_available (consumer) + m_cache.size ();
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
@@ -168,39 +154,33 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
-void SPMCQueue<Allocator, MaxNoDropConsumers>::allow_message_drops ()
+void SPMCQueue<Allocator, MaxNoDropConsumers>::register_consumer (
+  detail::ConsumerState &consumer)
 {
-  m_consumer.allow_message_drops ();
-}
-
-
-template <class Allocator, size_t MaxNoDropConsumers>
-void SPMCQueue<Allocator, MaxNoDropConsumers>::register_consumer ()
-{
-  // TODO RETEST explicit registering and hoist shared queue pointer to this object
-  // should be faster
-  m_queue->consumer_checks (m_producer, m_consumer);
+  m_queue->consumer_checks (consumer);
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
-void SPMCQueue<Allocator, MaxNoDropConsumers>::unregister_consumer ()
+void SPMCQueue<Allocator, MaxNoDropConsumers>::unregister_consumer (
+  detail::ConsumerState &consumer)
 {
-  m_queue->unregister_consumer (m_producer.index ());
+  m_queue->unregister_consumer (consumer);
 }
 
 template <class Allocator, size_t MaxNoDropConsumers>
 template <class Header, class BufferType>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   Header     &header,
-  BufferType &data)
+  BufferType &data,
+  detail::ConsumerState &consumer)
 {
   /*
    * The local data cache is only permitted if this consumer is not permitted to
    * drop messages.
    */
-  if (SPMC_EXPECT_TRUE (!m_cacheEnabled))
+  // if (SPMC_EXPECT_TRUE (!m_cacheEnabled))
   {
-    if (SPMC_EXPECT_TRUE (m_queue->pop (header, m_producer, m_consumer) > 0 &&
+    if (SPMC_EXPECT_TRUE (m_queue->pop (header, consumer) &&
                           header.type != WARMUP_MESSAGE_TYPE))
     {
       /*
@@ -212,8 +192,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
        * queue.
        */
       data.resize (header.size);
-
-      return m_queue->pop (data.data (), header.size, m_producer, m_consumer);
+      return m_queue->pop (data.data (), header.size, consumer);
     }
     else
     {
@@ -224,6 +203,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   return pop_from_cache (header, data);
 }
 
+#if 0
 template <class Allocator, size_t MaxNoDropConsumers>
 template <class Header, class BufferType>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
@@ -249,7 +229,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
      *
      * The cache will be increased in size if it is too small.
      */
-    m_queue->prefetch_to_cache (m_cache, m_producer, m_consumer);
+    m_queue->prefetch_to_cache (m_cache, m_consumer);
   }
 
   if (m_cache.pop (header) && header.type != WARMUP_MESSAGE_TYPE)
@@ -271,7 +251,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
       std::vector<uint8_t> tmp (header.size - data.size ());
 
       assert (m_queue->pop (tmp.data (), header.size - data.size (),
-                            m_producer, m_consumer));
+                            m_consumer));
 
       data.insert (data.end (), tmp.begin (), tmp.end ());
 
@@ -285,7 +265,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
      */
     while (m_cache.size () < header.size)
     {
-      m_queue->prefetch_to_cache (m_cache, m_producer, m_consumer);
+      m_queue->prefetch_to_cache (m_cache, m_consumer);
     }
 
     return m_cache.pop (data, header.size);
@@ -293,5 +273,5 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
 
   return false;
 }
-
+#endif
 } // namespace spmc {

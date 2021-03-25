@@ -27,14 +27,30 @@ PerformanceStats::PerformanceStats (const std::string &directory,
   start ();
 }
 
+PerformanceStats::~PerformanceStats ()
+{
+  stop ();
+}
+
+void PerformanceStats::stop ()
+{
+  if (m_thread.joinable ())
+  {
+    m_stop = true;
+    m_thread.join ();
+  }
+}
+
 void PerformanceStats::start ()
 {
   if (m_thread.joinable ())
   {
-    BOOST_LOG_TRIVIAL (warning) << "Performance thread already running";
+    BOOST_LOG_TRIVIAL (info) << "Performance thread already running";
 
     return;
   }
+
+  m_stop = false;
   /*
    * Service latency information in a separate thread so that persisting latency
    * values are not on the critical path.
@@ -51,8 +67,6 @@ void PerformanceStats::start ()
      */
     bool warmup = true;
 
-    BOOST_LOG_TRIVIAL (info) << "Start latency thread";
-
     while (!m_stop)
     {
       if (m_throughput.is_stopped () && m_latency.is_stopped ())
@@ -65,7 +79,7 @@ void PerformanceStats::start ()
         /*
          * Avoid using too much CPU time
          */
-        std::this_thread::sleep_for (10ns);
+        std::this_thread::sleep_for (1us);
 
         continue;
       }
@@ -77,15 +91,13 @@ void PerformanceStats::start ()
       /*
        * Allow a warmup period of a few seconds before starting latency logging
        */
-      if (warmup)
+      if (warmup && (logDuration > m_warmupDuration))
       {
-        if (logDuration > m_warmupDuration)
-        {
-          warmup = false;
-          lastLog = now;
-          BOOST_LOG_TRIVIAL (info) << "Warmup complete, "
-                                   << "start logging performance statistics";
-        }
+        warmup = false;
+        lastLog = now;
+        BOOST_LOG_TRIVIAL (info) << "Warmup complete, "
+                                  << "start logging performance statistics";
+      }
 
         continue;
       }
@@ -106,11 +118,8 @@ void PerformanceStats::start ()
   });
 }
 
-PerformanceStats::~PerformanceStats ()
+void PerformanceStats::print_summary () const
 {
-  m_stop = true;
-
-  m_thread.join ();
   /*
    * Output message statistics
    */
@@ -124,6 +133,7 @@ PerformanceStats::~PerformanceStats ()
   {
     BOOST_LOG_TRIVIAL(info) << line;
   }
+
 }
 
 void PerformanceStats::log_interval_stats ()

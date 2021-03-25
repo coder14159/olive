@@ -33,7 +33,7 @@ void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
    * Sample latency values as requesting a timestamp too often impacts
    * performance
    */
-  if (SPMC_EXPECT_FALSE ((timestamp - m_sampled) < 10ns))
+  if (SPMC_EXPECT_FALSE ((timestamp - m_sampled) < 1us))
   {
     return;
   }

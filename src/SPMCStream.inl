@@ -31,28 +31,22 @@ SPMCStream<QueueType>::SPMCStream (QueueType &queue,
 template <typename QueueType>
 SPMCStream<QueueType>::~SPMCStream ()
 {
-  if (!m_stop)
-  {
-    stop ();
-  }
+  stop ();
 
-  m_queue.unregister_consumer ();
+  m_queue.unregister_consumer (m_consumer);
 }
 
 template <typename QueueType>
 void SPMCStream<QueueType>::init (bool allowMessageDrops, size_t prefetchSize)
 {
-  if (allowMessageDrops)
-  {
-    m_queue.allow_message_drops ();
-  }
+  m_consumer.allow_message_drops (allowMessageDrops);
 
   if (prefetchSize > 0)
   {
     m_queue.resize_cache (prefetchSize);
   }
 
-  m_queue.register_consumer ();
+  m_queue.register_consumer (m_consumer);
 }
 
 template <typename QueueType>
@@ -67,7 +61,7 @@ bool SPMCStream<QueueType>::next (Header &header, Vector &data)
 {
   while (!m_stop.load (std::memory_order_relaxed))
   {
-    if (SPMC_EXPECT_TRUE (m_queue.pop (header, data)))
+    if (SPMC_EXPECT_TRUE (m_queue.pop (header, data, m_consumer)))
     {
       return true;
     }

@@ -183,7 +183,11 @@ Latency &Latency::write_data ()
 
 std::string Latency::to_string () const
 {
-  return nanoseconds_to_pretty (min ()) + ":" + nanoseconds_to_pretty (max ());
+  auto median = static_cast<int64_t>(ba::p_square_quantile (m_quantiles.at (50)));
+
+  return nanoseconds_to_pretty (min ()) + " " +
+         nanoseconds_to_pretty (median) + " " +
+         nanoseconds_to_pretty (max ());
 }
 
 std::vector<std::string> Latency::to_strings () const
