@@ -77,7 +77,7 @@ void PerformanceStats::start ()
       if (!m_queue.pop (latency_duration))
       {
         /*
-         * Avoid using too much CPU time
+         * Sample latencies to avoid using too much CPU time
          */
         std::this_thread::sleep_for (1us);
 
@@ -91,13 +91,15 @@ void PerformanceStats::start ()
       /*
        * Allow a warmup period of a few seconds before starting latency logging
        */
-      if (warmup && (logDuration > m_warmupDuration))
+      if (SPMC_EXPECT_FALSE (warmup))
       {
-        warmup = false;
-        lastLog = now;
-        BOOST_LOG_TRIVIAL (info) << "Warmup complete, "
-                                  << "start logging performance statistics";
-      }
+        if (logDuration > m_warmupDuration)
+        {
+          warmup = false;
+          lastLog = now;
+          BOOST_LOG_TRIVIAL (info) << "Warmup complete, "
+                                   << "start logging performance statistics";
+        }
 
         continue;
       }
