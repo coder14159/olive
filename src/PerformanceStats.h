@@ -21,6 +21,8 @@ public:
 
   ~PerformanceStats ();
 
+
+
   /*
    * Start the service thread
    */
@@ -54,13 +56,25 @@ private:
 
 private:
 
+  struct Stats
+  {
+    Clock::duration latency;
+    uint64_t bytes = { 0 };
+    uint64_t messages = { 0 };
+  };
+
+  uint64_t m_intervalBytes = { 0 };
+  uint64_t m_intervalMessages = { 0 };
+
+
   /*
    * Store sampled latency values
    */
   static const size_t QUEUE_CAPACITY = 10;
-  boost::lockfree::spsc_queue<Clock::duration,
+
+  boost::lockfree::spsc_queue<Stats,
               boost::lockfree
-                   ::capacity<sizeof (Clock::duration)*QUEUE_CAPACITY>> m_queue;
+                   ::capacity<sizeof (Stats)*QUEUE_CAPACITY>> m_queue;
 
   ThroughputStats m_throughput;
 

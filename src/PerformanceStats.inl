@@ -23,12 +23,15 @@ void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
      * than expected.
      */
     m_seqNum = seqNum;
+    m_intervalBytes = 0;
+    m_intervalMessages = 0;
 
     return;
   }
 
-  m_throughput.interval ().next (bytes, seqNum);
-  m_throughput.summary ().next (bytes, seqNum);
+  m_intervalBytes += bytes;
+  ++m_intervalMessages;
+
   /*
    * Sample latency values as requesting a timestamp too often impacts
    * performance
@@ -40,7 +43,13 @@ void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
 
   m_sampled = Clock::now ();
 
-  m_queue.push ({ m_sampled - timestamp });
+  if (m_queue.push ({{ m_sampled - timestamp },
+                       m_intervalBytes,
+                       m_intervalMessages }))
+  {
+    m_intervalBytes = 0;
+    m_intervalMessages = 0;
+  }
 
   m_seqNum = seqNum;
 }

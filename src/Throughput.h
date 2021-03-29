@@ -61,56 +61,50 @@ public:
    */
   void write (const std::string &directory, const std::string &filename);
   /*
-   * Update byte count for throughput calculation
-   *
-   * Sequence number is used to calculate dropped messages
+   * Update byte and message count
    */
-  void next (uint64_t bytes, uint64_t seqNum);
-  /*
-   * Update byte counts for throughput calculation
-   *
-   * Sequence number is used to calculate dropped messages
-   */
-  void next (uint64_t header, uint64_t payload, uint64_t seqNum);
-
+  void next (uint64_t bytes, uint64_t messages);
   /*
    * Reset statistics
    */
   void reset ();
-
   /*
    * Throughput computation is disabled by default
    */
   void enable (bool enable);
-
   /*
-   * Total number of messages
+   * Total number of messages consumed
    */
   uint64_t messages () const { return m_messages; }
   /*
-   * Total number of bytes
+   * Total count of bytes consumed
    */
-  uint64_t bytes ()    const { return m_bytes;    }
-
-  uint32_t megabytes_per_sec () const;
-  uint32_t messages_per_sec () const;
-  uint64_t dropped () const;
-
+  uint64_t bytes () const { return m_bytes; }
   /*
-   * Return a throughput string since start or last reset
+   * Return throughput in MB/sec
+   */
+  uint32_t megabytes_per_sec () const;
+  /*
+   * Return throughput in message/sec
+   */
+  uint32_t messages_per_sec () const;
+  /*
+   * Return a human readable throughput string since start or last reset
    */
   std::string to_string () const;
-
+  /*
+   * Write header line to file
+   */
   void write_header ();
-
+  /*
+   * Write header line to file
+   */
   Throughput &write_data ();
 
 private:
 
   uint64_t m_messages = 0;
   uint64_t m_bytes    = 0;
-  uint64_t m_seqNum   = 0;
-  uint64_t m_dropped  = 0;
 
   bool m_stop = { false };
 

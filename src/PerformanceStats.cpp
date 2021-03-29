@@ -57,7 +57,7 @@ void PerformanceStats::start ()
    */
   m_thread = std::thread ([this] ()
   {
-    Clock::duration latency_duration;
+    Stats stats;
 
     TimePoint now = Clock::now ();
 
@@ -71,10 +71,11 @@ void PerformanceStats::start ()
     {
       if (m_throughput.is_stopped () && m_latency.is_stopped ())
       {
+        m_stop = true;
         break;
       }
 
-      if (!m_queue.pop (latency_duration))
+      if (!m_queue.pop (stats))
       {
         /*
          * Sample latencies to avoid using too much CPU time
@@ -97,6 +98,10 @@ void PerformanceStats::start ()
         {
           warmup = false;
           lastLog = now;
+
+          m_throughput.interval ().reset ();
+          m_throughput.summary ().reset ();
+
           BOOST_LOG_TRIVIAL (info) << "Warmup complete, "
                                    << "start logging performance statistics";
         }
@@ -111,8 +116,11 @@ void PerformanceStats::start ()
         lastLog = now;
       }
 
-      m_latency.interval ().next (latency_duration);
-      m_latency.summary ().next (latency_duration);
+      m_latency.interval ().next (stats.latency);
+      m_latency.summary ().next (stats.latency);
+
+      m_throughput.interval ().next (stats.bytes, stats.messages);
+      m_throughput.summary ().next (stats.bytes, stats.messages);
     }
 
     m_throughput.summary ().write_data ();
@@ -122,18 +130,15 @@ void PerformanceStats::start ()
 
 void PerformanceStats::print_summary () const
 {
-  /*
-   * Output message statistics
-   */
   if (m_throughput.summary ().is_running ())
   {
-    BOOST_LOG_TRIVIAL(info) <<
+    BOOST_LOG_TRIVIAL (info) <<
       boost::algorithm::trim_left_copy (m_throughput.summary ().to_string ());
   }
 
   for (auto line : m_latency.summary ().to_strings ())
   {
-    BOOST_LOG_TRIVIAL(info) << line;
+    BOOST_LOG_TRIVIAL (info) << line;
   }
 
 }
@@ -156,15 +161,6 @@ void PerformanceStats::log_interval_stats ()
     log += m_throughput.interval ().to_string ();
 
     m_throughput.interval ().write_data ().reset ();
-  }
-
-  if  (m_throughput.interval ().dropped () > 0 &&
-       (m_latency.interval ().is_running () ||
-        m_throughput.interval ().is_running ()))
-  {
-    if (!log.empty ()) { log += "|"; }
-
-    log += std::to_string (m_throughput.interval ().dropped ());
   }
 
   if (!log.empty ())

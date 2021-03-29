@@ -19,25 +19,14 @@ void Throughput::reset ()
 {
   m_messages = 0;
   m_bytes    = 0;
-  m_dropped  = 0;
 
   m_timer.reset ().start ();
 }
 
 inline
-void Throughput::next (uint64_t header, uint64_t payload, uint64_t seqNum)
+void Throughput::next (uint64_t bytes, uint64_t messages)
 {
-  next (header + payload, seqNum);
-}
-
-inline
-void Throughput::next (uint64_t bytes, uint64_t seqNum)
-{
-  if (m_stop)
-  {
-    return;
-  }
-
+#if TODO // Don't think this is required any more..
   /*
    * Reset on startup or if the server was restarted
    */
@@ -47,22 +36,11 @@ void Throughput::next (uint64_t bytes, uint64_t seqNum)
 
     m_seqNum = seqNum;
   }
+#endif
 
-  /*
-   * Check for dropped messages
-   */
-  auto diff = seqNum - m_seqNum;
-
-  if (SPMC_EXPECT_FALSE (diff > 1))
-  {
-    m_dropped += diff;
-  }
-
-  ++m_messages;
+  m_messages += messages;
 
   m_bytes += bytes;
-
-  m_seqNum = seqNum;
 }
 
 } // namespace spmc
