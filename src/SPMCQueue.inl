@@ -203,7 +203,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   return pop_from_cache (header, data);
 }
 
-#if 0
+#if TODO // Cache functionality should work
 template <class Allocator, size_t MaxNoDropConsumers>
 template <class Header, class BufferType>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
@@ -214,14 +214,14 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
   {
     return false;
   }
-  // TODO server restart is removed
-  // if (m_queue->producer_restarted (m_consumer) && !m_cache.empty ())
-  // {
-  //   BOOST_LOG_TRIVIAL (info)
-  //     << "Producer restarted. Clear the consumer prefetch cache.";
-  //   m_cache.clear ();
-  // }
-
+#if TODO // server restart is removed
+  if (m_queue->producer_restarted (m_consumer) && !m_cache.empty ())
+  {
+    BOOST_LOG_TRIVIAL (info)
+      << "Producer restarted. Clear the consumer prefetch cache.";
+    m_cache.clear ();
+  }
+#endif
   if (m_cache.size () < sizeof (Header))
   {
     /*
