@@ -8,8 +8,6 @@
 #include "detail/SharedMemory.h"
 #include "detail/Utils.h"
 
-#include <boost/log/trivial.hpp>
-
 #include <bits/stdc++.h>
 #include <exception>
 #include <set>
@@ -152,12 +150,10 @@ int main(int argc, char* argv[]) try
         {
           testHeader.seqNum = header.seqNum;
         }
-        else if (!allowDrops)
-        {
-          ASSERT_SS (header.seqNum - testHeader.seqNum != 1,
-            "Invalid sequence number: header.seqNum: " << header.seqNum <<
-            " testHeader.seqNum: " << testHeader.seqNum);
-        }
+
+        ASSERT_SS (header.seqNum - testHeader.seqNum == 1,
+          "Invalid sequence number: header.seqNum: " << header.seqNum <<
+          " testHeader.seqNum: " << testHeader.seqNum);
 
         ASSERT_SS (header.size == data.size (), "Unexpected payload size: "
                   << data.size () << " expected: " << header.size);
@@ -181,6 +177,9 @@ int main(int argc, char* argv[]) try
       }
     }
   }
+
+  stats.stop ();
+  stats.print_summary ();
 
   BOOST_LOG_TRIVIAL (info) << "Exit stream";
 
