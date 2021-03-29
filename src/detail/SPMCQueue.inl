@@ -306,7 +306,6 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
    */
   size_t readerCursor = consumer.cursor ();
 
-  // size_t capacity = m_backPressure.capacity (); // TODO is this faster?
   size_t capacity = m_capacity + 1;
 
   auto *buffer = consumer.queue_ptr ();
