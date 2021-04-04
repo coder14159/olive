@@ -1,6 +1,7 @@
 #include "Chrono.h"
 #include "PerformanceStats.h"
 #include "TimeDuration.h"
+#include "detail/SharedMemory.h"
 #include "detail/Utils.h"
 
 #include <boost/algorithm/string.hpp>
@@ -16,6 +17,7 @@ inline
 void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
                                TimePoint timestamp)
 {
+#if 0 // TODO // is this required?
   if (SPMC_EXPECT_FALSE (seqNum < m_seqNum))
   {
     /*
@@ -28,7 +30,7 @@ void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
 
     return;
   }
-
+#endif
   m_intervalBytes += bytes;
   ++m_intervalMessages;
 

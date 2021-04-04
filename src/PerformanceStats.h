@@ -2,8 +2,8 @@
 #define IPC_PERFORMANCE_STATS_H
 
 #include "LatencyStats.h"
-#include "TimeDuration.h"
 #include "ThroughputStats.h"
+#include "TimeDuration.h"
 
 #include <boost/lockfree/spsc_queue.hpp>
 
@@ -20,9 +20,6 @@ public:
                     TimeDuration warmup = Seconds (0));
 
   ~PerformanceStats ();
-
-
-
   /*
    * Start the service thread
    */
@@ -56,6 +53,11 @@ private:
 
 private:
 
+  /*
+   * Store sampled latency values
+   */
+  static const size_t QUEUE_CAPACITY = 10;
+
   struct Stats
   {
     Clock::duration latency;
@@ -65,20 +67,18 @@ private:
 
   uint64_t m_intervalBytes = { 0 };
   uint64_t m_intervalMessages = { 0 };
+  uint64_t m_seqNum = { 0 };
 
 
-  /*
-   * Store sampled latency values
-   */
-  static const size_t QUEUE_CAPACITY = 10;
-
-  boost::lockfree::spsc_queue<Stats,
-              boost::lockfree
-                   ::capacity<sizeof (Stats)*QUEUE_CAPACITY>> m_queue;
+  std::atomic<bool> m_stop { false };
 
   ThroughputStats m_throughput;
 
   LatencyStats m_latency;
+
+  boost::lockfree::spsc_queue<Stats,
+              boost::lockfree
+                   ::capacity<sizeof (Stats)*QUEUE_CAPACITY>> m_queue;
 
   TimePoint m_lastIntervalLog;
 
@@ -89,10 +89,6 @@ private:
   TimeDuration m_warmupDuration;
 
   std::thread m_thread;
-
-  uint64_t m_seqNum = 0;
-
-  std::atomic<bool> m_stop { false };
 
 };
 
