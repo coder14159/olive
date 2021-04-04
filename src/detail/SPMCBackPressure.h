@@ -93,8 +93,6 @@ class SPMCBackPressure
 {
 public:
   SPMCBackPressure (size_t capacity);
-
-  size_t capacity () const { return m_capacity; }
   /*
    * If a consumer registers successful then back-pressure is exerted on the
    * producer by all registered consumers so that message dropping is prevented.
@@ -109,6 +107,10 @@ public:
    * Unregister a consumer
    */
   void unregister_consumer (const ConsumerState &consumer);
+  /*
+   * Return the max size used in cursor index computations
+   */
+  size_t max_size () const { return m_maxSize; }
   /*
    * Use acquire/release space methods to atomically push more than one data
    * object onto the queue as a single contiguous unit.
@@ -175,21 +177,26 @@ private:
 
 private:
   /*
+   * Current maximum value of consumer indexes
+   */
+  uint8_t m_maxConsumerIndex = { 0 };
+  /*
    * Current number of consumers
    */
   alignas (CACHE_LINE_SIZE)
   uint8_t m_consumerCount = { 0 };
   /*
-   * Current maximum value of consumer indexes
-   */
-  alignas (CACHE_LINE_SIZE)
-  uint8_t m_maxConsumerIndex = { 0 };
-  /*
    * The queue capacity
    */
-  // TODO: SEPARATE CAPACITY FOR CONSUMER AND PRODUCER?
-  // alignas (CACHE_LINE_SIZE)
-  const size_t m_capacity = { 0 };
+  const size_t m_maxSize = { 0 };
+  /*
+   * Counter used to claim a data range by the producer before writing data.
+   *
+   * Consumer threads use this counter to check if a producer has begun
+   * ovewriting a range which the consumer has just read.
+   */
+  alignas (CACHE_LINE_SIZE)
+  size_t m_claimed = { 0 };
   /*
    * Index used to implement fair servicing of the ConsumerArray
    * TODO: make use of this variable!!
@@ -200,14 +207,6 @@ private:
    */
   alignas (CACHE_LINE_SIZE)
   std::atomic<size_t> m_committed = { 0 };
-  /*
-   * Counter used to claim a data range by the producer before writing data.
-   *
-   * Consumer threads use this counter to check if a producer has begun
-   * ovewriting a range which the consumer has just read.
-   */
-  alignas (CACHE_LINE_SIZE)
-  size_t m_claimed = { 0 };
   /*
    * Array holding the bytes consumed for each non message dropping consumer
    */

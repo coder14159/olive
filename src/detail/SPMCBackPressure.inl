@@ -10,7 +10,7 @@ namespace detail {
 
 template<class Mutex, uint8_t MaxNoDropConsumers>
 SPMCBackPressure<Mutex, MaxNoDropConsumers>::SPMCBackPressure (size_t capacity)
-: m_capacity (capacity + 1)
+: m_maxSize (capacity + 1)
 {
   ASSERT_SS (capacity < (std::numeric_limits<size_t>::max ()),
             "Requested queue capacity too large");
@@ -85,8 +85,8 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer (
 
   BOOST_LOG_TRIVIAL(trace)
     << "Register consumer: index=" << static_cast<size_t> (index)
-    << " m_maxConsumerIndex=" << m_maxConsumerIndex
-    << " m_consumerCount="    << m_consumerCount;
+    << " m_maxConsumerIndex=" << static_cast<size_t> (m_maxConsumerIndex)
+    << " m_consumerCount="    << static_cast<size_t> (m_consumerCount);
 }
 
 template<class Mutex, uint8_t MaxNoDropConsumers>
@@ -124,14 +124,14 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::advance_cursor (
 {
   cursor += advance;
 
-  if (BOOST_LIKELY (cursor < m_capacity))
+  if (BOOST_LIKELY (cursor < m_maxSize))
   {
     return cursor;
   }
 
-  if (BOOST_LIKELY (cursor > m_capacity))
+  if (BOOST_LIKELY (cursor > m_maxSize))
   {
-    return cursor - m_capacity;
+    return cursor - m_maxSize;
   }
 
   return 0;
@@ -164,14 +164,14 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::read_available (
 {
   if (BOOST_LIKELY (readerCursor < Consumer::Reserved))
   {
-    size_t writerCursor = m_committed.load (std::memory_order_acquire);
+    size_t writerCursor = m_committed.load (std::memory_order_relaxed);
 
     if (writerCursor >= readerCursor)
     {
       return writerCursor - readerCursor;
     }
 
-    return writerCursor + m_capacity - readerCursor;
+    return writerCursor + m_maxSize - readerCursor;
   }
 
   return 0;
@@ -190,7 +190,7 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::write_available (
 
   if (writerCursor >= readerCursor)
   {
-    available += m_capacity;
+    available += m_maxSize;
   }
 
   return available;
@@ -238,7 +238,7 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::write_available () const
     return minAvailable;
   }
 
-  return m_capacity - 1;
+  return m_maxSize - 1;
 }
 
 template<class Mutex, uint8_t MaxNoDropConsumers>
