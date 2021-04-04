@@ -206,14 +206,18 @@ private:
 
 private:
   /*
-   * The capacity of the shared queue
-   */
-  const size_t m_capacity = { 0 };
-  /*
    * Structure used by consumers exert back pressure on the producer
    */
   alignas (CACHE_LINE_SIZE)
   BackPressureType m_backPressure;
+  /*
+   * Local store of max size is capacity+1 for the algorithm used by the
+   */
+  const size_t m_maxSize = { 0 };
+  /*
+   * The capacity of the shared queue
+   */
+  const size_t m_capacity = { 0 };
   /*
    * Definition of a pointer to data accessed by either multiple threads or
    * mulitple processes

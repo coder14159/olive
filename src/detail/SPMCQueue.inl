@@ -10,12 +10,14 @@ namespace detail {
 
 template <typename Allocator, uint16_t MaxNoDropConsumers>
 SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (size_t capacity)
-: m_capacity (capacity)
-, m_backPressure (capacity)
+: m_backPressure (capacity)
+, m_maxSize (m_backPressure.max_size ())
+, m_capacity (capacity)
 , m_buffer (Allocator::allocate (capacity))
 , m_bufferProducer (buffer ())
 {
   ASSERT (m_capacity > 0, "Invalid capacity");
+  ASSERT (m_buffer != nullptr, "Invalid buffer");
 
   std::fill (m_bufferProducer, m_bufferProducer + m_capacity, 0);
 }
@@ -24,8 +26,9 @@ template <typename Allocator, uint16_t MaxNoDropConsumers>
 SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
   size_t capacity, const Allocator &allocator)
 : Allocator  (allocator)
-, m_capacity (capacity)
 , m_backPressure (capacity)
+, m_maxSize (m_backPressure.max_size ())
+, m_capacity (capacity)
 , m_buffer (Allocator::allocate (capacity))
 , m_bufferProducer (buffer ())
 {
@@ -268,7 +271,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::prefetch_to_cache (
 
 template <typename Allocator, uint16_t MaxNoDropConsumers>
 void SPMCQueue<Allocator, MaxNoDropConsumers>::copy_to_buffer (
-  const uint8_t* from, uint8_t* buffer, size_t size, size_t offset)
+  const uint8_t* from, uint8_t* to, size_t size, size_t offset)
 {
   // TODO hoist out of copy_to_buffer method?
   size_t writerCursor = m_backPressure.committed_cursor ();
@@ -278,22 +281,19 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::copy_to_buffer (
     writerCursor = m_backPressure.advance_cursor (writerCursor, offset);
   }
 
-  size_t writeEnd = writerCursor + size;
-  size_t capacity = m_backPressure.capacity ();
-
-  if (writeEnd > capacity)
+  if ((writerCursor + size) > m_maxSize)
   {
     /*
      * Copying data wraps over the end of the buffer
      */
-    size_t spaceToEnd = capacity - writerCursor;
+    size_t spaceToEnd = m_maxSize - writerCursor;
 
-    std::memcpy (buffer + writerCursor, from, spaceToEnd);
-    std::memcpy (buffer, from + spaceToEnd, size - spaceToEnd);
+    std::memcpy (to + writerCursor, from, spaceToEnd);
+    std::memcpy (to, from + spaceToEnd, size - spaceToEnd);
   }
   else
   {
-    std::memcpy (buffer + writerCursor, from, size);
+    std::memcpy (to + writerCursor, from, size);
   }
 }
 
@@ -306,20 +306,18 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
    */
   size_t readerCursor = consumer.cursor ();
 
-  size_t capacity = m_capacity + 1;
+  static const auto *from = consumer.queue_ptr ();
 
-  auto *buffer = consumer.queue_ptr ();
-
-  if (readerCursor + size > capacity)
+  if (readerCursor + size > m_maxSize)
   {
-    const size_t spaceToEnd = capacity - readerCursor;
+    const size_t spaceToEnd = m_maxSize - readerCursor;
 
-    std::memcpy (to, buffer + readerCursor, spaceToEnd);
-    std::memcpy (to + spaceToEnd, buffer, size - spaceToEnd);
+    std::memcpy (to, from + readerCursor, spaceToEnd);
+    std::memcpy (to + spaceToEnd, from, size - spaceToEnd);
   }
   else
   {
-    std::memcpy (to, buffer + readerCursor, size);
+    std::memcpy (to, from + readerCursor, size);
   }
 
   return size;
