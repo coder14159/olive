@@ -129,6 +129,7 @@ void Throughput::enable (bool enable)
 void Throughput::stop ()
 {
   m_stop = true;
+  m_timer.stop ();
 }
 
 bool Throughput::is_stopped () const
