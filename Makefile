@@ -1,6 +1,6 @@
 include Makefile.include
 
-.PHONY:	all test clean $(BIN_DIR) $(LIB_DIR)
+.PHONY:	all test clean spmc_client spmc_server $(BIN_DIR) $(LIB_DIR)
 
 .DEFAULT_GOAL := all
 
@@ -77,7 +77,6 @@ LIB_SRC_CPP_FILES += src/detail/SharedMemoryCounter.h
 LIB_SRC_CPP_FILES += src/detail/SharedMemory.h
 LIB_SRC_CPP_FILES += src/detail/SPMCBackPressure.h
 LIB_SRC_CPP_FILES += src/detail/SPMCBackPressure.inl
-LIB_SRC_CPP_FILES += src/detail/SPMCQueue.cpp
 LIB_SRC_CPP_FILES += src/detail/SPMCQueue.h
 LIB_SRC_CPP_FILES += src/detail/SPMCQueue.inl
 LIB_SRC_CPP_FILES += src/detail/Utils.h
@@ -129,9 +128,11 @@ $(BIN_DIR):
 	@mkdir -p $(BIN_DIR)
 
 # Build tools
+spmc_client:  $(BIN_DIR)/spmc_client
 $(BIN_DIR)/spmc_client: Makefile tools/spmc_client/spmc_client.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
 	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) tools/spmc_client/spmc_client.cpp -o $@ -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
 
+spmc_server: $(BIN_DIR)/spmc_server
 $(BIN_DIR)/spmc_server: Makefile tools/spmc_server/spmc_server.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
 	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) tools/spmc_server/spmc_server.cpp -o $@ -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
 
