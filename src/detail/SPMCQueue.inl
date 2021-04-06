@@ -13,7 +13,7 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (size_t capacity)
 : m_backPressure (capacity)
 , m_maxSize (m_backPressure.max_size ())
 , m_capacity (capacity)
-, m_buffer (Allocator::allocate (capacity))
+, m_buffer (Allocator::allocate (m_maxSize))
 , m_bufferProducer (buffer ())
 {
   ASSERT (m_capacity > 0, "Invalid capacity");
@@ -29,10 +29,11 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
 , m_backPressure (capacity)
 , m_maxSize (m_backPressure.max_size ())
 , m_capacity (capacity)
-, m_buffer (Allocator::allocate (capacity))
+, m_buffer (Allocator::allocate (m_maxSize))
 , m_bufferProducer (buffer ())
 {
   ASSERT (m_capacity > 0, "Invalid capacity");
+  ASSERT (m_buffer != nullptr, "Invalid buffer");
 
   std::fill (m_bufferProducer, m_bufferProducer + m_capacity, 0);
 }
@@ -46,7 +47,7 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::~SPMCQueue ()
    * The interprocess queue is deallocated when the named shared memory is
    * removed.
    */
-  Allocator::deallocate (m_buffer, m_capacity);
+  Allocator::deallocate (m_buffer, m_maxSize);
 }
 
 template <typename Allocator, uint16_t MaxNoDropConsumers>
