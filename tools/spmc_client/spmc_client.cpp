@@ -132,7 +132,8 @@ int main(int argc, char* argv[]) try
 
   bind_to_cpu (cpu);
 
-  Header header, testHeader;
+  Header header;
+  uint64_t testSeqNum = 0;
 
   std::vector<uint8_t> data;
   std::vector<uint8_t> expected;
@@ -146,14 +147,18 @@ int main(int argc, char* argv[]) try
 
       if (SPMC_EXPECT_FALSE (test))
       {
-        if (testHeader.seqNum == 0)
+        if (testSeqNum == 0)
         {
-          testHeader.seqNum = header.seqNum;
+          testSeqNum = header.seqNum;
         }
+        else
+        {
+          ASSERT_SS ((header.seqNum - testSeqNum) == 1,
+            "Invalid sequence number: header.seqNum: " << header.seqNum <<
+            " testSeqNum: " << testSeqNum);
 
-        ASSERT_SS (header.seqNum - testHeader.seqNum == 1,
-          "Invalid sequence number: header.seqNum: " << header.seqNum <<
-          " testHeader.seqNum: " << testHeader.seqNum);
+          testSeqNum = header.seqNum;
+        }
 
         ASSERT_SS (header.size == data.size (), "Unexpected payload size: "
                   << data.size () << " expected: " << header.size);
