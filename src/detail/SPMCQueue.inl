@@ -306,7 +306,7 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
    */
   size_t readerCursor = consumer.cursor ();
 
-  static const auto *from = consumer.queue_ptr ();
+  const uint8_t* from = consumer.queue_ptr ();
 
   if (readerCursor + size > m_maxSize)
   {
