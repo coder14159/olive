@@ -32,7 +32,8 @@ CxxOptsHelper parse (int argc, char* argv[])
     ("cpu", "Bind main thread to a cpu processor integer, "
             "use -1 for no binding",
       cxxopts::value<int> ()->default_value ("-1"))
-    ("prefetch_cache", "Size of a prefetch cache",
+    ("prefetch_size", "Set size of a prefetch cache. "
+                      "The default of 0 indicates no prefetching",
       cxxopts::value<size_t> ()->default_value ("0"))
     ("directory", "Directory for statistics files",
       cxxopts::value<std::string> ())
@@ -76,7 +77,7 @@ int main(int argc, char* argv[]) try
   auto directory     = options.value<std::string>    ("directory", "");
   auto cpu           = options.value<int>            ("cpu", -1);
   auto allowDrops    = options.value<bool>           ("allow_drops", false);
-  auto prefetchCache = options.value<size_t>         ("prefetch_cache", 0);
+  auto prefetchSize  = options.value<size_t>         ("prefetch_size", 0);
   auto test          = options.value<bool>           ("test", false);
   auto logLevel      = options.value<std::string>    ("log_level",
                                                       log_levels (),"INFO");
@@ -92,9 +93,9 @@ int main(int argc, char* argv[]) try
   {
     BOOST_LOG_TRIVIAL (info) <<  "Allow dropping of messages";
   }
-  if (prefetchCache > 0)
+  if (prefetchSize > 0)
   {
-    BOOST_LOG_TRIVIAL (info) <<  "Use prefetch cache size: " << prefetchCache;
+    BOOST_LOG_TRIVIAL (info) <<  "Use prefetch cache size: " << prefetchSize;
   }
 
 
@@ -102,7 +103,7 @@ int main(int argc, char* argv[]) try
   using Stream = SPMCStream<Queue>;
 
   // TODO: Generate the queue name from within Stream ctor..
-  Stream stream (name, name + ":queue", allowDrops, prefetchCache);
+  Stream stream (name, name + ":queue", allowDrops, prefetchSize);
 
   bool stop = { false };
 
