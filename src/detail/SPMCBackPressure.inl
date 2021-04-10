@@ -236,13 +236,6 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::write_available () const
 
 template<class Mutex, uint8_t MaxNoDropConsumers>
 void SPMCBackPressure<Mutex, MaxNoDropConsumers>::consumed (
-  uint8_t readerIndex, size_t size)
-{
-  m_consumers[readerIndex] = advance_cursor (m_consumers[readerIndex], size);
-}
-
-template<class Mutex, uint8_t MaxNoDropConsumers>
-void SPMCBackPressure<Mutex, MaxNoDropConsumers>::consumed (
   ConsumerState &consumer, size_t size)
 {
   auto readerIndex = consumer.index ();
