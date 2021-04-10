@@ -7,17 +7,15 @@ namespace spmc {
 template <class Allocator>
 Buffer<Allocator>::Buffer (size_t capacity)
 : m_capacity (capacity)
-{
-  m_buffer = Allocator::allocate (capacity);
-}
+, m_buffer (Allocator::allocate (m_capacity))
+{ }
 
 template <class Allocator>
 Buffer<Allocator>::Buffer (size_t capacity, const Allocator &allocator)
-: Allocator  (allocator),
-  m_capacity (capacity)
-{
-  m_buffer = Allocator::allocate (capacity);
-}
+: Allocator  (allocator)
+, m_capacity (capacity)
+, m_buffer (Allocator::allocate (m_capacity))
+{ }
 
 template <class Allocator>
 Buffer<Allocator>::~Buffer ()
@@ -34,33 +32,42 @@ void Buffer<Allocator>::clear ()
 }
 
 template <class Allocator>
-void Buffer<Allocator>::resize (size_t capacity)
+void Buffer<Allocator>::capacity (size_t capacity)
 {
-  if (m_capacity == capacity)
+  if (capacity == m_capacity)
   {
     return;
   }
 
-  auto newBuffer = Allocator::allocate (capacity);
-  /*
-   * Copy over all existing data on resize if possible
-   */
-  if (capacity >= m_size)
+  if (capacity > m_size)
   {
-    std::memcpy (newBuffer, m_buffer, m_capacity);
+    auto newBuffer = Allocator::allocate (capacity);
+    /*
+     * Copy over all existing data on resize
+     */
+    std::memcpy (newBuffer, m_buffer, m_size);
+
+    Allocator::deallocate (m_buffer, m_capacity);
+
+    m_buffer = newBuffer;
+
+    m_capacity = capacity;
   }
   else
   {
-    clear ();
     BOOST_LOG_TRIVIAL (warning) << "Resize Buffer to capacity smaller stored "
-                                << "data clears internal data";
+                                  << "data clears all internal data";
+
+    clear ();
+
+    auto newBuffer = Allocator::allocate (capacity);
+
+    Allocator::deallocate (m_buffer, m_capacity);
+
+    m_buffer = newBuffer;
+
+    m_capacity = capacity;
   }
-
-  Allocator::deallocate (m_buffer, m_capacity);
-
-  m_buffer = newBuffer;
-
-  m_capacity = capacity;
 }
 
 template <class Allocator>
@@ -227,15 +234,15 @@ bool Buffer<Allocator>::pop (uint8_t* data, size_t size)
 {
   if (m_capacity < size)
   {
-    size_t new_capacity = (size*2);
+    size_t newCapacity = (size*2);
 
     BOOST_LOG_TRIVIAL (info) << "Cache capacity is too small, "
       << "increasing it to the size from " << m_capacity << " bytes "
-      << "to " << new_capacity << " bytes";
+      << "to " << newCapacity << " bytes";
     /*
      * Data is preserved when increasing Buffer size
      */
-    resize (new_capacity);
+    capacity (newCapacity);
   }
   /*
    * Requesting a zero size copy does not fail
