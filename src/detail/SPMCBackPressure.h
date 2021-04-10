@@ -145,6 +145,7 @@ public:
    * Only used by consumers configured not to drop messages.
    */
   void consumed (uint8_t readerIndex, size_t size);
+  void consumed (ConsumerState &consumer, size_t size);
   /*
    * Return the index of the committed data cursor
    */

@@ -49,7 +49,7 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer (
   for (uint8_t i = 0; i < m_maxConsumerIndex; ++i)
   {
     BOOST_LOG_TRIVIAL(trace)
-      << "Slot check m_consumers[" << static_cast<size_t> (index)
+      << "Slot check m_consumers[" << static_cast<size_t> (i)
       << "]=" << m_consumers[i];
 
     if (m_consumers[i] == Consumer::Stopped)
@@ -164,9 +164,9 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::read_available (
 {
   if (BOOST_LIKELY (readerCursor < Consumer::Reserved))
   {
-    size_t writerCursor = m_committed.load (std::memory_order_relaxed);
+    size_t writerCursor = m_committed.load (std::memory_order_acquire);
 
-    if (writerCursor >= readerCursor)
+    if (BOOST_LIKELY (writerCursor >= readerCursor))
     {
       return writerCursor - readerCursor;
     }
@@ -202,20 +202,13 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::write_available () const
   if (BOOST_LIKELY (m_consumerCount > 0))
   {
     /*
-     * Fast path for single consumer
-     */
-    size_t minAvailable = write_available (m_consumers[0], m_claimed);
-
-    if (m_consumerCount == 1 && minAvailable < Consumer::Reserved)
-    {
-      return minAvailable;
-    }
-    /*
      * Get the bytes consumed by the slowest consumer.
      */
-    uint8_t consumerCount = 1;
+    uint8_t consumerCount = 0;
 
-    for (uint8_t i = 1; i < MaxNoDropConsumers; ++i)
+    size_t minAvailable = Consumer::Reserved;
+
+    for (uint8_t i = 0; i < MaxNoDropConsumers; ++i)
     {
       size_t available = write_available (m_consumers[i], m_claimed);
 
@@ -246,6 +239,19 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::consumed (
   uint8_t readerIndex, size_t size)
 {
   m_consumers[readerIndex] = advance_cursor (m_consumers[readerIndex], size);
+}
+
+template<class Mutex, uint8_t MaxNoDropConsumers>
+void SPMCBackPressure<Mutex, MaxNoDropConsumers>::consumed (
+  ConsumerState &consumer, size_t size)
+{
+  auto readerIndex = consumer.index ();
+
+  auto cursor = advance_cursor (m_consumers[readerIndex], size);
+
+  m_consumers[readerIndex] = cursor;
+
+  consumer.cursor (cursor);
 }
 
 } // namespace detail {
