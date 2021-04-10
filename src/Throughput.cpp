@@ -30,7 +30,7 @@ throughput_bytes_to_pretty (uint64_t bytes, TimeDuration duration)
 
   if (bytes_per_second > GB)
   {
-    return (boost::format ("%4.0f GB/s") % (bytes_per_second/GB)).str ();
+    return (boost::format ("%4.1f GB/s") % (bytes_per_second/GB)).str ();
   }
   else if (bytes_per_second > MB)
   {
@@ -41,7 +41,7 @@ throughput_bytes_to_pretty (uint64_t bytes, TimeDuration duration)
     return (boost::format ("%4.0f KB/s") % (bytes_per_second/KB)).str ();
   }
 
-  return (boost::format ("%4.f bytes/s") % bytes_per_second).str ();
+  return (boost::format ("%4.0f bytes/s") % bytes_per_second).str ();
 }
 
 std::string
