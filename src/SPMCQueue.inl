@@ -106,7 +106,7 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::resize_cache (size_t size)
 
   if (m_cache.capacity () != size)
   {
-    m_cache.resize (size);
+    m_cache.capacity (size);
 
     m_cacheEnabled = true;
   }
@@ -179,7 +179,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
    * The local data cache is only permitted if this consumer is not permitted to
    * drop messages.
    */
-  // if (SPMC_EXPECT_TRUE (!m_cacheEnabled))
+  if (SPMC_EXPECT_TRUE (!m_cacheEnabled))
   {
     if (SPMC_EXPECT_TRUE (m_queue->pop (header, consumer) &&
                           header.type != WARMUP_MESSAGE_TYPE))
@@ -193,6 +193,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
        * queue.
        */
       data.resize (header.size);
+
       return m_queue->pop (data.data (), header.size, consumer);
     }
     else
@@ -201,21 +202,21 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
     }
   }
 
-  return pop_from_cache (header, data);
+  return pop_from_cache (header, data, consumer);
 }
 
-#if TODO // Cache functionality should work
 template <class Allocator, size_t MaxNoDropConsumers>
 template <class Header, class BufferType>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
   Header     &header,
-  BufferType &data)
+  BufferType &data,
+  detail::ConsumerState &consumer)
 {
   if (!m_cacheEnabled)
   {
     return false;
   }
-#if TODO // server restart is removed
+#if TODO // Restart is not currently supported with the current algorithm
   if (m_queue->producer_restarted (m_consumer) && !m_cache.empty ())
   {
     BOOST_LOG_TRIVIAL (info)
@@ -223,14 +224,14 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
     m_cache.clear ();
   }
 #endif
-  if (m_cache.size () < sizeof (Header))
+  if (m_cache.size () <= sizeof (Header))
   {
     /*
      * Move a chunk of data from the shared queue into the local cache.
      *
      * The cache will be increased in size if it is too small.
      */
-    m_queue->prefetch_to_cache (m_cache, m_consumer);
+    m_queue->prefetch_to_cache (m_cache, consumer);
   }
 
   if (m_cache.pop (header) && header.type != WARMUP_MESSAGE_TYPE)
@@ -251,8 +252,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
 
       std::vector<uint8_t> tmp (header.size - data.size ());
 
-      assert (m_queue->pop (tmp.data (), header.size - data.size (),
-                            m_consumer));
+      assert (m_queue->pop (tmp.data (), header.size - data.size (), consumer));
 
       data.insert (data.end (), tmp.begin (), tmp.end ());
 
@@ -266,7 +266,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
      */
     while (m_cache.size () < header.size)
     {
-      m_queue->prefetch_to_cache (m_cache, m_consumer);
+      m_queue->prefetch_to_cache (m_cache, consumer);
     }
 
     return m_cache.pop (data, header.size);
@@ -274,5 +274,5 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
 
   return false;
 }
-#endif
+
 } // namespace spmc {

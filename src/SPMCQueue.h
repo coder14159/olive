@@ -135,8 +135,8 @@ private:
    * a message header and associated data from the local cache
    */
   template <class Header, class BufferType>
-  bool pop_from_cache (Header &header, BufferType &data);
-
+  bool pop_from_cache (Header &header, BufferType &data,
+                       detail::ConsumerState &consumer);
   /*
    * Memory shared between processes
    */
@@ -157,6 +157,7 @@ private:
    * This data cache can optionally be used to store chunks of data taken from
    * the shared queue. This cache is local to each client.
    */
+  alignas (CACHE_LINE_SIZE)
   Buffer<std::allocator<uint8_t>> m_cache;
 
 };
