@@ -165,7 +165,7 @@ public:
   /*
    * Pop seralised data from the queue
    */
-  bool pop (uint8_t *buffer, size_t size, ConsumerState &consumer);
+  bool pop (uint8_t *data, size_t size, ConsumerState &consumer);
   /*
    * Prefetch a chunk of data for caching in a local non-shared circular buffer
    */
@@ -176,24 +176,25 @@ public:
    */
   bool producer_restarted (const ConsumerState &consumer) const;
 
-  // void print_debug () const;
-
 private:
   /*
-   * Push data to the internal queue
+   * Copy producer data to the internal queue
    */
-  void copy_to_buffer (const uint8_t *from, uint8_t* to, size_t size,
+  void copy_to_queue (const uint8_t *from, uint8_t* to, size_t size,
                        size_t offset = 0);
+  /*
+   * Copy consumer data from the internal queue to a data buffer
+   */
+  size_t copy_from_queue (uint8_t *to, size_t size, ConsumerState &consumer);
 
-  size_t copy_from_buffer (uint8_t *to, size_t size, ConsumerState &consumer);
-
-#if TODO_BATCH_CONSUME
-  template <typename Buffer>
-  bool copy_from_buffer (const uint8_t* from, Buffer &to, size_t size,
-                        ConsumerState &consumer);
-#endif
-  size_t next_index (size_t size) const;
-
+  /*
+   * Copy a batch of data from the internal queue into a consumer local cache
+   * from which the consumer subsequently retrieves data.
+   *
+   * Consuming batches of data reduces contention on the queue.
+   */
+  template <typename BufferType>
+  bool copy_from_queue (BufferType &to, size_t size, ConsumerState &consumer);
 
 private:
 

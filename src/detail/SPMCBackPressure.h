@@ -134,13 +134,13 @@ public:
    * Return the size of queue data available to be read from the perspective of
    * a consumers reader cursor
    */
-  size_t read_available (size_t readerCursor) const;
+  size_t read_available (const ConsumerState &consumer) const;
   /*
    * Return true if there are any consumers configured not to drop messages
    */
   bool has_non_drop_consumers () const;
   /*
-   * Used by the consumer to inform the producer of its progress consuming data.
+   * Update consumer cursor value and producer back-pressure
    */
   void consumed (ConsumerState &consumer, size_t size);
   /*

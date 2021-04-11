@@ -160,8 +160,10 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::release_space ()
 
 template<class Mutex, uint8_t MaxNoDropConsumers>
 size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::read_available (
-  size_t readerCursor) const
+  const ConsumerState &consumer) const
 {
+  size_t readerCursor = consumer.cursor ();
+
   if (BOOST_LIKELY (readerCursor < Consumer::Reserved))
   {
     size_t writerCursor = m_committed.load (std::memory_order_acquire);

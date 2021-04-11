@@ -90,7 +90,7 @@ template <typename Allocator, uint16_t MaxNoDropConsumers>
 size_t SPMCQueue<Allocator, MaxNoDropConsumers>::read_available (
   const ConsumerState &consumer) const
 {
-  return m_backPressure.read_available (consumer.cursor ());
+  return m_backPressure.read_available (consumer);
 }
 
 
@@ -170,7 +170,7 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::push (
   /*
    * Copy the header and payload data to the shared buffer.
    */
-  copy_to_buffer (data, m_bufferProducer, size, offset);
+  copy_to_queue (data, m_bufferProducer, size, offset);
   /*
    * Make data available to the consumers.
    *
@@ -196,34 +196,20 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
 
 template <typename Allocator, uint16_t MaxNoDropConsumers>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
-    uint8_t* data,
-    size_t size,
+    uint8_t* to,
+    size_t   size,
     ConsumerState &consumer)
 {
   /*
-   * Check to see if new data is available. Avoid using synchronisation if no
-   * new data is available.
-   *
-   * Return false if data is not yet available in the queue
+   * Copy data from the queue if new data is available.
    */
-  const size_t cursor = consumer.cursor ();
-
-  if (SPMC_EXPECT_TRUE (m_backPressure.read_available (cursor) >= size))
+  if (SPMC_EXPECT_TRUE (m_backPressure.read_available (consumer) >= size))
   {
+    copy_from_queue (to, size, consumer);
     /*
-    * Cache a variable for the duration of the call for a small performance
-    * improvement, particularly for the in-process consumer as thread-local
-    * variables are a hotspot
-    */
-    copy_from_buffer (data, size, consumer);
-    /*
-    * Update back-pressure against the producer
-    */
-    m_backPressure.consumed (consumer.index (), size);
-    /*
-    * Move the current consumer cursor to a new index
-    */
-    consumer.cursor (m_backPressure.advance_cursor (cursor, size));
+     * Update consumer cursor value and producer back-pressure
+     */
+    m_backPressure.consumed (consumer, size);
 
     return true;
   }
@@ -237,16 +223,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::prefetch_to_cache (
   BufferType   &cache,
   ConsumerState &consumer)
 {
-#pragma GCC warning "prefetch_to_cache does not work now..remove?"
-  (void)cache;
-  (void)consumer;
-#if IGNORE_
-  ASSERT (consumer.message_drops_allowed () == false,
-          "Consumer message drops facility should not be enabled");
-
-  auto consumed = consumer.consumed ();
-
-  size_t available = m_committed.load (std::memory_order_relaxed) - consumed;
+  size_t available = m_backPressure.read_available (consumer);
 
   if (available == 0)
   {
@@ -258,23 +235,21 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::prefetch_to_cache (
    */
   size_t size = std::min (cache.capacity () - cache.size (), available);
 
-  m_committed.load (std::memory_order_acquire);
-
-  if (copy_from_buffer (consumer.queue_ptr (), cache, size, consumer))
+  if (copy_from_queue (cache, size, consumer))
   {
-    m_backPressure.consumed (consumer.index (), size);
+    m_backPressure.consumed (consumer, size);
 
     return true;
   }
-#endif
+
   return false;
 }
 
 template <typename Allocator, uint16_t MaxNoDropConsumers>
-void SPMCQueue<Allocator, MaxNoDropConsumers>::copy_to_buffer (
+void SPMCQueue<Allocator, MaxNoDropConsumers>::copy_to_queue (
   const uint8_t* from, uint8_t* to, size_t size, size_t offset)
 {
-  // TODO hoist out of copy_to_buffer method?
+  // TODO hoist out of copy_to_queue method?
   size_t writerCursor = m_backPressure.committed_cursor ();
 
   if (offset > 0)
@@ -299,7 +274,7 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::copy_to_buffer (
 }
 
 template <typename Allocator, uint16_t MaxNoDropConsumers>
-size_t SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
+size_t SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_queue (
   uint8_t* to, size_t size, ConsumerState &consumer)
 {
   /*
@@ -309,73 +284,47 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
 
   const uint8_t* from = consumer.queue_ptr ();
 
-  if (readerCursor + size > m_maxSize)
+  if (BOOST_LIKELY (readerCursor + size <= m_maxSize))
+  {
+    std::memcpy (to, from + readerCursor, size);
+  }
+  else
   {
     const size_t spaceToEnd = m_maxSize - readerCursor;
 
     std::memcpy (to, from + readerCursor, spaceToEnd);
     std::memcpy (to + spaceToEnd, from, size - spaceToEnd);
   }
-  else
-  {
-    std::memcpy (to, from + readerCursor, size);
-  }
 
   return size;
 }
 
-#if TODO_BATCH_CONSUME
 template <typename Allocator, uint16_t MaxNoDropConsumers>
-template <typename Buffer>
-bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_buffer (
-  const uint8_t *from,
-  Buffer        &to,
-  size_t         size,
-  ConsumerType  &consumer)
+template <typename BufferType>
+bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_queue (
+  BufferType &to, size_t size, ConsumerState &consumer)
 {
   ASSERT (size <= to.capacity (),
           "Message size larger than capacity buffer capacity");
 
-  size_t index = MODULUS (consumer.consumed (), m_capacity);
-  /*
-   * Copy the header from the buffer
-   */
-  size_t spaceToEnd = m_capacity - index;
+  size_t readerCursor = consumer.cursor ();
 
-  if (spaceToEnd >= size)
+  const uint8_t* from = consumer.queue_ptr ();
+
+  if (readerCursor + size < m_maxSize)
   {
-    to.push (from + index, size);
+    to.push (from + readerCursor, size);
   }
   else
   {
-    to.push (from + index, spaceToEnd);
+    const size_t spaceToEnd = m_maxSize - readerCursor;
+
+    to.push (from + readerCursor, spaceToEnd);
     to.push (from, size - spaceToEnd);
   }
-  /*
-   * Check the data copied wasn't overwritten during the copy
-   *
-   * This is only relevant if the consumer is configured to allow message drops
-   *
-   * TODO: is message drops required?
-   */
-  if (SPMC_EXPECT_FALSE (consumer.message_drops_allowed ()) &&
-      SPMC_EXPECT_FALSE ((m_claimed - consumer.consumed ()) > m_capacity))
-  {
-    /*
-     * If a the consumer is configured to allow message drops and the producer
-     * has wrapped the buffer and begun overwritting the data just copied,
-     * reset the consumer to point to the most recent data.
-     */
-    consumer.consumed (m_committed.load (std::memory_order_relaxed));
-
-    return false;
-  }
-
-  consumer.add (size);
 
   return true;
 }
-#endif
 
 template <typename Allocator, uint16_t MaxNoDropConsumers>
 void SPMCQueue<Allocator, MaxNoDropConsumers>::consumer_checks (
