@@ -906,8 +906,6 @@ private:
 
   std::vector<uint8_t> m_data;
 
-  bool m_messageDropsAllowed = false;
-
   std::atomic<bool> m_stop = { false };
 
   std::thread m_thread;
@@ -958,7 +956,7 @@ BOOST_AUTO_TEST_CASE (ThreadedProducerSingleConsumer)
 }
 
 
-BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerNoMesssageDropsAllowed)
+BOOST_AUTO_TEST_CASE (ThreadedProducerMultiConsumerNoMesssage)
 {
   ScopedLogLevel log (error);
 
@@ -1082,8 +1080,6 @@ public:
 private:
 
   std::unique_ptr<SPMCStream<Queue>> m_stream;
-
-  bool m_messageDropsAllowed = false;
 
   std::atomic<bool> m_stop = { false };
 
@@ -1305,11 +1301,9 @@ BOOST_AUTO_TEST_CASE (SinkStreamInSharedMemory)
     }
   });
 
-  bool allowMessageDrops = false;
-  size_t prefetchSize    = 0;
+  size_t prefetchSize = 0;
 
-  SPMCStreamProcess stream (name, name + ":queue",
-                            allowMessageDrops, prefetchSize);
+  SPMCStreamProcess stream (name, name + ":queue", prefetchSize);
 
   PerformanceStats stats;
 

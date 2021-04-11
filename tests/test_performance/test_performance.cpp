@@ -415,10 +415,8 @@ void sink_stream_multi_thread (
     std::this_thread::sleep_for (1us);
   }
 
-  bool allow_message_drops = false;
-
-  SPMCStreamThread stream1 (sink.queue (), allow_message_drops, prefetch);
-  SPMCStreamThread stream2 (sink.queue (), allow_message_drops, prefetch);
+  SPMCStreamThread stream1 (sink.queue (), prefetch);
+  SPMCStreamThread stream2 (sink.queue (), prefetch);
 
   auto consumer1 = std::thread ([&] () {
 
@@ -788,10 +786,7 @@ void sink_stream_multi_process (
     }
   });
 
-  bool allowMessageDrops = false;
-
-  SPMCStreamProcess stream (name, name + ":queue",
-                            allowMessageDrops, prefetch);
+  SPMCStreamProcess stream (name, name + ":queue", prefetch);
 
   auto consumer = std::thread ([&stream, &stats] () {
     Header header;

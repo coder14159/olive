@@ -76,7 +76,6 @@ int main(int argc, char* argv[]) try
   auto name          = options.required<std::string> ("name");
   auto directory     = options.value<std::string>    ("directory", "");
   auto cpu           = options.value<int>            ("cpu", -1);
-  auto allowDrops    = options.value<bool>           ("allow_drops", false);
   auto prefetchSize  = options.value<size_t>         ("prefetch_size", 0);
   auto test          = options.value<bool>           ("test", false);
   auto logLevel      = options.value<std::string>    ("log_level",
@@ -89,10 +88,7 @@ int main(int argc, char* argv[]) try
 
   BOOST_LOG_TRIVIAL (info) <<  "Start spmc_client";
   BOOST_LOG_TRIVIAL (info) <<  "Consume from shared memory named: " << name;
-  if (allowDrops)
-  {
-    BOOST_LOG_TRIVIAL (info) <<  "Allow dropping of messages";
-  }
+
   if (prefetchSize > 0)
   {
     BOOST_LOG_TRIVIAL (info) <<  "Use prefetch cache size: " << prefetchSize;
@@ -103,7 +99,7 @@ int main(int argc, char* argv[]) try
   using Stream = SPMCStream<Queue>;
 
   // TODO: Generate the queue name from within Stream ctor..
-  Stream stream (name, name + ":queue", allowDrops, prefetchSize);
+  Stream stream (name, name + ":queue", prefetchSize);
 
   bool stop = { false };
 

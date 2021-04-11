@@ -49,17 +49,6 @@ public:
    * Set the cursor to the currently read queue index value
    */
   void cursor (size_t cursor) { m_cursor = cursor; }
-  /*
-   * Return true if a consumer process is allowed to drop messages
-   */
-  bool message_drops_allowed () const { return m_messageDropsAllowed; }
-  /*
-   * Allow the consumer process to drop messages if cannot keep up with the
-   * message rate of the producer process
-   */
-  void allow_message_drops (bool allowMessageDrops) {
-    m_messageDropsAllowed = allowMessageDrops;
-  }
 
 private:
   /*
@@ -79,7 +68,7 @@ private:
   /*
    * Set to true if message drops are permitted for a consumer
    */
-  bool m_messageDropsAllowed = false;
+  // bool m_messageDropsAllowed = false;
 };
 
 /*
@@ -150,7 +139,7 @@ public:
   /*
    * Return the index of the committed data cursor
    */
-  size_t claimed_cursor () const;
+  // size_t claimed_cursor () const;
   /*
    * Return the value of a cursor advanced a number of bytes along a circular
    * buffer
@@ -184,7 +173,7 @@ private:
   alignas (CACHE_LINE_SIZE)
   uint8_t m_consumerCount = { 0 };
   /*
-   * The queue capacity
+   * The queue capacity + 1 for the algorithm to work
    */
   const size_t m_maxSize = { 0 };
   /*

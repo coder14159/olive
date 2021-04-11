@@ -112,11 +112,11 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::committed_cursor () const
   return m_committed.load (std::memory_order_relaxed);
 }
 
-template<class Mutex, uint8_t MaxNoDropConsumers>
-size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::claimed_cursor () const
-{
-  return m_claimed;
-}
+// template<class Mutex, uint8_t MaxNoDropConsumers>
+// size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::claimed_cursor () const
+// {
+//   return m_claimed;
+// }
 
 template<class Mutex, uint8_t MaxNoDropConsumers>
 size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::advance_cursor (

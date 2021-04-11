@@ -11,21 +11,18 @@ namespace spmc {
 template <typename QueueType>
 SPMCStream<QueueType>::SPMCStream (const std::string &memoryName,
                         const std::string &queueName,
-                        bool allowMessageDrops,
                         size_t prefetchSize)
 : m_queuePtr (std::make_unique<QueueType> (memoryName, queueName)),
   m_queue (*m_queuePtr)
 {
-  init (allowMessageDrops, prefetchSize);
+  init (prefetchSize);
 }
 
 template <typename QueueType>
-SPMCStream<QueueType>::SPMCStream (QueueType &queue,
-                        bool allowMessageDrops,
-                        size_t prefetchSize)
+SPMCStream<QueueType>::SPMCStream (QueueType &queue, size_t prefetchSize)
 : m_queue (queue)
 {
-  init (allowMessageDrops, prefetchSize);
+  init (prefetchSize);
 }
 
 template <typename QueueType>
@@ -37,10 +34,8 @@ SPMCStream<QueueType>::~SPMCStream ()
 }
 
 template <typename QueueType>
-void SPMCStream<QueueType>::init (bool allowMessageDrops, size_t prefetchSize)
+void SPMCStream<QueueType>::init (size_t prefetchSize)
 {
-  m_consumer.allow_message_drops (allowMessageDrops);
-
   if (prefetchSize > 0)
   {
     m_queue.resize_cache (prefetchSize);
