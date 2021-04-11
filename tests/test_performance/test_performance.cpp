@@ -1249,7 +1249,7 @@ BOOST_AUTO_TEST_CASE (Modulus)
 
     for (int64_t i = 0; i < cycles; ++i)
     {
-      modulus = MODULUS(i, size);
+      modulus = MODULUS (i, size);
       dummy += modulus;
     }
 
