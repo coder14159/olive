@@ -124,47 +124,6 @@ BOOST_AUTO_TEST_CASE (BasicBufferTests)
       BOOST_CHECK (in == out);
     }
   }
-  { // Buffer resize preserves data if the new buffer size is large enough
-    Buffer<std::allocator<uint8_t>> buffer (10);
-    std::vector<uint8_t> out;
-    std::vector<uint8_t> in (5);
-    std::iota (in.begin (), in.end (), 0);
-
-    buffer.push (in);
-
-    buffer.resize (5);
-    BOOST_CHECK_EQUAL (buffer.capacity (), 5);
-
-    BOOST_CHECK_EQUAL (buffer.size (), 5);
-    BOOST_CHECK (buffer.pop (out, in.size ()));
-    BOOST_CHECK (in == out);
-  }
-  { // Buffer resize when Buffer front is not at index 0
-    Buffer<std::allocator<uint8_t>> buffer (10);
-    std::vector<uint8_t> out;
-    std::vector<uint8_t> in (4);
-    std::iota (in.begin (), in.end (), 0);
-
-    BOOST_CHECK (buffer.push (in));
-    BOOST_CHECK_EQUAL (buffer.size (), 4);
-
-    BOOST_CHECK (buffer.push (in));
-    BOOST_CHECK_EQUAL (buffer.size (), 8);
-
-    BOOST_CHECK (!buffer.push (in));
-
-    BOOST_CHECK (buffer.pop (out, in.size ()));
-    BOOST_CHECK_EQUAL (buffer.size (), 4);
-    BOOST_CHECK (in == out);
-
-    buffer.resize (20);
-
-    BOOST_CHECK_EQUAL (buffer.capacity (), 20);
-    BOOST_CHECK (buffer.pop (out, in.size ()));
-    BOOST_CHECK (buffer.empty ());
-    BOOST_CHECK_EQUAL (buffer.size (), 0);
-    BOOST_CHECK (in == out);
-  }
 }
 
 BOOST_AUTO_TEST_CASE (BufferPopStruct)
@@ -449,6 +408,21 @@ public:
     m_stop = true;
   }
 
+  bool empty ()
+  {
+    return m_queue.read_available (m_consumer) == 0;
+  }
+
+  size_t read_available ()
+  {
+    return m_queue.read_available (m_consumer);
+  }
+
+  size_t cache_size () const
+  {
+    return m_queue.cache_size ();
+  }
+
   void push (const Packet &packet)
   {
     {
@@ -482,7 +456,10 @@ public:
     return packet;
   }
 
-  const SPMCQueue<std::allocator<uint8_t>> &queue () const { return m_queue; }
+  const SPMCQueue<std::allocator<uint8_t>> &queue () const
+  {
+    return m_queue;
+  }
 
 private:
   std::mutex m_mutex;
@@ -493,7 +470,7 @@ private:
   std::atomic_bool m_stop = { false };
 };
 
-#if PREFETCH_FIXED
+
 BOOST_AUTO_TEST_CASE (SlowConsumerWithPrefetch)
 {
   ScopedLogLevel log (error);
@@ -537,8 +514,6 @@ BOOST_AUTO_TEST_CASE (SlowConsumerWithPrefetch)
    * Run the server in a separate thread
    */
   std::thread server ([&] {
-
-    BOOST_CHECK_EQUAL (blocking_queue.queue ().message_drops_allowed (), false);
 
     Packet in;
     in.header.seqNum = 0;
@@ -590,17 +565,17 @@ BOOST_AUTO_TEST_CASE (SlowConsumerWithPrefetch)
    * Note: The read_available method is the sum of data in the queue plus the
    * data moved to the client local cache
    */
-  BOOST_CHECK (blocking_queue.queue ().empty ());
-  BOOST_CHECK_EQUAL (blocking_queue.queue ().cache_size (), 0);
-  BOOST_CHECK_EQUAL (blocking_queue.queue ().read_available (), 0);
+  BOOST_CHECK (blocking_queue.empty ());
+  BOOST_CHECK_EQUAL (blocking_queue.cache_size (), 0);
+  BOOST_CHECK_EQUAL (blocking_queue.read_available (), 0);
 
   serve_one ();
-  BOOST_CHECK_EQUAL (blocking_queue.queue ().cache_size (), 0);
-  BOOST_CHECK_EQUAL (blocking_queue.queue ().read_available (), 40);
+  BOOST_CHECK_EQUAL (blocking_queue.cache_size (), 0);
+  BOOST_CHECK_EQUAL (blocking_queue.read_available (), 40);
 
   serve_one ();
-  BOOST_CHECK_EQUAL (blocking_queue.queue ().cache_size (), 0);
-  BOOST_CHECK_EQUAL (blocking_queue.queue ().read_available (), 80);
+  BOOST_CHECK_EQUAL (blocking_queue.cache_size (), 0);
+  BOOST_CHECK_EQUAL (blocking_queue.read_available (), 80);
 
   Packet packet;
 
@@ -608,37 +583,37 @@ BOOST_AUTO_TEST_CASE (SlowConsumerWithPrefetch)
   BOOST_CHECK (is_valid_packet (packet));
   BOOST_CHECK_EQUAL (packet.header.seqNum, 1);
   BOOST_CHECK (packet.payload == payload);
-  BOOST_CHECK_EQUAL (blocking_queue.queue ().cache_size (), 40);
-  BOOST_CHECK_EQUAL (blocking_queue.queue ().read_available (), 40);
+  BOOST_CHECK_EQUAL (blocking_queue.cache_size (), 40);
+  BOOST_CHECK_EQUAL (blocking_queue.read_available (), 40);
 
   serve_one ();
-  BOOST_CHECK_EQUAL (blocking_queue.queue ().cache_size (), 40);
-  BOOST_CHECK_EQUAL (blocking_queue.queue ().read_available (), 80);
+  BOOST_CHECK_EQUAL (blocking_queue.cache_size (), 40);
+  BOOST_CHECK_EQUAL (blocking_queue.read_available (), 80);
 
   packet = consume_one ();
   BOOST_CHECK (is_valid_packet (packet));
   BOOST_CHECK_EQUAL (packet.header.seqNum, 2);
   BOOST_CHECK (packet.payload == payload);
-  BOOST_CHECK_EQUAL (blocking_queue.queue ().cache_size (), 0);
-  BOOST_CHECK_EQUAL (blocking_queue.queue ().read_available (), 40);
+  BOOST_CHECK_EQUAL (blocking_queue.cache_size (), 0);
+  BOOST_CHECK_EQUAL (blocking_queue.read_available (), 40);
 
   packet = consume_one ();
   BOOST_CHECK (is_valid_packet (packet));
   BOOST_CHECK_EQUAL (packet.header.seqNum, 3);
   BOOST_CHECK (packet.payload == payload);
-  BOOST_CHECK_EQUAL (blocking_queue.queue ().cache_size (), 0);
-  BOOST_CHECK_EQUAL (blocking_queue.queue ().read_available (), 0);
+  BOOST_CHECK_EQUAL (blocking_queue.cache_size (), 0);
+  BOOST_CHECK_EQUAL (blocking_queue.read_available (), 0);
 
   serve_one ();
-  BOOST_CHECK_EQUAL (blocking_queue.queue ().cache_size (), 0);
-  BOOST_CHECK_EQUAL (blocking_queue.queue ().read_available (), 40);
+  BOOST_CHECK_EQUAL (blocking_queue.cache_size (), 0);
+  BOOST_CHECK_EQUAL (blocking_queue.read_available (), 40);
 
   packet = consume_one ();
   BOOST_CHECK (is_valid_packet (packet));
   BOOST_CHECK_EQUAL (packet.header.seqNum, 4);
   BOOST_CHECK (packet.payload == payload);
-  BOOST_CHECK_EQUAL (blocking_queue.queue ().cache_size (), 0);
-  BOOST_CHECK_EQUAL (blocking_queue.queue ().read_available (), 0);
+  BOOST_CHECK_EQUAL (blocking_queue.cache_size (), 0);
+  BOOST_CHECK_EQUAL (blocking_queue.read_available (), 0);
 
   /*
    * Exit server and consumer
@@ -646,6 +621,8 @@ BOOST_AUTO_TEST_CASE (SlowConsumerWithPrefetch)
   stop = true;
   server.join ();
 }
+
+#if PREFETCH_FIXED
 
 BOOST_AUTO_TEST_CASE (ConsumerPrefetchSmallerThanMessageSize)
 {
