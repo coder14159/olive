@@ -18,6 +18,14 @@ LatencyStats::LatencyStats (const std::string &directory)
 { }
 
 LatencyStats::~LatencyStats ()
-{ }
+{
+  stop ();
+}
+
+void LatencyStats::stop ()
+{
+  m_summary.stop ();
+  m_interval.stop ();
+}
 
 } // namespace spmc

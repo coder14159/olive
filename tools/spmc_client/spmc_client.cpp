@@ -8,8 +8,6 @@
 #include "detail/SharedMemory.h"
 #include "detail/Utils.h"
 
-#include <boost/log/trivial.hpp>
-
 #include <bits/stdc++.h>
 #include <exception>
 #include <set>
@@ -34,7 +32,8 @@ CxxOptsHelper parse (int argc, char* argv[])
     ("cpu", "Bind main thread to a cpu processor integer, "
             "use -1 for no binding",
       cxxopts::value<int> ()->default_value ("-1"))
-    ("prefetch_cache", "Size of a prefetch cache",
+    ("prefetch_size", "Set size of a prefetch cache. "
+                      "The default of 0 indicates no prefetching",
       cxxopts::value<size_t> ()->default_value ("0"))
     ("directory", "Directory for statistics files",
       cxxopts::value<std::string> ())
@@ -77,8 +76,7 @@ int main(int argc, char* argv[]) try
   auto name          = options.required<std::string> ("name");
   auto directory     = options.value<std::string>    ("directory", "");
   auto cpu           = options.value<int>            ("cpu", -1);
-  auto allowDrops    = options.value<bool>           ("allow_drops", false);
-  auto prefetchCache = options.value<size_t>         ("prefetch_cache", 0);
+  auto prefetchSize  = options.value<size_t>         ("prefetch_size", 0);
   auto test          = options.value<bool>           ("test", false);
   auto logLevel      = options.value<std::string>    ("log_level",
                                                       log_levels (),"INFO");
@@ -90,13 +88,10 @@ int main(int argc, char* argv[]) try
 
   BOOST_LOG_TRIVIAL (info) <<  "Start spmc_client";
   BOOST_LOG_TRIVIAL (info) <<  "Consume from shared memory named: " << name;
-  if (allowDrops)
+
+  if (prefetchSize > 0)
   {
-    BOOST_LOG_TRIVIAL (info) <<  "Allow dropping of messages";
-  }
-  if (prefetchCache > 0)
-  {
-    BOOST_LOG_TRIVIAL (info) <<  "Use prefetch cache size: " << prefetchCache;
+    BOOST_LOG_TRIVIAL (info) <<  "Use prefetch cache size: " << prefetchSize;
   }
 
 
@@ -104,7 +99,7 @@ int main(int argc, char* argv[]) try
   using Stream = SPMCStream<Queue>;
 
   // TODO: Generate the queue name from within Stream ctor..
-  Stream stream (name, name + ":queue", allowDrops, prefetchCache);
+  Stream stream (name, name + ":queue", prefetchSize);
 
   bool stop = { false };
 
@@ -134,7 +129,8 @@ int main(int argc, char* argv[]) try
 
   bind_to_cpu (cpu);
 
-  Header header, testHeader;
+  Header header;
+  uint64_t testSeqNum = 0;
 
   std::vector<uint8_t> data;
   std::vector<uint8_t> expected;
@@ -148,16 +144,17 @@ int main(int argc, char* argv[]) try
 
       if (SPMC_EXPECT_FALSE (test))
       {
-        if (testHeader.seqNum == 0)
+        if (testSeqNum == 0)
         {
-          testHeader.seqNum = header.seqNum;
+          testSeqNum = header.seqNum;
         }
-        else if (!allowDrops)
+        else
         {
-          ASSERT_SS ((header.seqNum - testHeader.seqNum) == 1,
+          ASSERT_SS ((header.seqNum - testSeqNum) == 1,
             "Invalid sequence number: header.seqNum: " << header.seqNum <<
-            " testHeader.seqNum: " << testHeader.seqNum);
-          testHeader = header;
+            " testSeqNum: " << testSeqNum);
+
+          testSeqNum = header.seqNum;
         }
 
         ASSERT_SS (header.size == data.size (), "Unexpected payload size: "
@@ -182,6 +179,9 @@ int main(int argc, char* argv[]) try
       }
     }
   }
+
+  stats.stop ();
+  stats.print_summary ();
 
   BOOST_LOG_TRIVIAL (info) << "Exit stream";
 

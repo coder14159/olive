@@ -60,7 +60,7 @@ public:
    *
    * Non-standard behaviour: all internal data is deleted on resize
    */
-  void resize (size_t size);
+  void capacity (size_t size);
 
   /*
    * Return current size of the buffer
@@ -110,7 +110,6 @@ public:
    */
   template<typename BufferType>
   bool pop (BufferType &data, size_t size);
-
   /*
    * Return unrestricted access to the internal buffer
    * Primarily for debugging

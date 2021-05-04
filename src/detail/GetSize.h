@@ -2,6 +2,7 @@
 #define IPC_DETAIL_SPMC_GET_SIZE_H
 
 #include <vector>
+
 namespace spmc {
 
 /*

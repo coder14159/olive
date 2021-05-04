@@ -30,7 +30,7 @@ throughput_bytes_to_pretty (uint64_t bytes, TimeDuration duration)
 
   if (bytes_per_second > GB)
   {
-    return (boost::format ("%4.0f GB/s") % (bytes_per_second/GB)).str ();
+    return (boost::format ("%4.1f GB/s") % (bytes_per_second/GB)).str ();
   }
   else if (bytes_per_second > MB)
   {
@@ -41,7 +41,7 @@ throughput_bytes_to_pretty (uint64_t bytes, TimeDuration duration)
     return (boost::format ("%4.0f KB/s") % (bytes_per_second/KB)).str ();
   }
 
-  return (boost::format ("%4.f bytes/s") % bytes_per_second).str ();
+  return (boost::format ("%4.0f bytes/s") % bytes_per_second).str ();
 }
 
 std::string
@@ -129,6 +129,7 @@ void Throughput::enable (bool enable)
 void Throughput::stop ()
 {
   m_stop = true;
+  m_timer.stop ();
 }
 
 bool Throughput::is_stopped () const
@@ -148,8 +149,7 @@ void Throughput::write_header ()
     return;
   }
 
-  m_file
-    << "avg_message_size,megabytes_per_sec,messages_per_sec,messages_dropped\n";
+  m_file << "avg_message_size,megabytes_per_sec,messages_per_sec\n";
 }
 
 Throughput &Throughput::write_data ()
@@ -163,8 +163,7 @@ Throughput &Throughput::write_data ()
 
   m_file << avgMessageSize       << ","
          << megabytes_per_sec () << ','
-         << messages_per_sec ()  << ','
-         << m_dropped            << '\n';
+         << messages_per_sec ()  << '\n';
 
   return *this;
 }
@@ -201,17 +200,7 @@ std::string Throughput::to_string () const
 
   std::string stats = throughput_bytes_to_pretty (m_bytes, duration) + " " +
                       throughput_messages_to_pretty (m_messages, duration);
-  if (m_dropped > 0)
-  {
-    stats += " dropped: " + std::to_string (m_dropped);
-  }
-
   return stats;
-}
-
-uint64_t Throughput::dropped () const
-{
-  return m_dropped;
 }
 
 } // namespace spmc

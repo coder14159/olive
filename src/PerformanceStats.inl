@@ -1,6 +1,7 @@
 #include "Chrono.h"
 #include "PerformanceStats.h"
 #include "TimeDuration.h"
+#include "detail/SharedMemory.h"
 #include "detail/Utils.h"
 
 #include <boost/algorithm/string.hpp>
@@ -16,6 +17,7 @@ inline
 void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
                                TimePoint timestamp)
 {
+#if 0 // TODO // is this required?
   if (SPMC_EXPECT_FALSE (seqNum < m_seqNum))
   {
     /*
@@ -23,24 +25,33 @@ void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
      * than expected.
      */
     m_seqNum = seqNum;
+    m_intervalBytes = 0;
+    m_intervalMessages = 0;
 
     return;
   }
+#endif
+  m_intervalBytes += bytes;
+  ++m_intervalMessages;
 
-  m_throughput.interval ().next (bytes, seqNum);
-  m_throughput.summary ().next (bytes, seqNum);
   /*
    * Sample latency values as requesting a timestamp too often impacts
    * performance
    */
-  if (SPMC_EXPECT_FALSE ((timestamp - m_sampled) < 10ns))
+  if (SPMC_EXPECT_FALSE ((timestamp - m_sampled) < 1us))
   {
     return;
   }
 
   m_sampled = Clock::now ();
 
-  m_queue.push ({ m_sampled - timestamp });
+  if (m_queue.push ({{ m_sampled - timestamp },
+                       m_intervalBytes,
+                       m_intervalMessages }))
+  {
+    m_intervalBytes = 0;
+    m_intervalMessages = 0;
+  }
 
   m_seqNum = seqNum;
 }

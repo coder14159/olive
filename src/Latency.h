@@ -10,7 +10,6 @@
 #include <fstream>
 #include <map>
 #include <string>
-#include <thread>
 #include <vector>
 
 namespace spmc {
@@ -38,13 +37,12 @@ public:
    * Computes latency information
    */
   Latency ();
-
-  ~Latency ();
-
   /*
    * Compute latency data and persists it to file in the named directory
    */
   Latency (const std::string &directory, const std::string &filename);
+
+  ~Latency ();
 
   void enable (bool enable);
 
@@ -110,6 +108,10 @@ public:
 
 private:
 
+  Latency (const Latency &) = delete;
+
+  Latency & operator=(const Latency&) = delete;
+
   void init_quantiles ();
 
   void init_file ();
@@ -124,8 +126,6 @@ private:
   bool                      m_stop = false;
   Nanoseconds               m_min  = Nanoseconds::max ();
   Nanoseconds               m_max  = Nanoseconds::min ();
-
-  std::thread m_thread;
 
   const uint64_t DEFAULT_QUEUE_SIZE = 10;
 

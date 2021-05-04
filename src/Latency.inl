@@ -29,9 +29,11 @@ void Latency::next (Nanoseconds nanoseconds)
     return;
   }
 
+  auto count = nanoseconds.count ();
+
   for (auto &quantile : m_quantiles)
   {
-    quantile.second (nanoseconds.count ());
+    quantile.second (count);
   }
 
   m_min = std::min (m_min, nanoseconds);

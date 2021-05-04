@@ -28,6 +28,10 @@ public:
   ~LatencyStats ();
 
   /*
+   * Stop interval and summary latency threads
+   */
+  void stop ();
+  /*
    * Return true if both interval and summary logging are stopped
    */
   bool is_stopped () const;

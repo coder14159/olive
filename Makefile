@@ -1,6 +1,6 @@
 include Makefile.include
 
-.PHONY:	all test clean $(BIN_DIR) $(LIB_DIR)
+.PHONY:	all test clean spmc_client spmc_server $(BIN_DIR) $(LIB_DIR)
 
 .DEFAULT_GOAL := all
 
@@ -77,7 +77,6 @@ LIB_SRC_CPP_FILES += src/detail/SharedMemoryCounter.h
 LIB_SRC_CPP_FILES += src/detail/SharedMemory.h
 LIB_SRC_CPP_FILES += src/detail/SPMCBackPressure.h
 LIB_SRC_CPP_FILES += src/detail/SPMCBackPressure.inl
-LIB_SRC_CPP_FILES += src/detail/SPMCQueue.cpp
 LIB_SRC_CPP_FILES += src/detail/SPMCQueue.h
 LIB_SRC_CPP_FILES += src/detail/SPMCQueue.inl
 LIB_SRC_CPP_FILES += src/detail/Utils.h
@@ -113,14 +112,14 @@ $(LIB_FILE_PATH): $(LIB_OBJ_FILES)
 # Build all binaries
 
 EXE_FILES = $(BIN_DIR)/spmc_client \
-			$(BIN_DIR)/spmc_server \
-			$(BIN_DIR)/spsc_server \
-			$(BIN_DIR)/spsc_client \
-			$(BIN_DIR)/remove_shared_memory \
-			$(BIN_DIR)/test_performance \
-			$(BIN_DIR)/test_spmcqueue \
-			$(BIN_DIR)/test_stats \
-			$(BIN_DIR)/test_allocator
+            $(BIN_DIR)/spmc_server \
+            $(BIN_DIR)/spsc_server \
+            $(BIN_DIR)/spsc_client \
+            $(BIN_DIR)/remove_shared_memory \
+            $(BIN_DIR)/test_performance \
+            $(BIN_DIR)/test_spmcqueue \
+            $(BIN_DIR)/test_stats \
+            $(BIN_DIR)/test_allocator
 
 # Create bin directory if required
 # Invoke using "order-only prerequisites" syntax to prevent directory timestamp
@@ -129,9 +128,11 @@ $(BIN_DIR):
 	@mkdir -p $(BIN_DIR)
 
 # Build tools
+spmc_client:  $(BIN_DIR)/spmc_client
 $(BIN_DIR)/spmc_client: Makefile tools/spmc_client/spmc_client.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
 	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) tools/spmc_client/spmc_client.cpp -o $@ -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
 
+spmc_server: $(BIN_DIR)/spmc_server
 $(BIN_DIR)/spmc_server: Makefile tools/spmc_server/spmc_server.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
 	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) tools/spmc_server/spmc_server.cpp -o $@ -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
 
@@ -160,16 +161,18 @@ $(BIN_DIR)/test_spmcqueue: Makefile tests/test_spmcqueue/test_spmcqueue.cpp $(LI
 $(BIN_DIR)/test_stats: Makefile tests/test_stats/test_stats.cpp $(LIB_FILE_PATH) $(LIB_SRC_CPP_FILES) | $(BIN_DIR)
 	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) tests/test_stats/test_stats.cpp -o $@ -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_THREAD) $(LIB_BOOST_FILESYSTEM)
 
+tests: $(BIN_DIR)/test_allocator \
+       $(BIN_DIR)/test_performance \
+       $(BIN_DIR)/test_spmcqueue \
+       $(BIN_DIR)/test_stats
+
 # Build all binaries
 all : $(BIN_DIR)/spmc_client \
-			$(BIN_DIR)/spmc_server \
-			$(BIN_DIR)/spsc_server \
-			$(BIN_DIR)/spsc_client \
-			$(BIN_DIR)/remove_shared_memory \
-			$(BIN_DIR)/test_performance \
-			$(BIN_DIR)/test_spmcqueue \
-			$(BIN_DIR)/test_stats \
-			$(BIN_DIR)/test_allocator
+       $(BIN_DIR)/spmc_server \
+       $(BIN_DIR)/spsc_server \
+       $(BIN_DIR)/spsc_client \
+       $(BIN_DIR)/remove_shared_memory \
+       tests
 
 clean:
 	rm -rf build/$(PROCESSOR)$(BUILD_SUFFIX)

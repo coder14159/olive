@@ -12,7 +12,10 @@ SPMCSink<Queuetype>::SPMCSink (const std::string &memoryName,
                                const std::string &queueName,
                                size_t             capacity)
 : m_queue (memoryName, queueName, capacity)
-{ }
+{
+  BOOST_LOG_TRIVIAL(info) << "Found or created queue named '"
+    << queueName << "' with capacity of " << capacity << " bytes";
+}
 
 template <class Queuetype>
 void SPMCSink<Queuetype>::stop ()

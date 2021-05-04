@@ -75,14 +75,20 @@ struct Header
 };
 
 /*
- * Definitions used by a consumer thread / process
+ * Definitions used by a consumer threads / processes to change state
  */
-struct Consumer
+namespace Consumer
 {
-  static constexpr size_t   UnInitialisedIndex = std::numeric_limits<size_t>::max ();
-  static constexpr uint64_t UnInitialised = std::numeric_limits<uint64_t>::max ();
-  static constexpr uint64_t Stopped       = std::numeric_limits<uint64_t>::max () - 1;
+  static constexpr size_t Ready         = std::numeric_limits<size_t>::max ();
+  static constexpr size_t UnInitialised = std::numeric_limits<size_t>::max () - 1;
+  static constexpr size_t Stopped       = std::numeric_limits<size_t>::max () - 2;
+  static constexpr size_t Reserved      = std::numeric_limits<size_t>::max () - 3;
 };
+
+namespace Producer
+{
+  static constexpr uint8_t InvalidIndex = std::numeric_limits<uint8_t>::max ();
+}
 
 static constexpr int8_t MAX_NO_DROP_CONSUMERS_DEFAULT = 4;
 

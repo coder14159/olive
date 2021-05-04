@@ -32,8 +32,8 @@ public:
   /*
    * Construct an SPMCQueue for multiple processes.
    *
-   * Finds or creates named the shared memory and then finds or creates a queue
-   * object in within the shared memory.
+   * Finds or creates named shared memory and then finds or creates a queue
+   * object within the shared memory.
    */
   SPMCQueue (const std::string &memoryName,
              const std::string &queueName,
@@ -47,13 +47,16 @@ public:
   SPMCQueue (const std::string &memoryName,
              const std::string &queueName);
 
-  void register_consumer ();
+  /*
+   * Register a consumer thread or process
+   */
+  void register_consumer (detail::ConsumerState &consumer);
   /*
    * Inform producer that a consumer is stopping.
    *
    * Called from the consumer context.
    */
-  void unregister_consumer ();
+  void unregister_consumer (detail::ConsumerState &consumer);
 
   /*
    * Return the capacity of the queue in bytes
@@ -63,27 +66,12 @@ public:
   /*
    * Return true if queue is empty
    */
-  bool empty () const;
-
-  /*
-   * Allow a consumer to drop messages if it cannot keep up with the message
-   * rate of the producer. The default is non-dropping.
-   *
-   * Called from a consumer thread context to ensure the producer message rate
-   * is not affected buy performance of a given consumer thread or process.
-   */
-  void allow_message_drops ();
-
-  /*
-   * Allow the consumer to drop messages if it consumes data too slowly so that
-   * it doesn't slow down other non-drop consumers.
-   */
-  bool message_drops_allowed () const;
+  bool empty (detail::ConsumerState &consumer) const;
 
   /*
    * Return the size of data currently available in the queue
    */
-  uint64_t read_available () const;
+  uint64_t read_available (detail::ConsumerState &consumer) const;
 
   /*
    * Return the capacity of the consumer local data cache
@@ -114,6 +102,8 @@ public:
   template <class POD>
   bool push (const POD &pod);
 
+  // TODO PUSH VECTOR ONLY
+
   /*
    * Push pod type data into the queue, always succeeds unless there are slow
    * consumers configured to be non-dropping.
@@ -136,7 +126,7 @@ public:
    * Pop data out of the header and data from the queue
    */
   template <class POD, class BufferType>
-  bool pop (POD &pod, BufferType &data);
+  bool pop (POD &pod, BufferType &data, detail::ConsumerState &consumer);
 
 private:
 
@@ -145,16 +135,12 @@ private:
    * a message header and associated data from the local cache
    */
   template <class Header, class BufferType>
-  bool pop_from_cache (Header &header, BufferType &data);
-
+  bool pop_from_cache (Header &header, BufferType &data,
+                       detail::ConsumerState &consumer);
   /*
    * Memory shared between processes
    */
   boost::interprocess::managed_shared_memory m_memory;
-
-  typename QueueType::ConsumerType m_consumer;
-
-  typename QueueType::ProducerType m_producer;
 
   bool m_cacheEnabled  = false;
 
@@ -168,17 +154,10 @@ private:
   alignas (CACHE_LINE_SIZE)
   QueuePtr m_queue;
   /*
-   * Local pointer to data buffer shared between producer and consumers.
-   *
-   * Dereferencing the boost shared memory offset pointer has a measurable cost,
-   * so cache the dereferenced pointer in each client.
-   */
-  alignas (CACHE_LINE_SIZE)
-  uint8_t *m_buffer  { nullptr };
-  /*
    * This data cache can optionally be used to store chunks of data taken from
    * the shared queue. This cache is local to each client.
    */
+  alignas (CACHE_LINE_SIZE)
   Buffer<std::allocator<uint8_t>> m_cache;
 
 };

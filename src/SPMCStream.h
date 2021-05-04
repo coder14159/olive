@@ -33,16 +33,13 @@ public:
    */
   SPMCStream (const std::string &memoryName,
               const std::string &queueName,
-              bool allowMessageDrops,
-              size_t prefetchSize);
+              size_t prefetchSize = 0);
 
   /*
    * Initialise a stream consuming from memory shared between threads in a
    * single process.
    */
-  SPMCStream (QueueType &queue,
-              bool allowMessageDrops,
-              size_t prefetchSize);
+  SPMCStream (QueueType &queue, size_t prefetchSize = 0);
 
   ~SPMCStream ();
 
@@ -67,7 +64,7 @@ public:
 
 private:
 
-  void init (bool allowMessageDrops, size_t prefetchSize);
+  void init (size_t prefetchSize);
 
   /*
    * Pull data from the shared queue.
@@ -81,6 +78,8 @@ private:
   bool m_registered = { false };
 
   std::atomic<bool> m_stop = { false };
+
+  detail::ConsumerState m_consumer;
 
   std::unique_ptr<QueueType> m_queuePtr;
 
