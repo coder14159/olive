@@ -32,19 +32,10 @@ throughput_messages_to_pretty (uint64_t messages, TimeDuration duration);
 class Throughput
 {
 public:
-
-  struct Dropped
-  {
-    uint64_t interval = 0;
-    uint64_t summary  = 0;
-  };
-
   /*
    * Compute throughput values which can be requested via member function calls
    */
   Throughput ();
-
-  Throughput(const Throughput &&throughput);
   /*
    * Computes throughput information and writes data to disk in csv format
    */

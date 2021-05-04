@@ -149,8 +149,7 @@ void Throughput::write_header ()
     return;
   }
 
-  m_file
-    << "avg_message_size,megabytes_per_sec,messages_per_sec,messages_dropped\n";
+  m_file << "avg_message_size,megabytes_per_sec,messages_per_sec\n";
 }
 
 Throughput &Throughput::write_data ()
