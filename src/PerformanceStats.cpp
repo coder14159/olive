@@ -109,18 +109,18 @@ void PerformanceStats::start ()
         continue;
       }
 
+      m_latency.interval ().next (stats.latency);
+      m_latency.summary ().next (stats.latency);
+
+      m_throughput.interval ().next (stats.bytes, stats.messages);
+      m_throughput.summary ().next (stats.bytes, stats.messages);
+
       if (logDuration > Seconds (1))
       {
         log_interval_stats ();
 
         lastLog = now;
       }
-
-      m_latency.interval ().next (stats.latency);
-      m_latency.summary ().next (stats.latency);
-
-      m_throughput.interval ().next (stats.bytes, stats.messages);
-      m_throughput.summary ().next (stats.bytes, stats.messages);
     }
 
     m_throughput.summary ().write_data ();
