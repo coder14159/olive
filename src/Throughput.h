@@ -40,6 +40,10 @@ public:
    * Computes throughput information and writes data to disk in csv format
    */
   Throughput (const std::string &directory, const std::string &filename);
+  /*
+   * Move constructor
+   */
+  Throughput(const Throughput &&throughput);
 
   ~Throughput ();
 
