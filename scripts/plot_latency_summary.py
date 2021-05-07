@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+##########################################
+# Script to plot latency profile summary #
+##########################################
+
 import argparse
 import cpuinfo
 import matplotlib.pyplot as plt
@@ -22,7 +26,8 @@ exe_dir = os.path.join (base_dir, 'build', platform.processor (), 'bin')
 
 parser = argparse.ArgumentParser (description='Plot performance test results')
 
-parser.add_argument ('--title', required=False, default='Latency Percentiles',
+parser.add_argument ('--title', required=False,
+                     default='Latency Percentile Distribution',
                      help='Title of the plot')
 parser.add_argument ('--subtitle', required=False,  help='Subtitle of the plot')
 
@@ -84,8 +89,7 @@ def plot_latency_summary (axis, file_path, title, legend):
   df = pd.read_csv (file_path).transpose ()
 
   axis = sns.lineplot (data=df, dashes=False)\
-            .set (xlabel='percentile', ylabel='latency (nanoseconds)',
-                  title='Latency Percentile Distribution')
+            .set (xlabel='percentile', ylabel='latency (nanoseconds)')
 
   plt.legend ().get_texts ()[index].set_text (legend)
 
@@ -174,7 +178,7 @@ for tick in axis.xaxis.get_major_ticks ():
 for tick in axis.yaxis.get_major_ticks ():
     tick.label.set_fontsize (8)
 
-axis.set_title ('Latency Profile\n' + ' '.join (data['title_texts']), fontsize=10)
+axis.set_title (' '.join (data['title_texts']), fontsize=10)
 axis.set_xlabel ('Percentile', fontsize=10)
 axis.set_ylabel ('Latency (nanoseconds)', fontsize=10)
 
@@ -185,6 +189,7 @@ legend_list = []
 for s in data['legend_texts']:
   legend_list.append (' '.join (s))
 
-axis.legend (handler, legend_list)
+axis.legend (handler, legend_list, fontsize=8)
 
+plt.suptitle (args.title)
 plt.show ()
