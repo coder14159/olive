@@ -98,7 +98,7 @@ def plot_latency_summary (axis, file_path, title, legend):
 index = 1
 axis = None
 
-def get_data ():
+def get_plot_data ():
   legend_texts = []
   title_text = set ()
   dataframe = None
@@ -127,6 +127,7 @@ def get_data ():
 
               file_path = Path (data_directory) / 'latency-summary.csv'
 
+              print ('loading: ' + str (file_path))
               df = pd.read_csv (file_path).transpose ()
 
               if dataframe is None:
@@ -169,27 +170,42 @@ def get_data ():
                legend_texts=legend_texts,
                title_texts=title_text)
 
-data = get_data ()
+def get_legend_list (data):
+  legend_list = []
 
-axis = sns.lineplot (data=data['latency_summaries'], dashes=False)
+  if len (data['legend_texts']) > 1:
+    for s in data['legend_texts']:
+      legend_list.append (' '.join (s))
 
-for tick in axis.xaxis.get_major_ticks ():
-    tick.label.set_fontsize (8)
-for tick in axis.yaxis.get_major_ticks ():
-    tick.label.set_fontsize (8)
+  return legend_list
+
+def show_legend (data):
+  if len (data) > 1:
+    return True
+
+  return False
+
+def set_tick_sizes (axis):
+  for tick in axis.xaxis.get_major_ticks ():
+      tick.label.set_fontsize (8)
+  for tick in axis.yaxis.get_major_ticks ():
+      tick.label.set_fontsize (8)
+
+data = get_plot_data ()
+
+legend_list = get_legend_list (data)
+
+show_legend = show_legend (data['latency_summaries'])
+
+axis = sns.lineplot (data=data['latency_summaries'], dashes=False,
+                     legend=show_legend)
+set_tick_sizes (axis)
+
+axis.legend (get_legend_list (data), fontsize=8)
 
 axis.set_title (' '.join (data['title_texts']), fontsize=10)
 axis.set_xlabel ('Percentile', fontsize=10)
 axis.set_ylabel ('Latency (nanoseconds)', fontsize=10)
-
-handler, label = axis.get_legend_handles_labels ()
-
-legend_list = []
-
-for s in data['legend_texts']:
-  legend_list.append (' '.join (s))
-
-axis.legend (handler, legend_list, fontsize=8)
 
 plt.suptitle (args.title)
 plt.show ()
