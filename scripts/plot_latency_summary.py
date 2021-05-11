@@ -11,6 +11,7 @@ import numpy as np
 import os
 import pandas as pd
 import platform
+import queue
 import seaborn as sns
 
 from pathlib import Path
@@ -41,6 +42,9 @@ parser.add_argument ('--server_rates', default='max', nargs='+',
 
 parser.add_argument ('--client_directories', nargs='+',
                     help='Base directories under which the stats data is stored')
+parser.add_argument ('--client_directory_descriptions', nargs='+',
+                    help='Give each directory a legend name. These should be in'
+                    ' the same order as client_directories')
 parser.add_argument ('--client_counts', nargs='+', type=int,
                     help='Number of consumer clients')
 parser.add_argument ('--client_prefetch_sizes', required=False, default='0',
@@ -49,7 +53,12 @@ parser.add_argument ('--client_prefetch_sizes', required=False, default='0',
 args = parser.parse_args ()
 
 if not args.client_directories:
-  print ('client directories argument is not set')
+  print ('client_directories argument is not set')
+  exit (1)
+
+if args.client_directory_descriptions is not None and \
+   len (args.client_directory_descriptions) != len (args.client_directories):
+  print ('client_directory_descriptions count should equal client_directories count')
   exit (1)
 
 max = '0'
@@ -72,6 +81,8 @@ def sub_title (server_rate, message_size, client_count):
 
 def latency_dataframe (file_path):
 
+  print (str (file_path))
+
   if file_path.exists () == False:
       print ('Path does not exist: ' + str (file_path))
       exit (1)
@@ -80,13 +91,7 @@ def latency_dataframe (file_path):
 
 def plot_latency_summary (axis, file_path, title, legend):
 
-  print (str (file_path))
-
-  if file_path.exists () == False:
-      print ('Path does not exist: ' + str (file_path))
-      exit (1)
-
-  df = pd.read_csv (file_path).transpose ()
+  df = latency_dataframe (file_path)
 
   axis = sns.lineplot (data=df, dashes=False)\
             .set (xlabel='percentile', ylabel='latency (nanoseconds)')
@@ -100,17 +105,29 @@ axis = None
 
 def get_plot_data ():
   legend_texts = []
+  legend_prefix_texts = None
   title_text = set ()
   dataframe = None
   frame_count = 0
+
+  if args.client_directory_descriptions is not None:
+    legend_prefix_texts = queue.Queue ()
+
+    for prefix in args.client_directory_descriptions:
+      legend_prefix_texts.put (prefix)
+
   for dir in args.client_directories:
+
+    legend_prefix = ''
+    if legend_prefix_texts is not None:
+      legend_prefix = legend_prefix_texts.get ()
 
     for server_rate in args.server_rates:
       for server_queue_size in args.server_queue_sizes:
 
         if Path (dir).exists () == False:
             print ('path does not exist: ' + dir)
-            exit (1)
+            continue
 
         for message_size in args.server_message_sizes:
 
@@ -127,6 +144,10 @@ def get_plot_data ():
 
               file_path = Path (data_directory) / 'latency-summary.csv'
 
+              if file_path.exists () == False:
+                print (str (file_path) + " does not exist")
+                continue
+
               print ('loading: ' + str (file_path))
               df = pd.read_csv (file_path).transpose ()
 
@@ -136,7 +157,8 @@ def get_plot_data ():
                 frame_count += 1
                 dataframe[frame_count] = df
 
-              legend_line_label = []
+              legend_line_label = [legend_prefix + ' ']
+
               rate = (server_rate if server_rate != '0' else 'max')
 
               if len (args.server_rates) > 1:

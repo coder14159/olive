@@ -18,16 +18,20 @@ def cpu_bind_list (cpu_list, client_count):
 def output_directory_path (
   base_directory,
   server_queue_size, server_rate, server_message_size,
-  client_count, client_prefetch_size):
+  client_count, client_prefetch_size = None):
 
   server_rate_str = 'max' if server_rate is '0' else str (server_rate)
 
-  return Path (base_directory) \
+  path = Path (base_directory) \
             / 'server_queue_size'    / str (server_queue_size) \
             / 'server_rate'          / server_rate_str  \
             / 'server_message_size'  / str (server_message_size) \
-            / 'client_count'         / str (client_count) \
-            / 'client_prefetch_size' / str (client_prefetch_size)
+            / 'client_count'         / str (client_count)
+
+  if client_prefetch_size is not None:
+    path /= Path ('client_prefetch_size') / str (client_prefetch_size)
+
+  return path
 
 # Return a human readable message throughput string
 def throughput_messages_to_pretty (rate):

@@ -28,9 +28,12 @@ exe_dir_pgo = os.path.join (base_dir, "build",
 parser = argparse.ArgumentParser (description="Latency testing")
 
 # note only allowing one shared memory name
-parser.add_argument ("--name", required=True, help="Shared memory name to use")
+parser.add_argument ("--tool_type", required=False,
+                    choices=['spmc', 'spsc'], default='spmc',
+                    help="The tool type to use")
+parser.add_argument ("--memory_name", required=True, help="Shared memory name to use")
 parser.add_argument ("--directory_name", required=False,
-                     help="Optional directory name")
+                    help="Optional directory name")
 parser.add_argument ("--log_level", default="INFO",
                     choices=["TRACE", "DEBUG", "INFO", "WARNING",
                             "ERROR", "FATAL"],
@@ -38,7 +41,7 @@ parser.add_argument ("--log_level", default="INFO",
 parser.add_argument ("--timeout", required=True, help="Run time (seconds)")
 
 parser.add_argument ("--server_cpu",  type=int, default=-1,
-                    help="Bind spmc server to cpu id")
+                    help="Bind server to cpu id")
 parser.add_argument ("--server_queue_size_list", required=True, nargs='+',
                     help="Queue size (bytes)")
 parser.add_argument ("--server_message_size", required=True, help="Message size (bytes)")
@@ -48,7 +51,7 @@ parser.add_argument ("--server_pgo", default=False, action="store_true",
                     help="Use profile guided optimised server binary")
 
 parser.add_argument ("--client_cpu_list", nargs='+', type=int, default=-1,
-                    help="Bind spmc client(s) to cpu id list. "
+                    help="Bind client(s) to cpu id list. "
                          "Can be fewer than the total number of clients")
 parser.add_argument ("--client_count_list",  required=True, nargs='+',
                     help="Number of consumer clients")
@@ -65,15 +68,15 @@ parser.add_argument ("--client_pgo", default=False, action="store_true",
 args = parser.parse_args ()
 
 server_exe_dir = exe_dir_pgo if args.server_pgo is True else exe_dir_non_pgo
-server_exe     = os.path.join (server_exe_dir, "spmc_server")
+server_exe     = os.path.join (server_exe_dir, args.tool_type + '_server')
 
 client_exe_dir = exe_dir_pgo if args.client_pgo is True else exe_dir_non_pgo
-client_exe     = os.path.join (client_exe_dir, "spmc_client")
+client_exe     = os.path.join (client_exe_dir, args.tool_type + '_client')
 
 print ("host_name:              " + socket.gethostname ())
 print ("cpu_count:              " + str (cpu_count))
 print ("arch:                   " + str (platform.processor ()))
-print ("name:                   " + args.name)
+print ("name:                   " + args.memory_name)
 print ("run_time:               " + str (args.timeout) + " seconds")
 print ("log_level:              " + args.log_level)
 print ("")
@@ -88,7 +91,8 @@ print ("client_exe:             " + client_exe)
 print ("client_count_list:      " + ' '.join (map (str, args.client_count_list)))
 print ("client_cpu_list:        " + ' '.join (map (str, args.client_cpu_list)))
 print ("client_stats:           " + ' '.join (args.client_stats))
-print ("client_prefetch_size_list: " + ' '.join (map (str, args.client_prefetch_size_list)))
+if args.client_directory is not None:
+    print ("client_directory: " + str (args.client_directory))
 
 # avoid using cpu 0 where possible
 
@@ -120,17 +124,21 @@ for server_rate in args.server_rate_list:
                                 str (directory))
                         continue
 
-
                 # Delete shared memory if it exists
+                print ('remove shared memory:' + str (args.memory_name))
+
                 subprocess.check_call ([pathlib.Path (exe_dir_non_pgo) / "remove_shared_memory",
-                                        "--names", args.name])
+                                        "--names", args.memory_name])
                 server_cmd = [server_exe,
                     "--cpu",          str (args.server_cpu),
-                    "--name",         args.name,
+                    "--name",         args.memory_name,
                     "--message_size", str (args.server_message_size),
                     "--queue_size",   str (server_queue_size),
                     "--rate",         str (server_rate),
                     "--log_level",    args.log_level]
+
+                if args.tool_type == 'spsc':
+                    server_cmd += ['--clients', str (client_count)]
 
                 # Run the server
                 print ('%s' % ' '.join (map (str, server_cmd)))
@@ -152,7 +160,7 @@ for server_rate in args.server_rate_list:
 
                 for client_index in range (client_count):
                     client_cmd = [client_exe,
-                                "--name",     args.name,
+                                "--name",     args.memory_name,
                                 "--log_level", "INFO"]
 
                     cpu_bind = -1
@@ -161,7 +169,7 @@ for server_rate in args.server_rate_list:
                     if cpu_bind != -1:
                         client_cmd.extend (["--cpu", str (cpu_bind)])
 
-                    if (client_prefetch_size != '0'):
+                    if args.tool_type == 'spmc':
                         client_cmd.extend (["--prefetch_size", str (client_prefetch_size)])
 
                     if (client_index == (client_count -1)):
@@ -187,6 +195,6 @@ for server_rate in args.server_rate_list:
                 print ("server exited")
 
                 subprocess.check_call ([os.path.join (exe_dir_non_pgo, "remove_shared_memory"),
-                                        "--names", args.name])
+                                        "--names", args.memory_name])
 
                 print ("Latency test finished")
