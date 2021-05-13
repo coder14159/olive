@@ -50,6 +50,7 @@ void SPSCSink<Allocator>::next (const std::vector<uint8_t> &data, TimePoint time
   auto &queue = *m_queue;
   /*
    * Push the data packet onto the shared queue if there is available space
+   * for both header and data
    */
   size_t size = sizeof (Header) + header.size;
 
