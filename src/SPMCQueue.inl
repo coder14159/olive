@@ -175,23 +175,11 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   BufferType &data,
   detail::ConsumerState &consumer)
 {
-  /*
-   * The local data cache is only permitted if this consumer is not permitted to
-   * drop messages.
-   */
   if (SPMC_EXPECT_TRUE (!m_cacheEnabled))
   {
     if (SPMC_EXPECT_TRUE (m_queue->pop (header, consumer) &&
                           header.type != WARMUP_MESSAGE_TYPE))
     {
-      /*
-       * If no message drops are permitted for the consumer then both header and
-       * data are available as they are pushed as one atomic unit.
-       *
-       * If dropping of messages by the client is permitted then failure to pop
-       * payload indicates the data has been overwritten in the shared data
-       * queue.
-       */
       data.resize (header.size);
 
       return m_queue->pop (data.data (), header.size, consumer);
@@ -236,7 +224,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
 
   if (m_cache.pop (header) && header.type != WARMUP_MESSAGE_TYPE)
   {
-    if (m_cache.capacity () < (header.size))
+    if (m_cache.capacity () < header.size)
     {
       /*
        * If a message received is too large to fit in the cache, drain the
