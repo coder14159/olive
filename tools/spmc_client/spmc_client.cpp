@@ -86,14 +86,17 @@ int main(int argc, char* argv[]) try
 
   set_log_level (logLevel);
 
-  BOOST_LOG_TRIVIAL (info) <<  "Start spmc_client";
-  BOOST_LOG_TRIVIAL (info) <<  "Consume from shared memory named: " << name;
+  BOOST_LOG_TRIVIAL (info) << "Start spmc_client";
+  BOOST_LOG_TRIVIAL (info) << "Consume from shared memory named: " << name;
 
+  if (cpu != -1)
+  {
+    BOOST_LOG_TRIVIAL (info) << "Bind to CPU: " << cpu;
+  }
   if (prefetchSize > 0)
   {
     BOOST_LOG_TRIVIAL (info) <<  "Use prefetch cache size: " << prefetchSize;
   }
-
 
   using Queue  = SPMCQueue<SharedMemory::Allocator>;
   using Stream = SPMCStream<Queue>;
