@@ -27,9 +27,9 @@ private:
   SPSCStream & operator= (const SPSCStream &) = delete;
 
 public:
-  SPSCStream (const std::string &memoryName);
-  ~SPSCStream ();
+  SPSCStream (const std::string &memoryName, size_t prefetchSize = 0);
 
+  ~SPSCStream ();
   /*
    * Retrieve the next packet of data.
    */
@@ -45,7 +45,19 @@ private:
   /*
    * Pop data off the queue to the location pointed to by data
    */
-  bool pop (uint8_t* data, size_t size);
+  bool pop (uint8_t* to, size_t size);
+
+  bool prefetch_to_cache ();
+
+  bool check_cache_size (size_t size);
+
+  /*
+   * Pop header and data from the cache
+   */
+  template<class Header, class Data>
+  bool pop_from_cache (Header &header, Data &data);
+
+  size_t copy_from_queue (uint8_t* to, size_t size);
 
 private:
 
@@ -60,6 +72,8 @@ private:
    */
   alignas (CACHE_LINE_SIZE)
   QueueType *m_queuePtr = { nullptr };
+
+  Buffer<std::allocator<uint8_t>> m_cache;
 
   alignas (CACHE_LINE_SIZE)
   std::unique_ptr<SharedMemory::Allocator> m_allocator;
