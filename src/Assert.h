@@ -39,6 +39,26 @@ namespace spmc {
 
 #define UNREACHABLE(message) { throw (message); }
 
+#define CHECK(condition, message) do  \
+{                                     \
+  if (!(condition))                   \
+  {                                   \
+    throw std::logic_error (message); \
+  }                                   \
+} while(0)
+
+
+#define CHECK_SS (condition, message) do  \
+{                                         \
+  if (!(condition))                       \
+  {                                       \
+    std::ostringstream ss;                \
+    ss << message;                        \
+    throw std::logic_error (ss.str ());   \
+  }                                       \
+} while(0)
+
+
 } // namespace spmc
 
 #endif // IPC_ASSERT_H
