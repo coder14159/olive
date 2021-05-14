@@ -77,11 +77,11 @@ private:
 
   bool m_registered = { false };
 
+  std::unique_ptr<QueueType> m_queuePtr;
+
   std::atomic<bool> m_stop = { false };
 
   detail::ConsumerState m_consumer;
-
-  std::unique_ptr<QueueType> m_queuePtr;
 
   QueueType &m_queue;
 

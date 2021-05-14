@@ -24,6 +24,12 @@ Buffer<Allocator>::~Buffer ()
 }
 
 template <class Allocator>
+bool Buffer<Allocator>::enabled () const
+{
+  return (m_capacity > 0);
+}
+
+template <class Allocator>
 void Buffer<Allocator>::clear ()
 {
   m_size  = 0;
@@ -187,7 +193,8 @@ template <class Allocator>
 bool Buffer<Allocator>::push (SharedMemory::SPSCQueue &queue)
 {
   auto queue_size = queue.read_available ();
-  auto size       = std::min (m_capacity - m_size, queue_size);
+
+  auto size = std::min (m_capacity - m_size, queue_size);
 
   return push_from_spsc_queue (queue, size);
 }

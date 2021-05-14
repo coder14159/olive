@@ -4,15 +4,17 @@ script_dir=$(dirname $(readlink -f $0))
 base_dir=$(dirname $script_dir)
 cur_dir=`pwd`
 
+# Use environment variables to set command line parameters
+clients=1
+
+jobs=${JOBS:-1}
+queue_size=${QUEUE_SIZE:-20480}
+prefetch_size=${PREFETCH_SIZE:-0}
+
 memory_name=test_memory_spsc
 bin_dir=build/x86_64/bin
 profile_bin_dir=build/x86_64.pgo_profile/bin
 release_bin_dir=build/x86_64.pgo_release/bin
-
-# Use environment variable "JOBS" to set the build job count
-jobs=${JOBS:-1}
-queue_size=${QUEUE_SIZE:-20480}
-clients=${CLIENTS:-1}
 
 echo "# Build executable for removing shared memory"
 cd $base_dir && make $bin_dir/remove_shared_memory --jobs $jobs
@@ -26,10 +28,6 @@ cd $base_dir && \
                       $profile_bin_dir/spsc_client --jobs $jobs
 
 echo "# Run the tests generating profile guiding data"
-echo "cd $base_dir && \
-   $profile_bin_dir/spsc_server --cpu 1 --name $memory_name \
-                                --message_size 32 --queue_size $queue_size \
-                                --rate 0 --clients $clients&"
 cd $base_dir && \
    $profile_bin_dir/spsc_server --cpu 1 --name $memory_name \
                                 --message_size 32 --queue_size $queue_size \
@@ -40,7 +38,8 @@ sleep 2
 cd $base_dir && \
    $profile_bin_dir/spsc_client --cpu 2 --name $memory_name \
                                 --log_level INFO \
-                                --stats latency,throughput,interval&
+                                --stats latency,throughput,interval \
+                                --prefetch_size $prefetch_size&
 
 sleep 15
 
@@ -58,15 +57,16 @@ cd $base_dir && \
 echo "# Run the tests using profile guided data"
 cd $base_dir && \
    $release_bin_dir/spsc_server --cpu 1 --name $memory_name \
-                                --message_size 32 --queue_size 20480 --rate 0 \
-                                --clients 1&
+                                --message_size 32 --queue_size $queue_size \
+                                --rate 0 --clients 1&
 
 sleep 2
 
 cd $base_dir && \
    $release_bin_dir/spsc_client --cpu 2 --name $memory_name \
                                 --log_level INFO \
-                                --stats latency,throughput,interval&
+                                --stats latency,throughput,interval \
+                                --prefetch_size $prefetch_size&
 
 sleep 15
 

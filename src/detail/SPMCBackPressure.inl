@@ -12,7 +12,7 @@ template<class Mutex, uint8_t MaxNoDropConsumers>
 SPMCBackPressure<Mutex, MaxNoDropConsumers>::SPMCBackPressure (size_t capacity)
 : m_maxSize (capacity + 1)
 {
-  ASSERT_SS (capacity < (std::numeric_limits<size_t>::max ()),
+  CHECK_SS (capacity < (std::numeric_limits<size_t>::max ()),
             "Requested queue capacity too large");
 
   std::lock_guard<Mutex> g (m_mutex);
@@ -28,13 +28,13 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer (
 
   BOOST_LOG_TRIVIAL (trace) << "Register consumer";
 
-  ASSERT_SS (m_consumerCount < std::numeric_limits<uint8_t>::max (),
+  CHECK_SS (m_consumerCount < std::numeric_limits<uint8_t>::max (),
             "Too many consumers requested, max: "
               << std::numeric_limits<uint8_t>::max ());
   /*
    * SPMCBackPressure supports a limited number of consumer threads
    */
-  ASSERT_SS (m_consumerCount < MaxNoDropConsumers,
+  CHECK_SS (m_consumerCount < MaxNoDropConsumers,
             "Failed to register a new consumer. Maximum consumer count is "
               << static_cast<size_t> (MaxNoDropConsumers));
   /*

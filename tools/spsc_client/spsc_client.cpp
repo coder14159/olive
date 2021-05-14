@@ -31,8 +31,9 @@ CxxOptsHelper parse (int argc, char* argv[])
     ("name", "Shared memory name", cxxopts::value<std::string> ())
     ("cpu", "bind main thread to a cpu processor id",
      cxxopts::value<int> ()->default_value ("-1"))
-    // ("prefetchcache", "Size of a prefetch cache",
-    //   cxxopts::value<size_t> ()->default_value ("0"))
+    ("prefetch_size", "Set size of a prefetch cache. "
+                      "The default of 0 indicates no prefetching",
+      cxxopts::value<size_t> ()->default_value ("0"))
     ("directory", "Directory for statistics files",
       cxxopts::value<std::string> ())
     ("stats", "Statistics to log. "
@@ -68,32 +69,32 @@ int main(int argc, char* argv[]) try
 
   auto options = parse (argc, argv);
 
-  auto name            = options.required<std::string> ("name");
-  auto directory       = options.value<std::string>    ("directory", "");
-  auto cpu             = options.value<int>            ("cpu", -1);
-  auto test            = options.value<bool>           ("test", false);
-  auto logLevel        = options.value<std::string>    ("log_level",
-                                                        log_levels (),"INFO");
-  auto latency         = options.positional ("stats", "latency");
-  auto throughput      = options.positional ("stats", "throughput");
-  auto interval        = options.positional ("stats", "interval");
+  auto name          = options.required<std::string> ("name");
+  auto directory     = options.value<std::string>    ("directory", "");
+  auto cpu           = options.value<int>            ("cpu", -1);
+  auto prefetchSize  = options.value<size_t>         ("prefetch_size", 0);
+  auto test          = options.value<bool>           ("test", false);
+  auto logLevel      = options.value<std::string>    ("log_level",
+                                                      log_levels (),"INFO");
+  auto latency       = options.positional ("stats", "latency");
+  auto throughput    = options.positional ("stats", "throughput");
+  auto interval      = options.positional ("stats", "interval");
 
-  /*
-   * TODO add a message drop option similar to spmc_client tool
-   *
-   * auto allowDrops   = options.value<bool> ("allowdrops", false);
-   */
+  set_log_level (logLevel);
 
-  BOOST_LOG_TRIVIAL (info) << "Start shared memory spsc_client";
-
-  BOOST_LOG_TRIVIAL (info) << "Consume from: " << name;
+  BOOST_LOG_TRIVIAL (info) << "Start spsc_client";
+  BOOST_LOG_TRIVIAL (info) << "Consume from shared memory named: " << name;
 
   if (cpu != -1)
   {
     BOOST_LOG_TRIVIAL (info) << "Bind to CPU: " << cpu;
   }
+  if (prefetchSize > 0)
+  {
+    BOOST_LOG_TRIVIAL (info) <<  "Use prefetch cache size: " << prefetchSize;
+  }
 
-  SPSCStreamProcess stream (name);
+  SPSCStreamProcess stream (name, prefetchSize);
 
   bool stop = { false };
 
@@ -136,7 +137,7 @@ int main(int argc, char* argv[]) try
                     timepoint_from_nanoseconds_since_epoch (header.timestamp));
       if (test)
       {
-        ASSERT_SS (header.size == data.size (), "Unexpected payload size: "
+        CHECK_SS (header.size == data.size (), "Unexpected payload size: "
                   << data.size () << " expected: " << header.size);
         /*
          * Initialise the expected packet on receipt of the first message
@@ -148,16 +149,19 @@ int main(int argc, char* argv[]) try
           std::iota (std::begin (expected), std::end (expected), 1);
         }
 
-        ASSERT_SS (expected.size () == data.size (),
+        CHECK_SS (expected.size () == data.size (),
                   "expected.size ()=" << expected.size ()
                   << " data.size ()=" << data.size ());
 
-        ASSERT (expected == data, "Unexpected data packet payload");
+        CHECK (expected == data, "Unexpected data packet payload");
 
         data.clear ();
       }
     }
   }
+
+  stats.stop ();
+  stats.print_summary ();
 
   BOOST_LOG_TRIVIAL (info) << "Exit stream";
 

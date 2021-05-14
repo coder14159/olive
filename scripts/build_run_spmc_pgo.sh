@@ -4,7 +4,7 @@ script_dir=$(dirname $(readlink -f $0))
 base_dir=$(dirname $script_dir)
 cur_dir=`pwd`
 
-# Use environment variables to override default options
+# Use environment variables to set command line parameters
 jobs=${JOBS:-1}
 queue_size=${QUEUE_SIZE:-20480}
 prefetch_size=${PREFETCH_SIZE:-0}
@@ -15,10 +15,10 @@ profile_bin_dir=build/x86_64.pgo_profile/bin
 release_bin_dir=build/x86_64.pgo_release/bin
 
 echo "# Build executable for removing shared memory"
-cd $base_dir && make ${bin_dir}/remove_shared_memory --jobs $jobs
+cd $base_dir && make $bin_dir/remove_shared_memory --jobs $jobs
 
 echo "# Removing shared memory $memory_name"
-cd $base_dir && ${bin_dir}/remove_shared_memory --names $memory_name
+cd $base_dir && $bin_dir/remove_shared_memory --names $memory_name
 
 echo "# Build executables for generating profile data"
 cd $base_dir && \

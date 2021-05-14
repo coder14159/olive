@@ -39,11 +39,21 @@ public:
    * Deallocates the buffer if allocated in local process memory only
    */
   ~Buffer ();
+  /*
+   * Return true if cache is enabled, ie capacity > 0
+   */
+  bool enabled () const;
 
   /*
    * Return the maximum size
    */
   size_t capacity () const;
+  /*
+   * Reset the capacity of the buffer.
+   *
+   * Non-standard behaviour: all internal data is deleted on resize
+   */
+  void capacity (size_t size);
 
   /*
    * Return true if the buffer contains no data
@@ -54,13 +64,6 @@ public:
    * Clear the contents of Buffer
    */
   void clear ();
-
-  /*
-   * Reset the capacity of the buffer.
-   *
-   * Non-standard behaviour: all internal data is deleted on resize
-   */
-  void capacity (size_t size);
 
   /*
    * Return current size of the buffer

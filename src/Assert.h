@@ -8,6 +8,11 @@
 
 namespace spmc {
 
+/*
+ * Asserts can be disabled at compile time
+ */
+#define ENABLE_ASSERTS 1
+
 #ifdef ENABLE_ASSERTS
 
 #define ASSERT(condition, message) do  \
@@ -37,7 +42,28 @@ namespace spmc {
 
 #endif
 
-#define UNREACHABLE(message) { throw (message); }
+/*
+ * Checks are always enabled
+ */
+#define CHECK(condition, message) do  \
+{                                     \
+  if (!(condition))                   \
+  {                                   \
+    throw std::logic_error (message); \
+  }                                   \
+} while(0)
+
+
+#define CHECK_SS(condition, message) do  \
+{                                         \
+  if (!(condition))                       \
+  {                                       \
+    std::ostringstream ss;                \
+    ss << message;                        \
+    throw std::logic_error (ss.str ());   \
+  }                                       \
+} while(0)
+
 
 } // namespace spmc
 

@@ -86,14 +86,17 @@ int main(int argc, char* argv[]) try
 
   set_log_level (logLevel);
 
-  BOOST_LOG_TRIVIAL (info) <<  "Start spmc_client";
-  BOOST_LOG_TRIVIAL (info) <<  "Consume from shared memory named: " << name;
+  BOOST_LOG_TRIVIAL (info) << "Start spmc_client";
+  BOOST_LOG_TRIVIAL (info) << "Consume from shared memory named: " << name;
 
+  if (cpu != -1)
+  {
+    BOOST_LOG_TRIVIAL (info) << "Bind to CPU: " << cpu;
+  }
   if (prefetchSize > 0)
   {
     BOOST_LOG_TRIVIAL (info) <<  "Use prefetch cache size: " << prefetchSize;
   }
-
 
   using Queue  = SPMCQueue<SharedMemory::Allocator>;
   using Stream = SPMCStream<Queue>;
@@ -150,14 +153,14 @@ int main(int argc, char* argv[]) try
         }
         else
         {
-          ASSERT_SS ((header.seqNum - testSeqNum) == 1,
+          CHECK_SS ((header.seqNum - testSeqNum) == 1,
             "Invalid sequence number: header.seqNum: " << header.seqNum <<
             " testSeqNum: " << testSeqNum);
 
           testSeqNum = header.seqNum;
         }
 
-        ASSERT_SS (header.size == data.size (), "Unexpected payload size: "
+        CHECK_SS (header.size == data.size (), "Unexpected payload size: "
                   << data.size () << " expected: " << header.size);
         /*
          * Initialise the expected packet on receipt of the first message
@@ -169,11 +172,11 @@ int main(int argc, char* argv[]) try
           std::iota (std::begin (expected), std::end (expected), 1);
         }
 
-        ASSERT_SS (expected.size () == data.size (),
+        CHECK_SS (expected.size () == data.size (),
                   "expected.size ()=" << expected.size ()
                   << " data.size ()=" << data.size ());
 
-        ASSERT (expected == data, "Unexpected data packet payload");
+        CHECK (expected == data, "Unexpected data packet payload");
 
         data.clear ();
       }

@@ -11,10 +11,10 @@ template <class Allocator, size_t MaxNoDropConsumers>
 SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (size_t capacity)
 : m_queue (std::make_unique<QueueType> (capacity))
 {
-  ASSERT (m_queue.get () != nullptr,
+  CHECK (m_queue.get () != nullptr,
         "In-process SPMCQueue initialisation failed");
 
-  ASSERT (capacity > sizeof (Header),
+  CHECK (capacity > sizeof (Header),
         "SPMCQueue capacity must be greater than header size");
 }
 
@@ -25,7 +25,7 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
   size_t capacity)
 : m_memory (boost::interprocess::open_only, memoryName.c_str ())
 {
-  ASSERT (capacity > sizeof (Header),
+  CHECK (capacity > sizeof (Header),
         "SPMCQueue capacity must be greater than header size");
 
   namespace bi = boost::interprocess;
@@ -37,7 +37,7 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
 
   m_queue = m_memory.find_or_construct<QueueType> (queueName.c_str())
                                                   (capacity + 1, allocator);
-  ASSERT_SS (m_queue != nullptr,
+  CHECK_SS (m_queue != nullptr,
              "Shared memory object initialisation failed: " << queueName);
 }
 
@@ -56,13 +56,13 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
 
   m_queue = memory.first;
 
-  ASSERT_SS (m_queue != nullptr,
+  CHECK_SS (m_queue != nullptr,
              "Shared memory object initialisation failed: " << queueName);
 
   /*
    * check we have a single queue object, not an array of them
    */
-  ASSERT_SS (memory.second == 1,
+  CHECK_SS (memory.second == 1,
              "Queue object: " << queueName << " should not be an array");
 }
 
@@ -101,7 +101,7 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::cache_capacity () const
 template <class Allocator, size_t MaxNoDropConsumers>
 void SPMCQueue<Allocator, MaxNoDropConsumers>::resize_cache (size_t size)
 {
-  ASSERT_SS (size > sizeof (Header),
+  CHECK_SS (size > sizeof (Header),
     "Cache size must be larger than size of Header: " << sizeof (Header));
 
   if (m_cache.capacity () != size)
@@ -175,23 +175,11 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   BufferType &data,
   detail::ConsumerState &consumer)
 {
-  /*
-   * The local data cache is only permitted if this consumer is not permitted to
-   * drop messages.
-   */
   if (SPMC_EXPECT_TRUE (!m_cacheEnabled))
   {
     if (SPMC_EXPECT_TRUE (m_queue->pop (header, consumer) &&
                           header.type != WARMUP_MESSAGE_TYPE))
     {
-      /*
-       * If no message drops are permitted for the consumer then both header and
-       * data are available as they are pushed as one atomic unit.
-       *
-       * If dropping of messages by the client is permitted then failure to pop
-       * payload indicates the data has been overwritten in the shared data
-       * queue.
-       */
       data.resize (header.size);
 
       return m_queue->pop (data.data (), header.size, consumer);
@@ -236,7 +224,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
 
   if (m_cache.pop (header) && header.type != WARMUP_MESSAGE_TYPE)
   {
-    if (m_cache.capacity () < (header.size))
+    if (m_cache.capacity () < header.size)
     {
       /*
        * If a message received is too large to fit in the cache, drain the

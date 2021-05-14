@@ -20,7 +20,7 @@ SPSCSink<Allocator>::SPSCSink (const std::string &memoryName,
   m_queue = m_memory.find_or_construct<SharedMemory::SPSCQueue>
                                   (objectName.c_str())(queueSize, m_allocator);
 
-  ASSERT_SS(m_queue != nullptr,
+  CHECK_SS (m_queue != nullptr,
             "shared memory object initialisation failed: " << objectName);
 }
 
@@ -50,6 +50,7 @@ void SPSCSink<Allocator>::next (const std::vector<uint8_t> &data, TimePoint time
   auto &queue = *m_queue;
   /*
    * Push the data packet onto the shared queue if there is available space
+   * for both header and data
    */
   size_t size = sizeof (Header) + header.size;
 
