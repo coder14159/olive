@@ -50,6 +50,9 @@ parser.add_argument ('--client_counts', nargs='+', type=int,
 parser.add_argument ('--client_prefetch_sizes', required=False, default='0',
                     nargs='+', help='Client prefetch size')
 
+parser.add_argument ('--throughput', action='store_false',
+                    help='Plot throughput')
+
 args = parser.parse_args ()
 
 if not args.client_directories:
