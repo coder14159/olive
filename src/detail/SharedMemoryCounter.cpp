@@ -20,7 +20,7 @@ SharedMemoryCounter::SharedMemoryCounter (
 
   BOOST_LOG_TRIVIAL(info)  << "Find or construct object: " << m_objectName;
 
-  ASSERT_SS (m_counter != nullptr,
+  CHECK_SS (m_counter != nullptr,
              "Shared memory counter initialisation failed: " << m_objectName);
 }
 
@@ -29,12 +29,12 @@ SharedMemoryCounter::~SharedMemoryCounter ()
   CounterType &counter = *m_counter;
 
 
-  BOOST_LOG_TRIVIAL(info)  << "Destroy object: " << m_objectName;
-  BOOST_LOG_TRIVIAL(info)  << "Counter: " << counter;
+  BOOST_LOG_TRIVIAL(debug)  << "Destroy object: " << m_objectName;
+  BOOST_LOG_TRIVIAL(debug)  << "Counter: " << counter;
 
   if (counter == 0)
   {
-    BOOST_LOG_TRIVIAL(info)  << "Destroy object: " << m_objectName;
+    BOOST_LOG_TRIVIAL(debug)  << "Destroy object: " << m_objectName;
 
     if (m_memory.destroy<CounterType> (m_objectName.c_str ()))
     {
@@ -42,8 +42,7 @@ SharedMemoryCounter::~SharedMemoryCounter ()
     }
     else
     {
-      BOOST_LOG_TRIVIAL(info)  << "Destroyed object: " << m_objectName;
-
+      BOOST_LOG_TRIVIAL(debug)  << "Destroyed object: " << m_objectName;
     }
 
   }
@@ -61,7 +60,7 @@ int SharedMemoryCounter::get ()
 
 SharedMemoryCounter &SharedMemoryCounter::operator++ ()
 {
-  ASSERT (m_counter != nullptr, "Uninitialised counter object");
+  CHECK (m_counter != nullptr, "Uninitialised counter object");
 
   ++(*m_counter);
 

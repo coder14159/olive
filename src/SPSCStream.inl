@@ -21,15 +21,15 @@ SPSCStream<Allocator>::SPSCStream (const std::string &memoryName,
   auto readyCounter =
     m_memory.find<SharedMemory::Counter> (readyCounterName.c_str ()).first;
 
-  ASSERT_SS (readyCounter != nullptr,
-    "client ready counter initialisation failed: " << readyCounterName);
+  CHECK_SS (readyCounter != nullptr,
+    "client ready counter not available: " << readyCounterName);
 
   // create a queue for streaming data
   std::string queueCounterName = memoryName + ":queue:counter";
   auto queueCounter =
     m_memory.find_or_construct<SharedMemory::Counter> (queueCounterName.c_str ())();
 
-  ASSERT_SS (queueCounter != nullptr,
+  CHECK_SS (queueCounter != nullptr,
     "queue counter initialisation failed: " << queueCounterName);
 
   int index = ++(*queueCounter);
@@ -39,13 +39,18 @@ SPSCStream<Allocator>::SPSCStream (const std::string &memoryName,
   m_queuePtr = m_memory.find_or_construct<SharedMemory::SPSCQueue> (
                                         queueName.c_str())(1, *m_allocator);
 
-  ASSERT_SS (m_queuePtr != nullptr,
+  CHECK_SS (m_queuePtr != nullptr,
     "Failed to create shared memory queue: " << queueName);
 
-  BOOST_LOG_TRIVIAL(info) << "SPSCStream constructed " << queueName;
+  BOOST_LOG_TRIVIAL (info) << "SPSCStream constructed " << queueName;
 
   if (prefetchSize > 0)
   {
+    CHECK_SS (prefetchSize > sizeof (Header),
+        "The prefetch cache must be larger than message size header size "
+        "(cache capacity: "<< m_cache.capacity ()
+        << " header size: " << sizeof (Header));
+
     m_cache.capacity (prefetchSize);
   }
 
@@ -132,10 +137,6 @@ template <typename Allocator>
 template<class Header, class Data>
 bool SPSCStream<Allocator>::pop_from_cache (Header &header, Data &data)
 {
-  CHECK_SS (m_cache.capacity () > sizeof (Header),
-            "The prefetch cache must be larger than message size header size. "
-            << "(sizeof Header: " << sizeof (Header) << ")");
-
   auto &queue = *m_queuePtr;
 
   size_t available = queue.read_available ();

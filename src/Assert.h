@@ -8,6 +8,11 @@
 
 namespace spmc {
 
+/*
+ * Asserts can be disabled at compile time
+ */
+#define ENABLE_ASSERTS 1
+
 #ifdef ENABLE_ASSERTS
 
 #define ASSERT(condition, message) do  \
@@ -37,8 +42,9 @@ namespace spmc {
 
 #endif
 
-#define UNREACHABLE(message) { throw (message); }
-
+/*
+ * Checks are always enabled
+ */
 #define CHECK(condition, message) do  \
 {                                     \
   if (!(condition))                   \
@@ -48,7 +54,7 @@ namespace spmc {
 } while(0)
 
 
-#define CHECK_SS (condition, message) do  \
+#define CHECK_SS(condition, message) do  \
 {                                         \
   if (!(condition))                       \
   {                                       \

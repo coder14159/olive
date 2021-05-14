@@ -20,7 +20,7 @@ SPSCSink<Allocator>::SPSCSink (const std::string &memoryName,
   m_queue = m_memory.find_or_construct<SharedMemory::SPSCQueue>
                                   (objectName.c_str())(queueSize, m_allocator);
 
-  ASSERT_SS(m_queue != nullptr,
+  CHECK_SS (m_queue != nullptr,
             "shared memory object initialisation failed: " << objectName);
 }
 

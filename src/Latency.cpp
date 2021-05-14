@@ -100,13 +100,13 @@ Latency::Latency (const std::string &directory, const std::string &filename)
 
   if (!fs::exists (directory))
   {
-    ASSERT_SS (fs::create_directories (directory),
+    CHECK_SS (fs::create_directories (directory),
                "Failed to create directory: " << directory);
 
     BOOST_LOG_TRIVIAL (info) << "Created directory: " << directory;
   }
 
-  ASSERT_SS (!filename.empty (), "Empty latency filename");
+  CHECK_SS (!filename.empty (), "Empty latency filename");
 
   fs::path file_path = fs::path (directory) / fs::path (filename);
 
@@ -114,7 +114,7 @@ Latency::Latency (const std::string &directory, const std::string &filename)
 
   m_file.open (file_path.string (), std::ios::app|std::ios_base::out);
 
-  ASSERT_SS (m_file.is_open (), "Failed to open file: " + file_path.string ());
+  CHECK_SS (m_file.is_open (), "Failed to open file: " << file_path.string ());
 
   BOOST_LOG_TRIVIAL (info) << "Latency file: " << file_path.string ();
 

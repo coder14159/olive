@@ -137,7 +137,7 @@ int main(int argc, char* argv[]) try
                     timepoint_from_nanoseconds_since_epoch (header.timestamp));
       if (test)
       {
-        ASSERT_SS (header.size == data.size (), "Unexpected payload size: "
+        CHECK_SS (header.size == data.size (), "Unexpected payload size: "
                   << data.size () << " expected: " << header.size);
         /*
          * Initialise the expected packet on receipt of the first message
@@ -149,11 +149,11 @@ int main(int argc, char* argv[]) try
           std::iota (std::begin (expected), std::end (expected), 1);
         }
 
-        ASSERT_SS (expected.size () == data.size (),
+        CHECK_SS (expected.size () == data.size (),
                   "expected.size ()=" << expected.size ()
                   << " data.size ()=" << data.size ());
 
-        ASSERT (expected == data, "Unexpected data packet payload");
+        CHECK (expected == data, "Unexpected data packet payload");
 
         data.clear ();
       }

@@ -25,7 +25,7 @@ SPSCSinks::SPSCSinks (const std::string &memoryName)
                                     (requestQueueName.c_str())
                                     (queueSize, m_allocator);
 
-  ASSERT_SS (m_queue != nullptr,
+  CHECK_SS (m_queue != nullptr,
              "shared memory object initialisation failed: " << objectName);
 
   ipc::logger ().info () << "constructed " << objectName;
