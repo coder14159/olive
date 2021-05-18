@@ -11,12 +11,11 @@ import numpy as np
 import os
 import pandas as pd
 import platform
-import queue
 import seaborn as sns
 
 from pathlib import Path
 
-import performance_utils as utils
+import plot_utils as utils
 
 plt.style.use ('seaborn-darkgrid')
 
@@ -28,7 +27,7 @@ exe_dir = os.path.join (base_dir, 'build', platform.processor (), 'bin')
 parser = argparse.ArgumentParser (description='Plot performance test results')
 
 parser.add_argument ('--title', required=False,
-                     default='Latency Percentile Distribution',
+                     default='IPC Performance Profile',
                      help='Title of the plot')
 parser.add_argument ('--subtitle', required=False,  help='Subtitle of the plot')
 
@@ -69,14 +68,13 @@ max = '0'
 print ('server_queue_size:    ' + str (args.server_queue_sizes) + ' bytes')
 print ('server_message_sizes:  ' + str (args.server_message_sizes) + ' bytes')
 print ('server_rate:          ' + str (args.server_rates) + ' messages/second')
-print ('client_count:         ' + str (args.client_counts)
-                                + (' client' if args.client_counts == 1
-                              else ' clients'))
+print ('client_count:         ' + str (args.client_counts) +
+                        (' client' if args.client_counts == 1 else ' clients'))
 print ('client_prefetch_sizes: ' + str (args.client_prefetch_sizes))
 
 def sub_title (server_rate, message_size, client_count):
-  # An integer of zero denotes maximum server rate
-  server_rate = (server_rate if server_rate != 'max' else '0')
+  # A value of zero also denotes max server rate
+  server_rate = (server_rate if server_rate != 'max' else max)
 
   return 'message_rate='  + utils.throughput_messages_to_pretty (server_rate) \
        + ' message_size=' + str (message_size) + ' bytes' \
@@ -91,109 +89,6 @@ def latency_dataframe (file_path):
       exit (1)
 
   return pd.read_csv (file_path).transpose ()
-
-def plot_latency_summary (axis, file_path, title, legend):
-
-  df = latency_dataframe (file_path)
-
-  axis = sns.lineplot (data=df, dashes=False)\
-            .set (xlabel='percentile', ylabel='latency (nanoseconds)')
-
-  plt.legend ().get_texts ()[index].set_text (legend)
-
-  return axis
-
-index = 1
-axis = None
-
-def get_plot_data ():
-  legend_texts = []
-  legend_prefix_texts = None
-  title_text = set ()
-  dataframe = None
-  frame_count = 0
-
-  if args.client_directory_descriptions is not None:
-    legend_prefix_texts = queue.Queue ()
-
-    for prefix in args.client_directory_descriptions:
-      legend_prefix_texts.put (prefix)
-
-  for dir in args.client_directories:
-
-    legend_prefix = ''
-    if legend_prefix_texts is not None:
-      legend_prefix = legend_prefix_texts.get ()
-
-    for server_rate in args.server_rates:
-      for server_queue_size in args.server_queue_sizes:
-
-        if Path (dir).exists () == False:
-            print ('path does not exist: ' + dir)
-            continue
-
-        for message_size in args.server_message_sizes:
-
-          for client_count in args.client_counts:
-
-            for client_prefetch_size in args.client_prefetch_sizes:
-
-              data_directory = utils.output_directory_path (dir,
-                                              server_queue_size,
-                                              server_rate,
-                                              message_size,
-                                              client_count,
-                                              client_prefetch_size)
-
-              file_path = Path (data_directory) / 'latency-summary.csv'
-
-              if file_path.exists () == False:
-                print (str (file_path) + " does not exist")
-                continue
-
-              print ('loading: ' + str (file_path))
-              df = pd.read_csv (file_path).transpose ()
-
-              if dataframe is None:
-                dataframe = df
-              else:
-                frame_count += 1
-                dataframe[frame_count] = df
-
-              legend_line_label = [legend_prefix + ' ']
-
-              rate = (server_rate if server_rate != '0' else 'max')
-
-              if len (args.server_rates) > 1:
-                legend_line_label.append ('rate:' + str (rate))
-              else:
-                title_text.add ('rate:' + str (rate))
-
-              if len (args.server_message_sizes) > 1:
-                legend_line_label.append ('message_size:' + str (message_size))
-              else:
-                title_text.add ('msg_size:' + str (message_size))
-
-              if len (args.server_queue_sizes) > 1:
-                legend_line_label.append ('queue_size:' + str (server_queue_size))
-              else:
-                title_text.add ('queue_size:' + str (server_queue_size))
-
-              if len (args.client_counts) > 1:
-                legend_line_label.append ('clients:' + str (client_count))
-              else:
-                title_text.add ('clients:' + str (client_count))
-
-              if len (args.client_prefetch_sizes) > 1:
-                legend_line_label.append ('prefetch_size:' + str (client_prefetch_size))
-              else:
-                title_text.add ('prefetch_size:' + str (client_prefetch_size))
-
-              legend_texts.append (legend_line_label)
-
-  return dict (latency_summaries=dataframe,
-               legend_texts=legend_texts,
-               title_texts=title_text)
 
 def get_legend_list (data):
   legend_list = []
@@ -216,21 +111,47 @@ def set_tick_sizes (axis):
   for tick in axis.yaxis.get_major_ticks ():
       tick.label.set_fontsize (8)
 
-data = get_plot_data ()
+def plot_summary_latencies (axis):
 
-legend_list = get_legend_list (data)
+  latency_data = utils.get_latency_summary_data (args)
 
-show_legend = show_legend (data['latency_summaries'])
+  # print (latency_data.head ())
 
-axis = sns.lineplot (data=data['latency_summaries'], dashes=False,
-                     legend=show_legend)
-set_tick_sizes (axis)
+  legend = show_legend (latency_data['latency_summaries'])
 
-axis.legend (get_legend_list (data), fontsize=8)
+  axis = sns.lineplot (ax=axis, data=latency_data['latency_summaries'],
+                       dashes=False, legend=legend)
 
-axis.set_title (' '.join (data['title_texts']), fontsize=10)
-axis.set_xlabel ('Percentile', fontsize=10)
-axis.set_ylabel ('Latency (nanoseconds)', fontsize=10)
+  set_tick_sizes (axis)
+
+  axis.legend (get_legend_list (latency_data), fontsize=8)
+
+  axis.set_title (' '.join (latency_data['title_texts']), fontsize=10)
+  axis.set_xlabel ('Percentiles', fontsize=9)
+  axis.set_ylabel ('Latency (nanoseconds)', fontsize=9)
+
+def plot_interval_throughput (axis):
+  throughput_data = utils.get_throughput_interval_data (args)
+
+  print (throughput_data)
+  print (throughput_data['throughput_intervals'])
+
+  axis = sns.lineplot (ax=axis, data=throughput_data['throughput_intervals'],
+                       dashes=False)
+
+  axis.legend (get_legend_list (throughput_data), fontsize=8)
+
+  axis.set_xlabel ('Time (seconds)', fontsize=9)
+  axis.set_ylabel ('Throughput (MB/sec)', fontsize=9)
+
+  return axis
+
+fig, axes = plt.subplots (2, 1, gridspec_kw={'height_ratios': [3, 1]})
+
+plot_summary_latencies (axes[0])
+
+plot_interval_throughput (axes[1])
 
 plt.suptitle (args.title)
+
 plt.show ()
