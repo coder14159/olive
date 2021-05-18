@@ -175,9 +175,9 @@ uint32_t Throughput::megabytes_per_sec () const
     return 0;
   }
 
-  auto seconds = to_seconds (m_timer.elapsed ());
+  double seconds = to_seconds (m_timer.elapsed ());
 
-  return (m_bytes / (1024. * 1024.)) / seconds;
+  return ((static_cast<double> (m_bytes) / (1024. * 1024.)) / seconds);
 }
 
 uint32_t Throughput::messages_per_sec () const
