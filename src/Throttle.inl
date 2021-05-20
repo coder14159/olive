@@ -63,8 +63,7 @@ void Throttle::throttle (Sink &sink)
 
   auto actualInterval = intervalStart - m_startTime;
 
-  auto keepWarmInterval =
-    std::min (Nanoseconds {intervalStart - m_startTime}, 1000ns);
+  auto keepWarmInterval = std::min (Nanoseconds {actualInterval}, 1000ns);
 
   while (actualInterval < targetInterval)
   {

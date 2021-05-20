@@ -26,18 +26,6 @@ void Throughput::reset ()
 inline
 void Throughput::next (uint64_t bytes, uint64_t messages)
 {
-#if TODO // Don't think this is required any more..
-  /*
-   * Reset on startup or if the server was restarted
-   */
-  if (SPMC_EXPECT_FALSE (m_seqNum < 2 || seqNum < m_seqNum))
-  {
-    reset ();
-
-    m_seqNum = seqNum;
-  }
-#endif
-
   m_messages += messages;
 
   m_bytes += bytes;
