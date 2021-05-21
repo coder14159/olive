@@ -49,7 +49,9 @@ parser.add_argument ('--client_counts', nargs='+', type=int,
 parser.add_argument ('--client_prefetch_sizes', required=False, default='0',
                     nargs='+', help='Client prefetch size')
 
-parser.add_argument ('--throughput', action='store_false',
+parser.add_argument ('--latency_log_scale', action='store_true',
+                    help='Plot latency on a log scale')
+parser.add_argument ('--throughput', action='store_true',
                     help='Plot throughput')
 
 args = parser.parse_args ()
@@ -111,16 +113,17 @@ def set_tick_sizes (axis):
   for tick in axis.yaxis.get_major_ticks ():
       tick.label.set_fontsize (8)
 
-def plot_summary_latencies (axis):
+def plot_summary_latencies (axis, latency_log_scale):
 
   latency_data = utils.get_latency_summary_data (args)
-
-  # print (latency_data.head ())
 
   legend = show_legend (latency_data['latency_summaries'])
 
   axis = sns.lineplot (ax=axis, data=latency_data['latency_summaries'],
                        dashes=False, legend=legend)
+
+  if latency_log_scale is True:
+    axis.set (yscale='log')
 
   set_tick_sizes (axis)
 
@@ -133,9 +136,6 @@ def plot_summary_latencies (axis):
 def plot_interval_throughput (axis):
   throughput_data = utils.get_throughput_interval_data (args)
 
-  print (throughput_data)
-  print (throughput_data['throughput_intervals'])
-
   axis = sns.lineplot (ax=axis, data=throughput_data['throughput_intervals'],
                        dashes=False)
 
@@ -146,11 +146,21 @@ def plot_interval_throughput (axis):
 
   return axis
 
-fig, axes = plt.subplots (2, 1, gridspec_kw={'height_ratios': [3, 1]})
+#
+# Plot latency percentiles
+#
+# Throughput over time is plotted if explcitly enabled.
+# This is useful at high throughput values
+#
+if args.throughput is True:
+  fig, axes = plt.subplots (2, 1, gridspec_kw={'height_ratios': [3, 1]})
 
-plot_summary_latencies (axes[0])
+  plot_summary_latencies (axes[0], args.latency_log_scale)
 
-plot_interval_throughput (axes[1])
+  plot_interval_throughput (axes[1])
+
+else:
+  plot_summary_latencies (axis=None, latency_log_scale=args.latency_log_scale)
 
 plt.suptitle (args.title)
 

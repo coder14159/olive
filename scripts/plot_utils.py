@@ -106,16 +106,12 @@ def load_performance_data (args, filename, transpose_data=False):
 
               if 'throughput-interval' in filename:
                 if dataframe is None:
-                  print (df.head ())
 
-                  dataframe = pd.DataFrame (df['megabytes_per_sec'])
-                  print (dataframe)
-
+                  dataframe = pd.DataFrame (df['messages_per_sec'])
                 else:
-                  print (df.head ())
                   column_count += 1
-                  dataframe = pd.concat ([dataframe, df['megabytes_per_sec']], axis=1, ignore_index=True)
-                  print (dataframe)
+                  dataframe = pd.concat ([dataframe, df['messages_per_sec']],
+                                          axis=1, ignore_index=True)
 
               if 'latency-summary' in filename:
                 df = df.transpose ()
@@ -169,9 +165,6 @@ def get_latency_summary_data (args):
   latency_data = load_performance_data (args,'latency-summary.csv',
                                         transpose_data=True)
 
-  print (latency_data)
-  print (latency_data['dataframe'])
-
   return dict (latency_summaries=latency_data['dataframe'],
                legend_texts=latency_data['legend_texts'],
                title_texts=latency_data['title_texts'])
@@ -179,9 +172,6 @@ def get_latency_summary_data (args):
 def get_throughput_interval_data (args):
 
   throughput_data = load_performance_data (args, 'throughput-interval.csv')
-
-  print (throughput_data)
-  print (throughput_data['dataframe'])
 
   return dict (throughput_intervals=throughput_data['dataframe'],
                legend_texts=throughput_data['legend_texts'],
