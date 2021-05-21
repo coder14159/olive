@@ -57,7 +57,7 @@ throughput_messages_to_pretty (uint64_t messages, TimeDuration duration)
 
   constexpr double K = 1.0e3;
   constexpr double M = 1.0e6;
-  constexpr double G = 1.0e9;
+  constexpr double G = 1.0e9 - (1.0e9 * 0.001);
 
   if (messages_per_second > G)
   {
