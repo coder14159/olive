@@ -63,9 +63,9 @@ void Throttle::throttle (Sink &sink)
 
   auto actualInterval = intervalStart - m_startTime;
 
-  auto keepWarmInterval = std::min (Nanoseconds {actualInterval}, 1000ns);
+  auto keepWarmInterval = std::min (actualInterval, 1000ns);
 
-  while (actualInterval < targetInterval)
+  while (actualInterval < (targetInterval - 500ns))
   {
     std::this_thread::sleep_for (keepWarmInterval - 100ns);
 
@@ -77,7 +77,7 @@ void Throttle::throttle (Sink &sink)
     * Periodically reset the counters so that the throttle is better able to
     * handle variations in workload.
     */
-  if ((intervalStart - m_startTime) > Seconds (1))
+  if (actualInterval > Seconds (1))
   {
     m_startTime = Clock::now ();
     m_counter = 0;
