@@ -137,10 +137,6 @@ public:
    */
   size_t committed_cursor () const;
   /*
-   * Return the index of the committed data cursor
-   */
-  // size_t claimed_cursor () const;
-  /*
    * Return the value of a cursor advanced a number of bytes along a circular
    * buffer
    */
