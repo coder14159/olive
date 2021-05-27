@@ -187,6 +187,29 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::push (
 
 template <typename Allocator, uint16_t MaxNoDropConsumers>
 template <typename POD>
+bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_test (
+  POD &pod, ConsumerState &consumer)
+{
+  return pop_test (reinterpret_cast<uint8_t*> (&pod), sizeof (POD), consumer);
+}
+
+template <typename Allocator, uint16_t MaxNoDropConsumers>
+bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_test (
+  uint8_t* to, size_t size, ConsumerState &consumer)
+{
+  /*
+   * Copy data from the queue
+   */
+  size_t copied = copy_from_queue (to, size, consumer);
+
+  consumer.cursor (m_backPressure.advance_cursor (consumer.cursor (), copied));
+
+  return (size == copied);
+}
+
+
+template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename POD>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
     POD &pod,
     ConsumerState &consumer)
@@ -203,7 +226,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   /*
    * Copy data from the queue if new data is available.
    */
-  if (SPMC_EXPECT_TRUE (m_backPressure.read_available (consumer) >= size))
+  if (m_backPressure.read_available (consumer) >= size)
   {
     copy_from_queue (to, size, consumer);
     /*
@@ -257,7 +280,11 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::copy_to_queue (
     writerCursor = m_backPressure.advance_cursor (writerCursor, offset);
   }
 
-  if ((writerCursor + size) > m_maxSize)
+  if ((writerCursor + size) <= m_maxSize)
+  {
+    std::memcpy (to + writerCursor, from, size);
+  }
+  else
   {
     /*
      * Copying data wraps over the end of the buffer
@@ -266,10 +293,6 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::copy_to_queue (
 
     std::memcpy (to + writerCursor, from, spaceToEnd);
     std::memcpy (to, from + spaceToEnd, size - spaceToEnd);
-  }
-  else
-  {
-    std::memcpy (to + writerCursor, from, size);
   }
 }
 

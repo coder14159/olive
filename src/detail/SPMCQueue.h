@@ -58,6 +58,15 @@ private:
   SPMCQueue (const SPMCQueue &) = delete;
 
 public:
+
+  typedef typename std::conditional<
+          std::is_same<std::allocator<typename Allocator::value_type>, Allocator>::value,
+          SPMCBackPressure<std::mutex,
+                           MaxNoDropConsumers>,
+          SPMCBackPressure<SharedMemoryMutex,
+                           MaxNoDropConsumers>>::type BackPressureType;
+
+public:
   /*
    * Construct an SPMCQueue for use in-process by a single producer thread and
    * multiple consumer threads.
@@ -122,6 +131,8 @@ public:
    * Return the size of data available to consume for a particular consumer
    */
   size_t read_available (const ConsumerState &consumer) const;
+
+  BackPressureType &back_pressure () { return m_backPressure; }
   /*
    * Push one or more data items to the queue. The data is published for
    * consuming once all the data items have been copied to the queue.
@@ -129,8 +140,6 @@ public:
    * Space is acquired/released once for all head..tail objects.
    *
    * Currently supports POD types and type std::vector<uint8_t>
-   *
-   * TODO: make std::vector<uint8_t> a template type
    */
   template<typename Head, typename...Tail>
   bool push_variadic (const Head &head, const Tail&...tail);
@@ -157,6 +166,16 @@ public:
   size_t push (const uint8_t *data, size_t size,
              AcquireRelease acquire_release = AcquireRelease::Yes,
              size_t offset = 0);
+  /*
+   * Pop a POD type from the queue
+   */
+  template<typename POD>
+  bool pop_test (POD &pod, ConsumerState &consumer);
+  /*
+   * Pop seralised data from the queue
+   */
+  bool pop_test (uint8_t *data, size_t size, ConsumerState &consumer);
+
   /*
    * Pop a POD type from the queue
    */
@@ -195,15 +214,6 @@ private:
    */
   template <typename BufferType>
   bool copy_from_queue (BufferType &to, size_t size, ConsumerState &consumer);
-
-private:
-
-  typedef typename std::conditional<
-          std::is_same<std::allocator<typename Allocator::value_type>, Allocator>::value,
-          SPMCBackPressure<std::mutex,
-                           MaxNoDropConsumers>,
-          SPMCBackPressure<SharedMemoryMutex,
-                           MaxNoDropConsumers>>::type BackPressureType;
 
 private:
   /*
