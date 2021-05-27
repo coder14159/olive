@@ -221,7 +221,7 @@ BOOST_AUTO_TEST_CASE (SPMCQueueCapacityCheck)
   Header headerIn, headerOut;
   headerIn.seqNum = 1;
   headerIn.version = 1;
-  headerIn.type = 2;
+  headerIn.type = STANDARD_MESSAGE_TYPE;
   headerIn.size = in.size ();
   headerIn.timestamp = 123456;
 
@@ -304,7 +304,7 @@ BOOST_AUTO_TEST_CASE (SPMCQueueBasicTest)
 
   Header headerIn;
   headerIn.version = 1;
-  headerIn.type = 2;
+  headerIn.type = STANDARD_MESSAGE_TYPE;
   headerIn.size = payloadIn.size ();
 
   // test pushing enough data to wrap the buffer a few times
@@ -710,7 +710,7 @@ BOOST_AUTO_TEST_CASE (SlowConsumerNoMessageDrops)
 
   Header headerProducer;
   headerProducer.version = 1;
-  headerProducer.type = 2;
+  headerProducer.type = STANDARD_MESSAGE_TYPE;
   headerProducer.size = 5;
   headerProducer.seqNum = 1;
   headerProducer.timestamp = nanoseconds_since_epoch (Clock::now ());
