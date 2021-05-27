@@ -175,14 +175,53 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   BufferType &data,
   detail::ConsumerState &consumer)
 {
+  auto check_read_available = [&] () {
+    /*
+     * Ensure data is available to be consumed
+     */
+    if (m_readAvailable == 0)
+    {
+      m_readAvailable = m_queue->read_available (consumer);
+
+      if (m_readAvailable == 0)
+      {
+        m_queue->back_pressure ().consumed (consumer, m_consumed);
+
+        m_consumed = 0;
+      }
+    }
+  };
+
   if (SPMC_EXPECT_TRUE (!m_cacheEnabled))
   {
-    if (SPMC_EXPECT_TRUE (m_queue->pop (header, consumer) &&
-                          header.type != WARMUP_MESSAGE_TYPE))
+    check_read_available ();
+
+    if (m_readAvailable == 0)
     {
+      return false;
+    }
+
+    /*
+     * Test caching all available consumer data
+     */
+    if (m_queue->pop_test (header, consumer))
+    {
+      m_readAvailable -= sizeof (Header);
+      m_consumed += sizeof (Header);
+
+      if (header.type == WARMUP_MESSAGE_TYPE)
+      {
+        return false;
+      }
+
       data.resize (header.size);
 
-      return m_queue->pop (data.data (), header.size, consumer);
+      m_queue->pop_test (data.data (), header.size, consumer);
+
+      m_readAvailable -= header.size;
+      m_consumed += header.size;
+
+      return true;
     }
     else
     {

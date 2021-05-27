@@ -144,6 +144,9 @@ private:
 
   bool m_cacheEnabled  = false;
 
+  size_t m_readAvailable = 0;
+  size_t m_consumed = 0;
+
   typedef typename std::conditional<
           std::is_same<std::allocator<uint8_t>, Allocator>::value,
           std::unique_ptr<QueueType>,
