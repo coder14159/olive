@@ -1,6 +1,7 @@
 #include "Assert.h"
 #include "Buffer.h"
 #include "Chrono.h"
+#include "CpuBind.h"
 #include "Logger.h"
 #include "PerformanceStats.h"
 #include "SPMCSink.h"
@@ -1344,13 +1345,13 @@ BOOST_AUTO_TEST_CASE (PerformanceSPMCQueue)
 
   ScopedLogLevel scoped_log_level (log_level);
 
-  const size_t capacity = 128;
+  const size_t capacity = 20480;
 
   using QueueType = detail::SPMCQueue<std::allocator<int64_t>>;
 
   QueueType queue (capacity);
 
-  std::atomic<bool> stop { false };
+  bool stop = false;
 
   Timer timer;
 
@@ -1371,6 +1372,8 @@ BOOST_AUTO_TEST_CASE (PerformanceSPMCQueue)
     queue.consumer_checks (consumer);
 
     int64_t timestamp = 0;
+
+    bind_to_cpu (1);
 
     Timer timer;
 
@@ -1406,7 +1409,9 @@ BOOST_AUTO_TEST_CASE (PerformanceSPMCQueue)
 
   auto producer = std::thread ([&] () {
 
-    while (!stop.load (std::memory_order_relaxed))
+    bind_to_cpu (2);
+
+    while (!stop)
     {
       const auto timestamp = nanoseconds_since_epoch (Clock::now ());
 
@@ -1469,13 +1474,13 @@ BOOST_AUTO_TEST_CASE (PerformanceSPSCQueue)
 
   ScopedLogLevel scoped_log_level (log_level);
 
-  const size_t capacity = PAYLOAD_SIZE;
+  const size_t capacity = 20480;
 
   using QueueType = boost::lockfree::spsc_queue<int64_t>;
 
   QueueType queue (capacity);
 
-  std::atomic<bool> stop { false };
+  bool stop = false;
 
   Timer timer;
 
@@ -1494,6 +1499,8 @@ BOOST_AUTO_TEST_CASE (PerformanceSPSCQueue)
     int64_t timestamp = 0;
 
     Timer timer;
+
+    bind_to_cpu (1);
 
     send = true;
     for (int64_t i = 0; ; ++i)
@@ -1527,7 +1534,9 @@ BOOST_AUTO_TEST_CASE (PerformanceSPSCQueue)
 
   auto producer = std::thread ([&] () {
 
-    while (!stop.load (std::memory_order_relaxed))
+    bind_to_cpu (2);
+
+    while (!stop)
     {
       const auto timestamp = nanoseconds_since_epoch (Clock::now ());
 
@@ -1576,3 +1585,4 @@ BOOST_AUTO_TEST_CASE (PerformanceSPSCQueue)
     << throughput_messages_to_pretty (enqueue_fail, timer.elapsed ()));
   BOOST_TEST_MESSAGE (" ");
 }
+
