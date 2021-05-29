@@ -17,7 +17,7 @@ SPMCBackPressure<Mutex, MaxNoDropConsumers>::SPMCBackPressure (size_t capacity)
 
   std::lock_guard<Mutex> g (m_mutex);
 
-  m_consumers.fill (Consumer::UnInitialised);
+  // m_consumers.fill (Consumer::UnInitialised);
 }
 
 template<class Mutex, uint8_t MaxNoDropConsumers>
@@ -50,11 +50,11 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer (
   {
     BOOST_LOG_TRIVIAL(trace)
       << "Slot check m_consumers[" << static_cast<size_t> (i)
-      << "]=" << m_consumers[i];
+      << "]=" << m_consumers[i].value;
 
-    if (m_consumers[i] == Consumer::Stopped)
+    if (m_consumers[i].value == Consumer::Stopped)
     {
-      m_consumers[i] = m_committed;
+      m_consumers[i].value = m_committed;
       index          = i;
       registered     = true;
       break;
@@ -65,7 +65,7 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer (
    */
   if (!registered)
   {
-    m_consumers[m_maxConsumerIndex] = m_committed;
+    m_consumers[m_maxConsumerIndex].value = m_committed;
 
     index = m_maxConsumerIndex;
 
@@ -77,7 +77,7 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer (
   /*
    * Initialise the consumer cursor to start at the current latest data
    */
-  consumer.cursor (m_consumers[index]);
+  consumer.cursor (m_consumers[index].value);
   /*
    * Set the index used by the producer to exert back pressure
    */
@@ -100,7 +100,7 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::unregister_consumer (
 
   if (consumer.index () != Producer::InvalidIndex)
   {
-    m_consumers[consumer.index ()] = Consumer::Stopped;
+    m_consumers[consumer.index ()].value = Consumer::Stopped;
 
     --m_consumerCount;
   }
@@ -206,7 +206,7 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::write_available () const
 
     for (uint8_t i = 0; i < MaxNoDropConsumers; ++i)
     {
-      size_t available = write_available (m_consumers[i], m_claimed);
+      size_t available = write_available (m_consumers[i].value, m_claimed);
 
       if (available < Consumer::Reserved)
       {
@@ -236,9 +236,9 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::consumed (
 {
   auto readerIndex = consumer.index ();
 
-  auto cursor = advance_cursor (m_consumers[readerIndex], size);
+  auto cursor = advance_cursor (m_consumers[readerIndex].value, size);
 
-  m_consumers[readerIndex] = cursor;
+  m_consumers[readerIndex].value = cursor;
 
   consumer.cursor (cursor);
 }

@@ -193,8 +193,18 @@ private:
   /*
    * Array holding the bytes consumed for each non message dropping consumer
    */
-  alignas (CACHE_LINE_SIZE)
-  std::array<size_t, MaxNoDropConsumers> m_consumers;
+  // alignas (CACHE_LINE_SIZE)
+  // std::array<size_t, MaxNoDropConsumers> m_consumers;
+  // std::array<size_t, MaxNoDropConsumers> m_consumers;
+
+
+  struct ConsumerIndex
+  {
+    alignas (64) size_t value = Consumer::UnInitialised;
+  };
+
+  ConsumerIndex m_consumers[MaxNoDropConsumers];
+
   /*
    * Mutex used to register/unregister new consumer threads
    */
