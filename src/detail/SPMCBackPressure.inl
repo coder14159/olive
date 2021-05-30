@@ -14,10 +14,6 @@ SPMCBackPressure<Mutex, MaxNoDropConsumers>::SPMCBackPressure (size_t capacity)
 {
   CHECK_SS (capacity < (std::numeric_limits<size_t>::max ()),
             "Requested queue capacity too large");
-
-  std::lock_guard<Mutex> g (m_mutex);
-
-  // m_consumers.fill (Consumer::UnInitialised);
 }
 
 template<class Mutex, uint8_t MaxNoDropConsumers>

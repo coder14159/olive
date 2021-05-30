@@ -190,19 +190,19 @@ private:
    */
   alignas (CACHE_LINE_SIZE)
   std::atomic<size_t> m_committed = { 0 };
+
   /*
-   * Array holding the bytes consumed for each non message dropping consumer
+   * Structure to ensure consumer values are cache aligned to reduce client
+   * contention on the elements
    */
-  // alignas (CACHE_LINE_SIZE)
-  // std::array<size_t, MaxNoDropConsumers> m_consumers;
-  // std::array<size_t, MaxNoDropConsumers> m_consumers;
-
-
   struct ConsumerIndex
   {
     alignas (64) size_t value = Consumer::UnInitialised;
   };
 
+  /*
+   * Array holding the bytes consumed for each non message dropping consumer
+   */
   ConsumerIndex m_consumers[MaxNoDropConsumers];
 
   /*
