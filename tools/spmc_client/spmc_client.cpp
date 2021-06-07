@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) try
   // TODO: Generate the queue name from within Stream ctor..
   Stream stream (name, name + ":queue", prefetchSize);
 
-  bool stop = { false };
+  std::atomic<bool> stop = { false };
 
   /*
    * Handle signals

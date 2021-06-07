@@ -75,7 +75,7 @@ void server (const std::string& name,
 
   Sink sink (name, name + ":queue", queueSize);
 
-  bool stop { false };
+  std::atomic<bool> stop = { false };
   /*
    * Handle signals
    */
@@ -83,11 +83,11 @@ void server (const std::string& name,
 
     if (!stop)
     {
-      stop = true;
+      std::cout << "Stop spmc_server" << std::endl;
 
       sink.stop ();
 
-      std::cout << "Stopping spmc_server" << std::endl;
+      stop = true;
     }
   });
 
@@ -103,7 +103,7 @@ void server (const std::string& name,
    */
   Throttle throttle (rate);
 
-  while (SPMC_EXPECT_FALSE (!stop))
+  while (!stop)
   {
     sink.next (message);
     /*
