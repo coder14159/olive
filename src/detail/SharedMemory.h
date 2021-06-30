@@ -75,15 +75,50 @@ struct Header
 };
 
 /*
- * Definitions used by a consumer threads / processes to change state
+ * Reserved index values used by a producer and consumers indicating state
  */
-namespace Consumer
+namespace Index
+{
+  static constexpr uint8_t UnInitialised = std::numeric_limits<uint8_t>::max ();
+};
+
+std::string index_to_string (uint8_t index)
+{
+  switch (index)
+  {
+    case Index::UnInitialised:
+      return "Index::UnInitialised";
+    default:
+      return std::to_string (index);
+  }
+}
+
+namespace Cursor
 {
   static constexpr size_t Ready         = std::numeric_limits<size_t>::max ();
-  static constexpr size_t UnInitialised = std::numeric_limits<size_t>::max () - 1;
-  static constexpr size_t Stopped       = std::numeric_limits<size_t>::max () - 2;
-  static constexpr size_t Reserved      = std::numeric_limits<size_t>::max () - 3;
+  static constexpr size_t UnInitialised = std::numeric_limits<size_t>::max ()-1;
 };
+
+/*
+ * Return true if the index value is valid
+ */
+bool is_valid_cursor (size_t cursor)
+{
+  return (cursor != Cursor::UnInitialised);
+}
+
+std::string cursor_to_string (size_t cursor)
+{
+  switch (cursor)
+  {
+    case Cursor::Ready:
+      return "Cursor::Ready";
+    case Cursor::UnInitialised:
+      return "Cursor::UnInitialised";
+    default:
+      return std::to_string (cursor);
+  }
+}
 
 namespace Producer
 {
