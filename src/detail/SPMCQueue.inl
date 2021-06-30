@@ -8,7 +8,7 @@
 namespace spmc {
 namespace detail {
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (size_t capacity)
 : m_backPressure (capacity)
 , m_maxSize (m_backPressure.max_size ())
@@ -20,9 +20,11 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (size_t capacity)
   ASSERT (m_buffer != nullptr, "Invalid buffer");
 
   std::fill (m_bufferProducer, m_bufferProducer + m_capacity, 0);
+
+  register_producer ();
 }
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
   size_t capacity, const Allocator &allocator)
 : Allocator  (allocator)
@@ -38,7 +40,7 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
   std::fill (m_bufferProducer, m_bufferProducer + m_capacity, 0);
 }
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 SPMCQueue<Allocator, MaxNoDropConsumers>::~SPMCQueue ()
 {
   /*
@@ -50,7 +52,15 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::~SPMCQueue ()
   Allocator::deallocate (m_buffer, m_maxSize);
 }
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
+void SPMCQueue<Allocator, MaxNoDropConsumers>::register_producer ()
+{
+  BOOST_LOG_TRIVIAL (info) << "Register producer";
+
+  m_backPressure.register_producer ();
+}
+
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 void SPMCQueue<Allocator, MaxNoDropConsumers>::register_consumer (
   ConsumerState &consumer)
 {
@@ -61,32 +71,32 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::register_consumer (
   /*
     * Register a consumer thread
     */
-  if (consumer.index () == Producer::InvalidIndex)
+  if (consumer.index () == Index::UnInitialised)
   {
     m_backPressure.register_consumer (consumer);
   }
 }
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 void SPMCQueue<Allocator, MaxNoDropConsumers>::unregister_consumer (
   const ConsumerState &consumer)
 {
   m_backPressure.unregister_consumer (consumer);
 }
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 uint8_t *SPMCQueue<Allocator, MaxNoDropConsumers>::buffer () const
 {
   return reinterpret_cast<uint8_t*> (&*m_buffer);
 }
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 size_t SPMCQueue<Allocator, MaxNoDropConsumers>::capacity () const
 {
   return m_capacity;
 }
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 size_t SPMCQueue<Allocator, MaxNoDropConsumers>::read_available (
   const ConsumerState &consumer) const
 {
@@ -94,7 +104,7 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::read_available (
 }
 
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 template <typename T>
 size_t SPMCQueue<Allocator, MaxNoDropConsumers>::push_variadic_item (
   const T &pod,
@@ -107,7 +117,7 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::push_variadic_item (
                AcquireRelease::No, offset);
 }
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 size_t SPMCQueue<Allocator, MaxNoDropConsumers>::push_variadic_item (
   const std::vector<uint8_t> &data,
   size_t offset)
@@ -115,7 +125,7 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::push_variadic_item (
   return push (data.data (), data.size (), AcquireRelease::No, offset);
 }
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 template<typename Head, typename...Tail>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::push_variadic (
   const Head &head, const Tail&...tail)
@@ -133,7 +143,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::push_variadic (
   return false;
 }
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 template <typename POD>
 size_t SPMCQueue<Allocator, MaxNoDropConsumers>::push (
   const POD &pod,
@@ -147,7 +157,7 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::push (
                acquire_release, offset);
 }
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 size_t SPMCQueue<Allocator, MaxNoDropConsumers>::push (
   const uint8_t *data,
   size_t size,
@@ -168,7 +178,7 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::push (
     return 0;
   }
   /*
-   * Copy the header and payload data to the shared buffer.
+   * Copy data to the shared buffer.
    */
   copy_to_queue (data, m_bufferProducer, size, offset);
   /*
@@ -185,7 +195,7 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::push (
   return size;
 }
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 template <typename POD>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_test (
   POD &pod, ConsumerState &consumer)
@@ -193,7 +203,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_test (
   return pop_test (reinterpret_cast<uint8_t*> (&pod), sizeof (POD), consumer);
 }
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_test (
   uint8_t* to, size_t size, ConsumerState &consumer)
 {
@@ -208,7 +218,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_test (
 }
 
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 template <typename POD>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
     POD &pod,
@@ -217,7 +227,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   return pop (reinterpret_cast<uint8_t*> (&pod), sizeof (POD), consumer);
 }
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
     uint8_t* to,
     size_t   size,
@@ -240,7 +250,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   return false;
 }
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 template <typename BufferType>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::prefetch_to_cache (
   BufferType   &cache,
@@ -268,7 +278,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::prefetch_to_cache (
   return false;
 }
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 void SPMCQueue<Allocator, MaxNoDropConsumers>::copy_to_queue (
   const uint8_t* from, uint8_t* to, size_t size, size_t offset)
 {
@@ -280,7 +290,7 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::copy_to_queue (
     writerCursor = m_backPressure.advance_cursor (writerCursor, offset);
   }
 
-  if ((writerCursor + size) <= m_maxSize)
+  if ((writerCursor + size) < m_maxSize)
   {
     std::memcpy (to + writerCursor, from, size);
   }
@@ -296,7 +306,7 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::copy_to_queue (
   }
 }
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 size_t SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_queue (
   uint8_t* to, size_t size, ConsumerState &consumer)
 {
@@ -322,7 +332,7 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_queue (
   return size;
 }
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 template <typename BufferType>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_queue (
   BufferType &to, size_t size, ConsumerState &consumer)
@@ -349,7 +359,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_queue (
   return true;
 }
 
-template <typename Allocator, uint16_t MaxNoDropConsumers>
+template <typename Allocator, uint8_t MaxNoDropConsumers>
 void SPMCQueue<Allocator, MaxNoDropConsumers>::consumer_checks (
   ConsumerState &consumer)
 {

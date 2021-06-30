@@ -49,7 +49,7 @@ namespace detail {
  * a producer and multiple consumers.
  */
 template <typename Allocator,
-          uint16_t MaxNoDropConsumers = MAX_NO_DROP_CONSUMERS_DEFAULT>
+          uint8_t MaxNoDropConsumers = MAX_NO_DROP_CONSUMERS_DEFAULT>
 class SPMCQueue : private Allocator
 {
 private:
@@ -57,14 +57,19 @@ private:
   SPMCQueue () = delete;
   SPMCQueue (const SPMCQueue &) = delete;
 
+  typedef SPMCBackPressure<std::mutex, MaxNoDropConsumers>
+          InprocessBackPressure;
+
+  typedef SPMCBackPressure<SharedMemoryMutex, MaxNoDropConsumers>
+          MultiProcessBackPressure;
+
 public:
 
   typedef typename std::conditional<
-          std::is_same<std::allocator<typename Allocator::value_type>, Allocator>::value,
-          SPMCBackPressure<std::mutex,
-                           MaxNoDropConsumers>,
-          SPMCBackPressure<SharedMemoryMutex,
-                           MaxNoDropConsumers>>::type BackPressureType;
+    std::is_same<std::allocator<typename Allocator::value_type>,
+                                Allocator>::value,
+          InprocessBackPressure,
+          MultiProcessBackPressure>::type BackPressureType;
 
 public:
   /*
@@ -90,6 +95,11 @@ public:
    * or threads
    */
   uint8_t *buffer () const;
+  /*
+   * Register the producer. This is required if previously existing shared
+   * memory is re-used.
+   */
+  void register_producer ();
   /*
    * Register a consumer thread / process
    */
@@ -240,7 +250,6 @@ private:
    */
   alignas (CACHE_LINE_SIZE)
   Pointer m_buffer = { nullptr };
-
   /*
    * A thread or process local pointer to shared memory data.
    *
@@ -253,7 +262,6 @@ private:
    * Cache the producer buffer pointer to avoid the dereferencing cost when used
    * with shared memory
    */
-  alignas (CACHE_LINE_SIZE)
   LocalPointer m_bufferProducer = { nullptr };
 };
 
