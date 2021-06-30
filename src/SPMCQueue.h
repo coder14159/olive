@@ -18,7 +18,7 @@ namespace spmc {
  * The producers and consumers can be separate threads or processes.
  */
 template <class Allocator,
-          size_t MaxNoDropConsumers = MAX_NO_DROP_CONSUMERS_DEFAULT>
+          uint8_t MaxNoDropConsumers = MAX_NO_DROP_CONSUMERS_DEFAULT>
 class SPMCQueue
 {
   using QueueType = detail::SPMCQueue<Allocator, MaxNoDropConsumers>;
@@ -89,7 +89,10 @@ public:
   size_t cache_size () const;
 
   /*
-   * Set the capacity of the data cache which is local to each consumer
+   * Set the capacity of the consumer local data cache.
+   *
+   * Using the cache enables higher throughput, particularly for multiple
+   * clients, at the expense of latency values
    */
   void resize_cache (size_t size);
 
@@ -117,7 +120,7 @@ public:
    * Push data into the queue, always succeeds unless there are slow consumers
    * configured to be non-dropping.
    *
-   * The queue should be greater than or equal to data size + pod size.
+   * The queue should be greater than or equal to data size + header size.
    */
   template <class Header>
   bool push (const Header &header, const std::vector<uint8_t> &data);
@@ -142,10 +145,50 @@ private:
    */
   boost::interprocess::managed_shared_memory m_memory;
 
-  bool m_cacheEnabled  = false;
+  /*
+   * ConsumerRange is used to reduce the number of (atomic synchronised) calls
+   * to the SPMCBackPressure object.
+   *
+   * This improves throughput, latency and scalability of the queues.
+   */
+  class ConsumerRange
+  {
+    public:
+      // Return the current size of data which can be read from the queue
+      bool empty () const { return m_readAvailable == 0; }
 
-  size_t m_readAvailable = 0;
-  size_t m_consumed = 0;
+      // Return the current size of data which can be read from the queue
+      size_t read_available () const { return m_readAvailable; }
+
+      // Reset size of consumable data after available data has been consumed
+      void read_available (size_t size)
+      {
+        m_consumed = 0;
+        m_readAvailable = size;
+      }
+
+      size_t consumed () const { return m_consumed; }
+
+
+      // Update the range with the size of data which has been consumed
+      void consumed (size_t size)
+      {
+        m_consumed += size;
+        m_readAvailable -= size;
+      }
+
+    private:
+      size_t m_consumed = 0;
+      size_t m_readAvailable = 0;
+  };
+
+  alignas (CACHE_LINE_SIZE)
+  ConsumerRange m_consumerRange;
+  /*
+   * Move data to a client local cache in larger data chaunks to reduce
+   * synchronisation calls.
+   */
+  bool m_cacheEnabled = false;
 
   typedef typename std::conditional<
           std::is_same<std::allocator<uint8_t>, Allocator>::value,
@@ -156,13 +199,13 @@ private:
    */
   alignas (CACHE_LINE_SIZE)
   QueuePtr m_queue;
+
   /*
    * This data cache can optionally be used to store chunks of data taken from
    * the shared queue. This cache is local to each client.
    */
   alignas (CACHE_LINE_SIZE)
   Buffer<std::allocator<uint8_t>> m_cache;
-
 };
 
 } // namespace spmc {

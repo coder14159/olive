@@ -7,7 +7,7 @@
 
 namespace spmc {
 
-template <class Allocator, size_t MaxNoDropConsumers>
+template <class Allocator, uint8_t MaxNoDropConsumers>
 SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (size_t capacity)
 : m_queue (std::make_unique<QueueType> (capacity))
 {
@@ -18,7 +18,7 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (size_t capacity)
         "SPMCQueue capacity must be greater than header size");
 }
 
-template <class Allocator, size_t MaxNoDropConsumers>
+template <class Allocator, uint8_t MaxNoDropConsumers>
 SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
   const std::string &memoryName,
   const std::string &queueName,
@@ -36,12 +36,14 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
     << queueName << " in named shared memory: " << memoryName;
 
   m_queue = m_memory.find_or_construct<QueueType> (queueName.c_str())
-                                                  (capacity + 1, allocator);
+                                                  (capacity, allocator);
   CHECK_SS (m_queue != nullptr,
              "Shared memory object initialisation failed: " << queueName);
+
+  m_queue->register_producer ();
 }
 
-template <class Allocator, size_t MaxNoDropConsumers>
+template <class Allocator, uint8_t MaxNoDropConsumers>
 SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
   const std::string &memoryName,
   const std::string &queueName)
@@ -64,41 +66,43 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
    */
   CHECK_SS (memory.second == 1,
              "Queue object: " << queueName << " should not be an array");
+
+  m_queue->register_producer ();
 }
 
-template <class Allocator, size_t MaxNoDropConsumers>
+template <class Allocator, uint8_t MaxNoDropConsumers>
 size_t SPMCQueue<Allocator, MaxNoDropConsumers>::capacity () const
 {
   return m_queue->capacity ();
 }
 
-template <class Allocator, size_t MaxNoDropConsumers>
+template <class Allocator, uint8_t MaxNoDropConsumers>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::empty (
   detail::ConsumerState &consumer) const
 {
   return (read_available (consumer) == 0);
 }
 
-template <class Allocator, size_t MaxNoDropConsumers>
+template <class Allocator, uint8_t MaxNoDropConsumers>
 uint64_t SPMCQueue<Allocator, MaxNoDropConsumers>::read_available (
   detail::ConsumerState &consumer) const
 {
   return m_queue->read_available (consumer) + m_cache.size ();
 }
 
-template <class Allocator, size_t MaxNoDropConsumers>
+template <class Allocator, uint8_t MaxNoDropConsumers>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::cache_enabled () const
 {
   return m_cacheEnabled;
 }
 
-template <class Allocator, size_t MaxNoDropConsumers>
+template <class Allocator, uint8_t MaxNoDropConsumers>
 size_t SPMCQueue<Allocator, MaxNoDropConsumers>::cache_capacity () const
 {
   return m_cache.capacity ();
 }
 
-template <class Allocator, size_t MaxNoDropConsumers>
+template <class Allocator, uint8_t MaxNoDropConsumers>
 void SPMCQueue<Allocator, MaxNoDropConsumers>::resize_cache (size_t size)
 {
   CHECK_SS (size > sizeof (Header),
@@ -112,13 +116,13 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::resize_cache (size_t size)
   }
 }
 
-template <class Allocator, size_t MaxNoDropConsumers>
+template <class Allocator, uint8_t MaxNoDropConsumers>
 size_t SPMCQueue<Allocator, MaxNoDropConsumers>::cache_size () const
 {
   return m_cache.size ();
 }
 
-template <class Allocator, size_t MaxNoDropConsumers>
+template <class Allocator, uint8_t MaxNoDropConsumers>
 template <class Header>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (const Header &header)
 {
@@ -128,7 +132,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (const Header &header)
   return m_queue->push (header);
 }
 
-template <class Allocator, size_t MaxNoDropConsumers>
+template <class Allocator, uint8_t MaxNoDropConsumers>
 template <class Header, class Data>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
   const Header  &header,
@@ -142,7 +146,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
   return m_queue->push_variadic (header, data);
 }
 
-template <class Allocator, size_t MaxNoDropConsumers>
+template <class Allocator, uint8_t MaxNoDropConsumers>
 template <class Header>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
   const Header &header,
@@ -154,61 +158,35 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
   return m_queue->push_variadic (header, data);
 }
 
-template <class Allocator, size_t MaxNoDropConsumers>
+template <class Allocator, uint8_t MaxNoDropConsumers>
 void SPMCQueue<Allocator, MaxNoDropConsumers>::register_consumer (
   detail::ConsumerState &consumer)
 {
   m_queue->consumer_checks (consumer);
 }
 
-template <class Allocator, size_t MaxNoDropConsumers>
+template <class Allocator, uint8_t MaxNoDropConsumers>
 void SPMCQueue<Allocator, MaxNoDropConsumers>::unregister_consumer (
   detail::ConsumerState &consumer)
 {
   m_queue->unregister_consumer (consumer);
 }
-
-template <class Allocator, size_t MaxNoDropConsumers>
+// #define OLD_IMPL
+#ifdef OLD_IMPL
+template <class Allocator, uint8_t MaxNoDropConsumers>
 template <class Header, class BufferType>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   Header     &header,
   BufferType &data,
   detail::ConsumerState &consumer)
 {
-  auto check_read_available = [&] () {
-    /*
-     * Ensure data is available to be consumed
-     */
-    if (m_readAvailable == 0)
-    {
-      m_readAvailable = m_queue->read_available (consumer);
-
-      if (m_readAvailable == 0)
-      {
-        m_queue->back_pressure ().consumed (consumer, m_consumed);
-
-        m_consumed = 0;
-      }
-    }
-  };
-
   if (SPMC_EXPECT_TRUE (!m_cacheEnabled))
   {
-    check_read_available ();
-
-    if (m_readAvailable == 0)
-    {
-      return false;
-    }
-
     /*
      * Test caching all available consumer data
      */
-    if (m_queue->pop_test (header, consumer))
+    if (m_queue->pop (header, consumer))
     {
-      m_readAvailable -= sizeof (Header);
-      m_consumed += sizeof (Header);
-
       if (header.type == WARMUP_MESSAGE_TYPE)
       {
         return false;
@@ -216,10 +194,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
 
       data.resize (header.size);
 
-      m_queue->pop_test (data.data (), header.size, consumer);
-
-      m_readAvailable -= header.size;
-      m_consumed += header.size;
+      m_queue->pop (data.data (), header.size, consumer);
 
       return true;
     }
@@ -232,7 +207,185 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   return pop_from_cache (header, data, consumer);
 }
 
-template <class Allocator, size_t MaxNoDropConsumers>
+#elif 1
+template <class Allocator, uint8_t MaxNoDropConsumers>
+template <class Header, class BufferType>
+bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
+  Header     &header,
+  BufferType &data,
+  detail::ConsumerState &consumer)
+{
+#if 0
+  /*
+   * Reserve a data range of data to be read by the consumer
+   */
+  auto update_consumer_range = [&] () {
+
+    // std::cout << "Update consumer range" << std::endl;
+
+    // std::cout << "1 queue: " << m_queue->read_available (consumer)
+    //           << std::endl;
+    // std::cout << "2 consumerRange read_available: " << m_consumerRange.read_available ()
+    //           << " consumed: " << m_consumerRange.consumed () << std::endl;
+
+    auto &back_pressure = m_queue->back_pressure ();
+
+    /*
+     * Update back-pressure with consumed data
+     */
+    // back_pressure.consumed (consumer, m_consumerRange.consumed ());
+
+    // std::cout << "3 back_pressure consumed updated" << std::endl;
+    // std::cout << "4 queue read_available: " << m_queue->read_available (consumer)
+    //           << std::endl;
+    // /*
+    //  * Refresh the range available to consume from queue data
+    //  */
+    // m_consumerRange.read_available (m_queue->read_available (consumer));
+
+    // std::cout << "5 consumerRange read_available: " << m_consumerRange.read_available ()
+    //           << " consumed: " << m_consumerRange.consumed () << std::endl;
+#if 0
+    // if (m_consumerRange.read_available () == 0)
+    {
+      /*
+       * After consuming the available data range update back pressure
+       */
+      back_pressure.consumed (consumer, m_consumerRange.consumed ());
+
+      m_consumerRange.read_available (m_queue->read_available (consumer));
+      // std::cout << "6 consumerRange read_available: " << m_consumerRange.read_available ()
+      //           << std::endl;
+    }
+#endif
+  };
+#endif
+
+  if (SPMC_EXPECT_TRUE (!m_cacheEnabled))
+  {
+    if (m_consumerRange.empty ())
+    {
+      /*
+       * After consuming data available in the range update back pressure
+       */
+      m_queue->back_pressure ().consumed (consumer, m_consumerRange.consumed ());
+      /*
+       * Get size of data available in the queue
+       */
+      size_t read_available = m_queue->read_available (consumer);
+      /*
+       * Update the consumable range if new data is available
+       */
+      m_consumerRange.read_available (read_available);
+      /*
+       * Return if no new data is available
+       */
+      if (read_available == 0)
+      {
+        return false;
+      }
+    }
+
+    /*
+     * Test caching all available consumer data
+     */
+    if (m_queue->pop_test (header, consumer))
+    {
+      if (header.type == WARMUP_MESSAGE_TYPE)
+      {
+        m_consumerRange.consumed (sizeof (Header));
+
+        return false;
+      }
+
+      data.resize (header.size);
+
+      m_queue->pop_test (data.data (), header.size, consumer);
+
+      m_consumerRange.consumed (sizeof (Header) + header.size);
+
+      return true;
+    }
+    else
+    {
+      return false;
+    }
+  }
+
+  return pop_from_cache (header, data, consumer);
+}
+#else
+template <class Allocator, uint8_t MaxNoDropConsumers>
+template <class Header, class BufferType>
+bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
+  Header     &header,
+  BufferType &data,
+  detail::ConsumerState &consumer)
+{
+  /*
+   * Reserve a data range of data to be read by the consumer
+   */
+  auto update_data_range = [&] () {
+    /*
+     * If the local consumable data range is empty, refresh read available
+     */
+    if (m_consumerRange.read_available () == 0)
+    {
+      m_consumerRange.read_available (m_queue->read_available (consumer));
+    }
+
+    if (m_consumerRange.consumed_all ())
+    {
+      /*
+       * After consuming the available data range update back pressure
+       */
+      m_queue->back_pressure ().consumed (consumer, m_consumerRange.consumed ());
+
+      m_consumerRange.reset ();
+
+      m_consumerRange.read_available (m_queue->read_available (consumer));
+    }
+  };
+
+  if (SPMC_EXPECT_TRUE (!m_cacheEnabled))
+  {
+    while (m_consumerRange.read_available () == 0)
+    {
+      update_data_range ();
+    }
+
+    /*
+    * Test caching all available consumer data
+    */
+    if (m_queue->pop_test (header, consumer))
+    {
+      m_consumerRange.consumed (sizeof (Header));
+
+      if (header.type == WARMUP_MESSAGE_TYPE)
+      {
+        return false;
+      }
+
+      // std::cout << "header.size: " << header.size << std::endl;
+      data.resize (header.size);
+
+      m_queue->pop_test (data.data (), header.size, consumer);
+
+      m_consumerRange.consumed (header.size);
+
+      return true;
+    }
+    else
+    {
+      return false;
+    }
+  }
+
+  return pop_from_cache (header, data, consumer);
+}
+
+#endif
+template <class Allocator, uint8_t MaxNoDropConsumers>
 template <class Header, class BufferType>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_from_cache (
   Header     &header,
