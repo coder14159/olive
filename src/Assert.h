@@ -54,14 +54,14 @@ namespace spmc {
 } while(0)
 
 
-#define CHECK_SS(condition, message) do  \
-{                                         \
-  if (!(condition))                       \
-  {                                       \
-    std::ostringstream ss;                \
-    ss << message;                        \
-    throw std::logic_error (ss.str ());   \
-  }                                       \
+#define CHECK_SS(condition, message) do \
+{                                       \
+  if (!(condition))                     \
+  {                                     \
+    std::ostringstream ss;              \
+    ss << message;                      \
+    throw std::logic_error (ss.str ()); \
+  }                                     \
 } while(0)
 
 
