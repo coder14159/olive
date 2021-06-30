@@ -9,8 +9,8 @@
 namespace spmc {
 namespace detail {
 /*
- * Class to track how much data has been consumed by a consumer
- * process or thread
+ * Class to track how much data has been consumed by a consumer process
+ * or thread.
  */
 class ConsumerState
 {
@@ -27,14 +27,11 @@ public:
     m_queue = queue;
   }
   /*
-   * Return true if the ConsmerState object has been registered with a producer
+   * Return true if the ConsumerState object has been registered with a producer
    */
-  bool registered () const
-  {
-    return (m_cursor < Consumer::Reserved);
-  }
+  bool registered () const { return (m_index != Index::UnInitialised); }
   /*
-   * Return the index id of the consumer - used by BackPressure class
+   * Each registered consumer has a different index value
    */
   uint8_t index () const { return m_index; }
   /*
@@ -59,16 +56,12 @@ private:
   /*
    * An index to the back pressure array which holds the consumer queue cursor
    */
-  uint8_t m_index = Producer::InvalidIndex;
+  uint8_t m_index = Index::UnInitialised;
   /*
    * The cursor points to an index of the shared queue indicating how much of
    * the produced data has been consumed
    */
-  size_t m_cursor = Consumer::UnInitialised;
-  /*
-   * Set to true if message drops are permitted for a consumer
-   */
-  // bool m_messageDropsAllowed = false;
+  size_t m_cursor = Cursor::UnInitialised;
 };
 
 /*
@@ -82,6 +75,8 @@ class SPMCBackPressure
 {
 public:
   SPMCBackPressure (size_t capacity);
+
+  void register_producer ();
   /*
    * If a consumer registers successful then back-pressure is exerted on the
    * producer by all registered consumers so that message dropping is prevented.
@@ -125,10 +120,6 @@ public:
    */
   size_t read_available (const ConsumerState &consumer) const;
   /*
-   * Return true if there are any consumers configured not to drop messages
-   */
-  bool has_non_drop_consumers () const;
-  /*
    * Update consumer cursor value and producer back-pressure
    */
   void consumed (ConsumerState &consumer, size_t size);
@@ -152,7 +143,7 @@ private:
   size_t write_available (size_t readerCursor, size_t writerCursor) const;
   /*
    * Return the minimum size of queue data which is writable taking into account
-   * the potentially multiple consumers
+   * all of the consumers
    *
    * Only called by the single writer process
    */
@@ -164,49 +155,42 @@ private:
    */
   uint8_t m_maxConsumerIndex = { 0 };
   /*
-   * Current number of consumers
-   */
-  alignas (CACHE_LINE_SIZE)
-  uint8_t m_consumerCount = { 0 };
-  /*
-   * The queue capacity + 1 for the algorithm to work
-   */
-  const size_t m_maxSize = { 0 };
-  /*
    * Counter used to claim a data range by the producer before writing data.
    *
    * Consumer threads use this counter to check if a producer has begun
    * ovewriting a range which the consumer has just read.
    */
   alignas (CACHE_LINE_SIZE)
-  size_t m_claimed = { 0 };
+  size_t m_claimed = { Cursor::UnInitialised };
+  /*
+   * The queue capacity + 1 for the algorithm to work
+   */
+  const size_t m_maxSize = { 0 };
+  /*
+   * Array holding the bytes consumed for each non message dropping consumer
+   */
+  alignas (CACHE_LINE_SIZE)
+  std::array<size_t, MaxNoDropConsumers> m_consumers;
   /*
    * Index used to implement fair servicing of the ConsumerArray
    * TODO: make use of this variable!!
    */
-  // uint8_t m_lastIndex = { 0 };
+  #pragma message "make use of m_consumerIndex variable!!"
+  // uint8_t m_consumerIndex = { 0 };
+
   /*
    * Counter used by the producer to publish a data range
    */
   alignas (CACHE_LINE_SIZE)
-  std::atomic<size_t> m_committed = { 0 };
-
+  std::atomic<size_t> m_committed = { Cursor::UnInitialised };
   /*
-   * Structure to ensure consumer values are cache aligned to reduce client
-   * contention on the elements
+   * Current number of consumers
+   * Should be atomic or is the mutex synchronise adequate??
    */
-  struct ConsumerIndex
-  {
-    alignas (64) size_t value = Consumer::UnInitialised;
-  };
-
+  // alignas (CACHE_LINE_SIZE)
+  uint8_t m_consumerCount = { 0 };
   /*
-   * Array holding the bytes consumed for each non message dropping consumer
-   */
-  ConsumerIndex m_consumers[MaxNoDropConsumers];
-
-  /*
-   * Mutex used to register/unregister new consumer threads
+   * Mutex used to register/unregister consumer threads
    */
   Mutex m_mutex;
 };

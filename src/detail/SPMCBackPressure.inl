@@ -14,6 +14,26 @@ SPMCBackPressure<Mutex, MaxNoDropConsumers>::SPMCBackPressure (size_t capacity)
 {
   CHECK_SS (capacity < (std::numeric_limits<size_t>::max ()),
             "Requested queue capacity too large");
+
+  std::lock_guard<Mutex> g (m_mutex);
+
+  for (size_t i = 0; i < MaxNoDropConsumers; ++i)
+  {
+    m_consumers[i] = Cursor::UnInitialised;
+  }
+}
+
+template<class Mutex, uint8_t MaxNoDropConsumers>
+void SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_producer ()
+{
+  if (m_claimed == Cursor::UnInitialised)
+  {
+    m_claimed = 0;
+  }
+  if (m_committed == Cursor::UnInitialised)
+  {
+    m_committed = 0;
+  }
 }
 
 template<class Mutex, uint8_t MaxNoDropConsumers>
@@ -44,24 +64,28 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer (
    */
   for (uint8_t i = 0; i < m_maxConsumerIndex; ++i)
   {
-    BOOST_LOG_TRIVIAL(trace)
+    BOOST_LOG_TRIVIAL (trace)
       << "Slot check m_consumers[" << static_cast<size_t> (i)
-      << "]=" << m_consumers[i].value;
+      << "]=" << cursor_to_string (m_consumers[i]);
 
-    if (m_consumers[i].value == Consumer::Stopped)
+    if (!is_valid_cursor (m_consumers[i]))
     {
-      m_consumers[i].value = m_committed;
+      m_consumers[i] = m_committed;
       index          = i;
       registered     = true;
       break;
     }
   }
   /*
-   * If there are no unused slots use a new slot if one is available
+   * If there are no unused slots, use a new slot if one is available
    */
   if (!registered)
   {
-    m_consumers[m_maxConsumerIndex].value = m_committed;
+    m_consumers[m_maxConsumerIndex] = m_committed;
+
+    BOOST_LOG_TRIVIAL (trace) << "Client index: " << std::to_string (index)
+          << " value: " << m_consumers[m_maxConsumerIndex]
+          << " (" << cursor_to_string (m_consumers[m_maxConsumerIndex]) << ")";
 
     index = m_maxConsumerIndex;
 
@@ -69,20 +93,21 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer (
   }
 
   ++m_consumerCount;
-
   /*
    * Initialise the consumer cursor to start at the current latest data
    */
-  consumer.cursor (m_consumers[index].value);
+  consumer.cursor (m_consumers[index]);
   /*
    * Set the index used by the producer to exert back pressure
    */
   consumer.index (index);
 
-  BOOST_LOG_TRIVIAL(trace)
-    << "Register consumer: index=" << static_cast<size_t> (index)
+  BOOST_LOG_TRIVIAL (trace)
+    << "Register consumer: cursor=" << cursor_to_string (consumer.cursor ())
+    << " index=" << static_cast<size_t> (consumer.index ())
     << " m_maxConsumerIndex=" << static_cast<size_t> (m_maxConsumerIndex)
-    << " m_consumerCount="    << static_cast<size_t> (m_consumerCount);
+    << " m_consumerCount="    << static_cast<size_t> (m_consumerCount)
+    << " write_available: " << write_available (consumer.cursor (), m_claimed);
 }
 
 template<class Mutex, uint8_t MaxNoDropConsumers>
@@ -91,12 +116,12 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::unregister_consumer (
 {
   std::lock_guard<Mutex> g (m_mutex);
 
-  BOOST_LOG_TRIVIAL (trace) << "Unregister consumer: index="
-                            << static_cast<size_t> (consumer.index ());
-
-  if (consumer.index () != Producer::InvalidIndex)
+  if (is_valid_cursor (consumer.cursor ()))
   {
-    m_consumers[consumer.index ()].value = Consumer::Stopped;
+    m_consumers[consumer.index ()] = Cursor::UnInitialised;
+
+    BOOST_LOG_TRIVIAL (info) << "Unregistered consumer (index="
+                             << index_to_string (consumer.index ()) << ")";
 
     --m_consumerCount;
   }
@@ -118,7 +143,6 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::advance_cursor (
   {
     return cursor;
   }
-
   if (BOOST_LIKELY (cursor > m_maxSize))
   {
     return cursor - m_maxSize;
@@ -153,12 +177,12 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::read_available (
   const ConsumerState &consumer) const
 {
   size_t readerCursor = consumer.cursor ();
+  size_t writerCursor = m_committed.load (std::memory_order_acquire);
 
-  if (BOOST_LIKELY (readerCursor < Consumer::Reserved))
+  if (BOOST_LIKELY (is_valid_cursor (readerCursor) &&
+                    is_valid_cursor (writerCursor)))
   {
-    size_t writerCursor = m_committed.load (std::memory_order_acquire);
-
-    if (BOOST_LIKELY (writerCursor >= readerCursor))
+    if (writerCursor >= readerCursor)
     {
       return writerCursor - readerCursor;
     }
@@ -173,11 +197,6 @@ template<class Mutex, uint8_t MaxNoDropConsumers>
 size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::write_available (
   size_t readerCursor, size_t writerCursor) const
 {
-  if (BOOST_UNLIKELY (readerCursor >= Consumer::Reserved))
-  {
-    return readerCursor;
-  }
-
   size_t available = readerCursor - writerCursor - 1;
 
   if (writerCursor >= readerCursor)
@@ -198,26 +217,32 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::write_available () const
      */
     uint8_t consumerCount = 0;
 
-    size_t minAvailable = Consumer::Reserved;
+    size_t minAvailable = Cursor::UnInitialised;
 
-    for (uint8_t i = 0; i < MaxNoDropConsumers; ++i)
+    for (uint8_t index = 0; index < MaxNoDropConsumers; ++index)
+    // for (uint8_t index = m_consumerIndex;
+    //      consumerCount < m_consumerCount; ++index)
+    //      index = ((index + 1) < MaxNoDropConsumers) ? index + 1 : 0)
     {
-      size_t available = write_available (m_consumers[i].value, m_claimed);
+      size_t consumerCursor = m_consumers[index];
 
-      if (available < Consumer::Reserved)
+      if (is_valid_cursor (consumerCursor))
       {
+        size_t available = write_available (consumerCursor, m_claimed);
+
         minAvailable = std::min (minAvailable, available);
 
-        if (minAvailable < Consumer::Reserved)
+        if (minAvailable != Cursor::UnInitialised)
         {
           ++consumerCount;
         }
-      }
 
-      if (consumerCount == m_consumerCount)
-      {
-        break;
+        if (consumerCount == m_consumerCount)
+        {
+          break;
+        }
       }
+      // index = ((index + 1) < MaxNoDropConsumers) ? index + 1 : 0;
     }
 
     return minAvailable;
@@ -232,9 +257,9 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::consumed (
 {
   auto readerIndex = consumer.index ();
 
-  auto cursor = advance_cursor (m_consumers[readerIndex].value, size);
+  auto cursor = advance_cursor (m_consumers[readerIndex], size);
 
-  m_consumers[readerIndex].value = cursor;
+  m_consumers[readerIndex] = cursor;
 
   consumer.cursor (cursor);
 }
