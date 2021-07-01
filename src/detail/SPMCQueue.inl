@@ -377,5 +377,5 @@ void SPMCQueue<Allocator, MaxNoDropConsumers>::consumer_checks (
   }
 }
 
-} // namespace detail
+} // namespace detail {
 } // namespace spmc {
