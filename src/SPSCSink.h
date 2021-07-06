@@ -79,6 +79,7 @@ private:
   };
 
   SharedMemory::SPSCQueue *m_queue = { nullptr };
+  SharedMemory::SPSCQueue &m_queueRef;
 };
 
 /*

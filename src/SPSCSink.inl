@@ -12,13 +12,14 @@ SPSCSink<Allocator>::SPSCSink (const std::string &memoryName,
 : m_name (objectName)
 , m_memory (bi::managed_shared_memory (bi::open_only, memoryName.c_str()))
 , m_allocator (m_memory.get_segment_manager ())
+, m_queue (m_memory.find_or_construct<SharedMemory::SPSCQueue>
+                                  (objectName.c_str())(queueSize, m_allocator))
+, m_queueRef (*m_queue)
 {
   // TODO clients could create queue and notify sink/server
   // TODO maybe support multiple queues in a single sink
 
   // construct an object within the shared memory
-  m_queue = m_memory.find_or_construct<SharedMemory::SPSCQueue>
-                                  (objectName.c_str())(queueSize, m_allocator);
 
   CHECK_SS (m_queue != nullptr,
             "shared memory object initialisation failed: " << objectName);
@@ -46,30 +47,24 @@ void SPSCSink<Allocator>::next (const std::vector<uint8_t> &data, TimePoint time
   header.size      = data.size ();
   header.seqNum    = m_sequenceNumber;
   header.timestamp = timestamp.time_since_epoch ().count ();
-
-  auto &queue = *m_queue;
   /*
    * Push the data packet onto the shared queue if there is available space
    * for both header and data
    */
   size_t size = sizeof (Header) + header.size;
 
-  while (m_stop.load (std::memory_order_relaxed) == false &&
-         queue.write_available () < size)
+  while (m_stop == false && m_queueRef.write_available () < size)
   { }
 
-  queue.push (reinterpret_cast <uint8_t*> (&header), sizeof (Header));
+  m_queueRef.push (reinterpret_cast <uint8_t*> (&header), sizeof (Header));
 
-  queue.push (data.data (), header.size);
+  m_queueRef.push (data.data (), header.size);
 }
 
 template <typename Allocator>
 void SPSCSink<Allocator>::next_keep_warm ()
 {
-  // TODO store the queue pointer
-  auto &queue = *m_queue;
-
-  queue.push (reinterpret_cast <uint8_t*> (&m_warmupHdr), sizeof (Header));
+  m_queueRef.push (reinterpret_cast <uint8_t*> (&m_warmupHdr), sizeof (Header));
 }
 
 }
