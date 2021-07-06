@@ -20,8 +20,6 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (size_t capacity)
   ASSERT (m_buffer != nullptr, "Invalid buffer");
 
   std::fill (m_bufferProducer, m_bufferProducer + m_capacity, 0);
-
-  register_producer ();
 }
 
 template <typename Allocator, uint8_t MaxNoDropConsumers>
