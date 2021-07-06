@@ -25,22 +25,22 @@ class SPMCQueue
 
 public:
   /*
-   * Construct an SPMCQueue for multiple threads in a single process.
+   * Construct an SPMCQueue for use by a single producer and multiple consumer
+   * threads in a single process.
    */
   SPMCQueue (size_t capacity);
 
   /*
-   * Construct an SPMCQueue for multiple processes.
-   *
-   * Finds or creates named shared memory and then finds or creates a queue
-   * object within the shared memory.
+   * Creates named shared memory and creates an SPMCQueue (or opens an existing
+   * queue if available) for inter-process communication.
    */
   SPMCQueue (const std::string &memoryName,
              const std::string &queueName,
              size_t             capacity);
 
   /*
-   * Find a shared memory SPMCQueue for multiple process access.
+   * Open an existing shared memory SPMCQueue for use by a consumer in
+   * inter-process communication.
    *
    * Does not create shared memory or shared objects.
    */

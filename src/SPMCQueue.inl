@@ -16,6 +16,8 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (size_t capacity)
 
   CHECK (capacity > sizeof (Header),
         "SPMCQueue capacity must be greater than header size");
+
+  // m_queue->register_producer ();
 }
 
 template <class Allocator, uint8_t MaxNoDropConsumers>
@@ -40,7 +42,7 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
   CHECK_SS (m_queue != nullptr,
              "Shared memory object initialisation failed: " << queueName);
 
-  m_queue->register_producer ();
+  // m_queue->register_producer ();
 }
 
 template <class Allocator, uint8_t MaxNoDropConsumers>
@@ -66,8 +68,6 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
    */
   CHECK_SS (memory.second == 1,
              "Queue object: " << queueName << " should not be an array");
-
-  m_queue->register_producer ();
 }
 
 template <class Allocator, uint8_t MaxNoDropConsumers>
