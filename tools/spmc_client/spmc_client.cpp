@@ -104,8 +104,7 @@ int main(int argc, char* argv[]) try
   // TODO: Generate the queue name from within Stream ctor..
   Stream stream (name, name + ":queue", prefetchSize);
 
-  std::atomic<bool> stop = { false };
-
+  bool stop = { false }; // TODO probably should be atomic
   /*
    * Handle signals
    */
@@ -138,7 +137,7 @@ int main(int argc, char* argv[]) try
   std::vector<uint8_t> data;
   std::vector<uint8_t> expected;
 
-  while (SPMC_EXPECT_TRUE (!stop))
+  while (!stop)
   {
     if (stream.next (header, data))
     {
@@ -162,6 +161,7 @@ int main(int argc, char* argv[]) try
 
         CHECK_SS (header.size == data.size (), "Unexpected payload size: "
                   << data.size () << " expected: " << header.size);
+
         /*
          * Initialise the expected packet on receipt of the first message
          */
@@ -179,6 +179,72 @@ int main(int argc, char* argv[]) try
         CHECK (expected == data, "Unexpected data packet payload");
 
         data.clear ();
+      }
+      else
+      {
+#define TEST1_B
+// #define TEST1_B_STATIC
+
+
+#ifdef TEST1
+        // 1.6 GB/s 26.4 M msgs/s
+        auto a = data;
+        a.clear ();
+#endif
+
+#ifdef TEST1_B_STATIC
+        // 1.6 GB/s 27.0 M msgs/s
+        boost::container::small_vector<uint8_t, 64> a (data);
+        a.clear ();
+#endif
+#ifdef TEST1_B
+        // 1.6 GB/s 27.0 M msgs/s
+        std::vector<uint8_t> a (data);
+        a.clear ();
+#endif
+
+#ifdef TEST1_A
+        // 1.5 GB/s 24.6 M msgs/s
+        auto a = data;
+        a.clear ();
+#endif
+
+#ifdef TEST2
+        // 932 MB/s 15.3 M msgs/s
+        data.clear ();
+#endif
+#ifdef TEST3
+        // 924 MB/s 15.1 M msgs/s
+        // uint8_t i = 0;
+        for (uint8_t i : data)
+        {
+          i = 0;
+          (void)i;
+        }
+        // (void)i;
+        // data.clear ();
+#endif
+#ifdef TEST4
+        // 1.3 GB/s 22.6 M msgs/s
+        // uint8_t i = 0;
+        for (uint8_t i : data)
+        {
+          i = 0;
+          (void)i;
+        }
+#endif
+
+#ifdef TEST5
+        // 947 MB/s 15.5 M msgs/sexpected
+        expected = data;
+        expected.clear ();
+#endif
+#ifdef TEST6
+        // 947 MB/s 15.5 M msgs/s
+        expected = data;
+#endif
+
+        // ASSERT (header.size == data.size (), "header.size != data.size");
       }
     }
   }
