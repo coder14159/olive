@@ -79,7 +79,9 @@ private:
 
   std::unique_ptr<QueueType> m_queuePtr;
 
-  std::atomic<bool> m_stop = { false };
+  bool m_stop = { false };
+#pragma message "is atomic stop boolean required?"
+  // std::atomic<bool> m_stop = { false };
 
   detail::ConsumerState m_consumer;
 
