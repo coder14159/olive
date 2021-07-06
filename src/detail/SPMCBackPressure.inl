@@ -26,6 +26,8 @@ SPMCBackPressure<Mutex, MaxNoDropConsumers>::SPMCBackPressure (size_t capacity)
 template<class Mutex, uint8_t MaxNoDropConsumers>
 void SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_producer ()
 {
+  std::lock_guard<Mutex> g (m_mutex);
+
   if (m_claimed == Cursor::UnInitialised)
   {
     m_claimed = 0;
@@ -64,10 +66,6 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer (
    */
   for (uint8_t i = 0; i < m_maxConsumerIndex; ++i)
   {
-    BOOST_LOG_TRIVIAL (trace)
-      << "Slot check m_consumers[" << static_cast<size_t> (i)
-      << "]=" << cursor_to_string (m_consumers[i]);
-
     if (!is_valid_cursor (m_consumers[i]))
     {
       m_consumers[i] = m_committed;
@@ -75,6 +73,10 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer (
       registered     = true;
       break;
     }
+
+    BOOST_LOG_TRIVIAL (debug)
+      << "Consumer index not available: m_consumers[" << static_cast<size_t> (i)
+      << "]=" << cursor_to_string (m_consumers[i]);
   }
   /*
    * If there are no unused slots, use a new slot if one is available
@@ -88,6 +90,7 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer (
           << " (" << cursor_to_string (m_consumers[m_maxConsumerIndex]) << ")";
 
     index = m_maxConsumerIndex;
+    BOOST_LOG_TRIVIAL (info) << "Use consumer index: " << std::to_string (index);
 
     ++m_maxConsumerIndex;
   }
