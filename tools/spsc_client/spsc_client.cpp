@@ -157,8 +157,17 @@ int main(int argc, char* argv[]) try
 
         data.clear ();
       }
+      else
+      {
+        /*
+         * Keep the reused data hot in cache for a performance gain
+         */
+        std::vector<uint8_t> a (data);
+        a.clear ();
+      }
     }
   }
+
 
   stats.stop ();
   stats.print_summary ();
