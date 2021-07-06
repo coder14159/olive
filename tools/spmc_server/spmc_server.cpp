@@ -63,6 +63,8 @@ void server (const std::string& name,
    * Create enough shared memory for a single queue which is shared by all the
    * clients.
    */
+  #pragma message "creation of memory should be in sink or SPMCQueue"
+
   size_t memory_size = queueSize
                      + SharedMemory::BOOK_KEEPING
                      + sizeof (SPMCQueue<SharedMemory::Allocator>);
@@ -75,7 +77,7 @@ void server (const std::string& name,
 
   Sink sink (name, name + ":queue", queueSize);
 
-  std::atomic<bool> stop = { false };
+  bool stop = { false };// TODO probably should be atomic
   /*
    * Handle signals
    */
