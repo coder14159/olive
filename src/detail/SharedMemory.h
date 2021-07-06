@@ -82,6 +82,7 @@ namespace Index
   static constexpr uint8_t UnInitialised = std::numeric_limits<uint8_t>::max ();
 };
 
+inline
 std::string index_to_string (uint8_t index)
 {
   switch (index)
@@ -102,11 +103,13 @@ namespace Cursor
 /*
  * Return true if the index value is valid
  */
+inline
 bool is_valid_cursor (size_t cursor)
 {
   return (cursor != Cursor::UnInitialised);
 }
 
+inline
 std::string cursor_to_string (size_t cursor)
 {
   switch (cursor)
