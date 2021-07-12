@@ -8,6 +8,8 @@ Throttle::Throttle (uint32_t rate)
 
 void Throttle::throttle ()
 {
+  using namespace std::chrono_literals;
+
   /*
    * No throttling by default
    */
@@ -35,7 +37,7 @@ void Throttle::throttle ()
     * Periodically reset the counters so that the throttle is better able to
     * handle variations in workload.
     */
-  if ((intervalStart - m_startTime) > Seconds (1))
+  if ((intervalStart - m_startTime) > 1s)
   {
     m_startTime = intervalStart;
     m_counter = 0;
@@ -77,7 +79,7 @@ void Throttle::throttle (Sink &sink)
     * Periodically reset the counters so that the throttle is better able to
     * handle variations in workload.
     */
-  if (actualInterval > Seconds (1))
+  if (actualInterval > 1s)
   {
     m_startTime = Clock::now ();
     m_counter = 0;
