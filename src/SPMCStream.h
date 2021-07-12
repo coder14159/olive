@@ -75,19 +75,18 @@ private:
 
 private:
 
-  bool m_registered = { false };
-
-  std::unique_ptr<QueueType> m_queuePtr;
-
+  alignas (CACHE_LINE_SIZE)
   bool m_stop = { false };
 #pragma message "is atomic stop boolean required?"
   // std::atomic<bool> m_stop = { false };
 
   detail::ConsumerState m_consumer;
 
+  std::unique_ptr<QueueType> m_queuePtr;
+
   QueueType &m_queue;
 
-  Buffer<std::allocator<uint8_t>> m_cache;
+  // Buffer<std::allocator<uint8_t>> m_cache;
 };
 
 /*
