@@ -32,7 +32,13 @@ void SPMCSink<Queuetype>::next (const std::vector<uint8_t> &data)
   header.timestamp = nanoseconds_since_epoch (Clock::now ());
 
   while (!m_stop && !m_queue.push (header, data))
-  { }
+  {
+    /*
+     * Reset the timestamp if the queue is full so that only internal latency
+     * is measured
+     */
+    header.timestamp = nanoseconds_since_epoch (Clock::now ());
+  }
 }
 
 template <class Queuetype>
@@ -45,7 +51,14 @@ void SPMCSink<Queuetype>::next (const Data &data)
   header.timestamp = nanoseconds_since_epoch (Clock::now ());
 
   while (!m_stop && !m_queue.push (header, data))
-  { }
+  {
+    /*
+     * Reset the timestamp if the queue is full so that only internal latency
+     * is measured
+     */
+    header.timestamp = nanoseconds_since_epoch (Clock::now ());
+  }
+
 }
 
 template <class Queuetype>
