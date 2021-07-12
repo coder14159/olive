@@ -79,7 +79,8 @@ struct Header
  */
 namespace Index
 {
-  static constexpr uint8_t UnInitialised = std::numeric_limits<uint8_t>::max ();
+  static constexpr
+  uint8_t UnInitialised = std::numeric_limits<uint8_t>::max ();
 };
 
 inline
@@ -96,12 +97,12 @@ std::string index_to_string (uint8_t index)
 
 namespace Cursor
 {
-  static constexpr size_t Ready         = std::numeric_limits<size_t>::max ();
-  static constexpr size_t UnInitialised = std::numeric_limits<size_t>::max ()-1;
+  static constexpr
+  size_t UnInitialised = std::numeric_limits<size_t>::max ();
 };
 
 /*
- * Return true if the index value is valid
+ * Return true if the cursor value is valid
  */
 inline
 bool is_valid_cursor (size_t cursor)
@@ -114,8 +115,6 @@ std::string cursor_to_string (size_t cursor)
 {
   switch (cursor)
   {
-    case Cursor::Ready:
-      return "Cursor::Ready";
     case Cursor::UnInitialised:
       return "Cursor::UnInitialised";
     default:

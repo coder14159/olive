@@ -41,8 +41,6 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
                                                   (capacity, allocator);
   CHECK_SS (m_queue != nullptr,
              "Shared memory object initialisation failed: " << queueName);
-
-  // m_queue->register_producer ();
 }
 
 template <class Allocator, uint8_t MaxNoDropConsumers>
@@ -215,68 +213,24 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   BufferType &data,
   detail::ConsumerState &consumer)
 {
-#if 0
-  /*
-   * Reserve a data range of data to be read by the consumer
-   */
-  auto update_consumer_range = [&] () {
-
-    // std::cout << "Update consumer range" << std::endl;
-
-    // std::cout << "1 queue: " << m_queue->read_available (consumer)
-    //           << std::endl;
-    // std::cout << "2 consumerRange read_available: " << m_consumerRange.read_available ()
-    //           << " consumed: " << m_consumerRange.consumed () << std::endl;
-
-    auto &back_pressure = m_queue->back_pressure ();
-
-    /*
-     * Update back-pressure with consumed data
-     */
-    // back_pressure.consumed (consumer, m_consumerRange.consumed ());
-
-    // std::cout << "3 back_pressure consumed updated" << std::endl;
-    // std::cout << "4 queue read_available: " << m_queue->read_available (consumer)
-    //           << std::endl;
-    // /*
-    //  * Refresh the range available to consume from queue data
-    //  */
-    // m_consumerRange.read_available (m_queue->read_available (consumer));
-
-    // std::cout << "5 consumerRange read_available: " << m_consumerRange.read_available ()
-    //           << " consumed: " << m_consumerRange.consumed () << std::endl;
-#if 0
-    // if (m_consumerRange.read_available () == 0)
-    {
-      /*
-       * After consuming the available data range update back pressure
-       */
-      back_pressure.consumed (consumer, m_consumerRange.consumed ());
-
-      m_consumerRange.read_available (m_queue->read_available (consumer));
-      // std::cout << "6 consumerRange read_available: " << m_consumerRange.read_available ()
-      //           << std::endl;
-    }
-#endif
-  };
-#endif
-
   if (SPMC_EXPECT_TRUE (!m_cacheEnabled))
   {
-    if (m_consumerRange.empty ())
+    /*
+     * If all available data in a consumer has been consumed, request more
+     */
+    if (consumer.data_range ().empty ())
     {
+      auto &backPressure = m_queue->back_pressure ();
+
+      backPressure.consumed (consumer);
       /*
-       * After consuming data available in the range update back pressure
+       * Get the size of data available in the queue for a consumer
        */
-      m_queue->back_pressure ().consumed (consumer, m_consumerRange.consumed ());
-      /*
-       * Get size of data available in the queue
-       */
-      size_t read_available = m_queue->read_available (consumer);
+      size_t read_available = backPressure.read_available (consumer);
       /*
        * Update the consumable range if new data is available
        */
-      m_consumerRange.read_available (read_available);
+      consumer.data_range ().read_available (read_available);
       /*
        * Return if no new data is available
        */
@@ -293,7 +247,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
     {
       if (header.type == WARMUP_MESSAGE_TYPE)
       {
-        m_consumerRange.consumed (sizeof (Header));
+        consumer.data_range ().consumed (sizeof (Header));
 
         return false;
       }
@@ -302,7 +256,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
 
       m_queue->pop_test (data.data (), header.size, consumer);
 
-      m_consumerRange.consumed (sizeof (Header) + header.size);
+      consumer.data_range ().consumed (sizeof (Header) + header.size);
 
       return true;
     }
@@ -329,27 +283,27 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
     /*
      * If the local consumable data range is empty, refresh read available
      */
-    if (m_consumerRange.read_available () == 0)
+    if (consumer.data_range ().read_available () == 0)
     {
-      m_consumerRange.read_available (m_queue->read_available (consumer));
+      consumer.data_range ().read_available (m_queue->read_available (consumer));
     }
 
-    if (m_consumerRange.consumed_all ())
+    if (consumer.data_range ().consumed_all ())
     {
       /*
        * After consuming the available data range update back pressure
        */
-      m_queue->back_pressure ().consumed (consumer, m_consumerRange.consumed ());
+      m_queue->back_pressure ().consumed (consumer, consumer.data_range ().consumed ());
 
-      m_consumerRange.reset ();
+      consumer.data_range ().reset ();
 
-      m_consumerRange.read_available (m_queue->read_available (consumer));
+      consumer.data_range ().read_available (m_queue->read_available (consumer));
     }
   };
 
   if (SPMC_EXPECT_TRUE (!m_cacheEnabled))
   {
-    while (m_consumerRange.read_available () == 0)
+    while (consumer.data_range ().read_available () == 0)
     {
       update_data_range ();
     }
@@ -359,7 +313,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
     */
     if (m_queue->pop_test (header, consumer))
     {
-      m_consumerRange.consumed (sizeof (Header));
+      consumer.data_range ().consumed (sizeof (Header));
 
       if (header.type == WARMUP_MESSAGE_TYPE)
       {
@@ -371,7 +325,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
 
       m_queue->pop_test (data.data (), header.size, consumer);
 
-      m_consumerRange.consumed (header.size);
+      consumer.data_range ().consumed (header.size);
 
       return true;
     }
