@@ -74,6 +74,11 @@ public:
   uint64_t read_available (detail::ConsumerState &consumer) const;
 
   /*
+   * Return the minimum size of queue data which is writable taking into account
+   * progress of all the consumers
+   */
+  size_t write_available () const;
+  /*
    * Return the capacity of the consumer local data cache
    */
   size_t cache_capacity () const;
@@ -126,10 +131,18 @@ public:
   bool push (const Header &header, const std::vector<uint8_t> &data);
 
   /*
-   * Pop data out of the header and data from the queue
+   * Pop header and data from the queue
+   *
+   * The BufferType should have the methods resize () and data ()
    */
-  template <class POD, class BufferType>
-  bool pop (POD &pod, BufferType &data, detail::ConsumerState &consumer);
+  template <class BufferType>
+  bool pop (Header &header, BufferType &data, detail::ConsumerState &consumer);
+
+  /*
+   * Pop a POD type from the queue
+   */
+  template <class POD>
+  bool pop (POD &pod, detail::ConsumerState &consumer);
 
 private:
 
