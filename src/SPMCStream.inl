@@ -70,8 +70,8 @@ template <typename QueueType>
 bool SPMCStream<QueueType>::next (Header &header,
                                   Buffer<std::allocator<uint8_t>> &data)
 {
-  // while (!m_stop.load (std::memory_order_relaxed))
   while (!m_stop)
+  // while (!m_stop.load (std::memory_order_relaxed))
   {
     if (SPMC_EXPECT_TRUE (m_queue.pop (header, data)))
     {
