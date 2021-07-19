@@ -5,6 +5,8 @@
 #include <boost/log/expressions.hpp>
 #include <boost/log/sources/logger.hpp>
 
+#include <iostream>
+
 namespace log = boost::log;
 
 namespace spmc {
@@ -25,6 +27,7 @@ boost::log::trivial::severity_level get_log_level ()
 
 void set_log_level (boost::log::trivial::severity_level level)
 {
+
   log::core::get ()->set_filter (log::trivial::severity >= level);
   LOG_LEVEL = level;
 }
@@ -41,8 +44,11 @@ void set_log_level (const std::string &level)
   else if (log_level == "FATAL"  ) { set_log_level (log::trivial::fatal);   }
   else
   {
-  	std::string message = "Invalid log level: " + log_level;
-  	throw std::invalid_argument (message);
+    std::string message = "Invalid log level: " + log_level;
+
+    std::cerr << message << std::endl;
+
+    throw std::invalid_argument (message);
   }
 }
 
