@@ -159,7 +159,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::push (
   static_assert (std::is_trivially_copyable<Header>::value,
                 "Header type must be trivially copyable");
 
-  return (m_queue->push_variadic (header, data) > 0);
+  return m_queue->push_variadic (header, data);
 }
 
 template <class Allocator, uint8_t MaxNoDropConsumers>
