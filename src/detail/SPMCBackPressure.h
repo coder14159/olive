@@ -145,6 +145,8 @@ public:
    * Return the max size used in cursor index computations
    */
   size_t max_size () const { return m_maxSize; }
+
+  size_t consumer_count () const { return m_consumerCount; }
   /*
    * Use acquire/release space methods to atomically push more than one data
    * object onto the queue as a single contiguous unit.
@@ -169,6 +171,12 @@ public:
    * a consumers reader cursor
    */
   size_t read_available (const ConsumerState &consumer) const;
+
+  /*
+   * Return the minimum size of queue data which is writable taking into account
+   * all of the consumers
+   */
+  size_t write_available () const;
   /*
    * Update consumer cursor value and therefore producer back-pressure state
    */
@@ -191,13 +199,6 @@ private:
    * cursors
    */
   size_t write_available (size_t readerCursor, size_t writerCursor) const;
-  /*
-   * Return the minimum size of queue data which is writable taking into account
-   * all of the consumers
-   *
-   * Only called by the single writer process
-   */
-  size_t write_available () const;
 
 private:
   /*
