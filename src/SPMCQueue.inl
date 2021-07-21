@@ -281,7 +281,8 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   POD &pod,
   detail::ConsumerState &consumer)
 {
-  if (SPMC_EXPECT_TRUE (!m_cacheEnabled))
+#pragma message "remove local buffer cache"
+  // if (SPMC_EXPECT_TRUE (!m_cacheEnabled))
   {
     /*
      * If all available data in a consumer has been consumed, request more
