@@ -163,7 +163,6 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::push (
   size_t offset)
 {
   assert (size <= m_capacity);
-
   /*
    * Claim a data range of the queue to overwrite with a header and the data.
    *
