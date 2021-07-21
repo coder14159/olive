@@ -251,10 +251,11 @@ BOOST_AUTO_TEST_CASE (SPMCQueueCapacityCheck)
     }
   };
 
-  push ("1)  push:");
-  push ("2)  push:");
-  push ("3)  push:");
-  push ("4)  push:");
+  bool ret = false;
+  ret = push ("1)  push:"); BOOST_CHECK (ret);
+  ret = push ("2)  push:"); BOOST_CHECK (ret);
+  ret = push ("3)  push:"); BOOST_CHECK (ret);
+  ret = push ("4)  push:"); BOOST_CHECK (!ret);
 
   pop ("5)  pop:");
   BOOST_CHECK (in == out);
@@ -304,32 +305,77 @@ BOOST_AUTO_TEST_CASE (SPMCQueueBasicTest)
 
   Header headerIn;
   headerIn.version = 1;
-  headerIn.type = STANDARD_MESSAGE_TYPE;
-  headerIn.size = payloadIn.size ();
+  headerIn.type    = STANDARD_MESSAGE_TYPE;
+  headerIn.size    = payloadIn.size ();
+  headerIn.seqNum  = 1;
+
+  bool success = false;
+  for (int i = 0; i < 5; ++i)
+  {
+    headerIn.timestamp = nanoseconds_since_epoch (Clock::now ());
+
+    success = queue.push (headerIn, payloadIn);
+
+    if (headerIn.seqNum < 3)
+    {
+      BOOST_CHECK_EQUAL (success, true);
+      ++headerIn.seqNum;
+    }
+    else
+      BOOST_CHECK_EQUAL (success, false);
+  }
+
+  BOOST_CHECK_EQUAL (queue.read_available (consumer), 80);
+
+  std::vector<uint8_t> payloadOut;
+  Header headerOut;
+
+  success = queue.pop (headerOut, payloadOut, consumer);
+
+  BOOST_CHECK_EQUAL (success, true);
+  BOOST_CHECK_EQUAL (headerOut.version, headerIn.version);
+  BOOST_CHECK_EQUAL (headerOut.type,    headerIn.type);
+  BOOST_CHECK_EQUAL (headerOut.seqNum,  1);
+  BOOST_CHECK_EQUAL (queue.read_available (consumer),  40);
+
+  success = queue.pop (headerOut, payloadOut, consumer);
+
+  BOOST_CHECK_EQUAL (success, true);
+  BOOST_CHECK_EQUAL (headerOut.version, headerIn.version);
+  BOOST_CHECK_EQUAL (headerOut.type,    headerIn.type);
+  BOOST_CHECK_EQUAL (headerOut.seqNum,  2);
+  BOOST_CHECK_EQUAL (queue.read_available (consumer),  0);
+
+  success = queue.pop (headerOut, payloadOut, consumer);
+  BOOST_CHECK_EQUAL (success, false);
+  BOOST_CHECK_EQUAL (queue.read_available (consumer),  0);
+
+  success = queue.pop (headerOut, payloadOut, consumer);
+  BOOST_CHECK_EQUAL (success, false);
+  BOOST_CHECK_EQUAL (queue.read_available (consumer),  0);
 
   // test pushing enough data to wrap the buffer a few times
-  for (int i = 1; i < 6; ++i)
+  int start = headerOut.seqNum + 1;
+  int end   = start + 20;
+  for (int i = start; i < end; ++i)
   {
     {
-      headerIn.seqNum = i;
-
       headerIn.timestamp = nanoseconds_since_epoch (Clock::now ());
 
-      bool success = queue.push (headerIn, payloadIn);
+      success = queue.push (headerIn, payloadIn);
 
       BOOST_CHECK_EQUAL (success, true);
+      ++headerIn.seqNum;
     }
-
     {
       std::vector<uint8_t> payload;
 
-      Header header;
-      bool success = queue.pop (header, payload, consumer);
+      success = queue.pop (headerOut, payload, consumer);
 
       BOOST_CHECK_EQUAL (success, true);
-      BOOST_CHECK_EQUAL (header.version, headerIn.version);
-      BOOST_CHECK_EQUAL (header.type,    headerIn.type);
-      BOOST_CHECK_EQUAL (header.seqNum,  i);
+      BOOST_CHECK_EQUAL (headerOut.version, headerIn.version);
+      BOOST_CHECK_EQUAL (headerOut.type,    headerIn.type);
+      BOOST_CHECK_EQUAL (headerOut.seqNum,  i);
 
       BOOST_CHECK_EQUAL (payload.size (), payloadIn.size ());
       BOOST_CHECK (payload == payloadIn);
@@ -355,272 +401,87 @@ BOOST_AUTO_TEST_CASE (SPMCQueuePushPod)
 
   Payload payloadIn = { 100, 'z' };
 
-  auto time = nanoseconds_since_epoch (Clock::now ());
+  for (uint64_t i = 1; i < 500; ++i)
+  {
+    auto time = nanoseconds_since_epoch (Clock::now ());
+    Header headerIn  = { 1, 2, sizeof (Payload), i, time };
 
-  Header headerIn  = { 1, 2, sizeof (Payload), 3, time };
+    bool success = queue.push (headerIn, payloadIn);
+    BOOST_CHECK (success);
+
+    Header headerOut;
+    std::vector<uint8_t> data;
+
+    success = queue.pop (headerOut, data, consumer);
+    BOOST_CHECK (success);
+    BOOST_CHECK_EQUAL (headerIn.version, headerOut.version);
+    BOOST_CHECK_EQUAL (headerIn.timestamp, headerOut.timestamp);
+
+    Payload *payloadOut = reinterpret_cast<Payload*> (data.data ());
+
+    BOOST_CHECK_EQUAL (payloadIn.i, payloadOut->i);
+    BOOST_CHECK_EQUAL (payloadIn.c, payloadOut->c);
+  }
+}
+
+BOOST_AUTO_TEST_CASE (SPMCQueuePushVector)
+{
+  ScopedLogLevel log (error);
+
+  const size_t capacity = 100;
+  SPMCQueue<std::allocator<uint8_t>> queue (capacity);
+
+  detail::ConsumerState consumer;
+
+  queue.register_consumer (consumer);
+
+  std::vector<uint8_t> payloadIn;
+  payloadIn.resize (capacity - sizeof (Header));
+
+  uint64_t seqNum = 0;
+  int64_t time = nanoseconds_since_epoch (Clock::now ());
+  Header headerIn  = { 1, 2, payloadIn.size (), ++seqNum, time };
 
   bool success = queue.push (headerIn, payloadIn);
   BOOST_CHECK (success);
 
-  std::vector<uint8_t> data;
-
   Header headerOut;
-  success = queue.pop (headerOut, data, consumer);
+  std::vector<uint8_t> payloadOut;
+
+  success = queue.pop (headerOut, payloadOut, consumer);
   BOOST_CHECK (success);
   BOOST_CHECK_EQUAL (headerIn.version, headerOut.version);
+  BOOST_CHECK_EQUAL (headerIn.timestamp, headerOut.timestamp);
 
-  Payload *payloadOut = reinterpret_cast<Payload*> (data.data ());
-
-  BOOST_CHECK_EQUAL (payloadIn.i, payloadOut->i);
-  BOOST_CHECK_EQUAL (payloadIn.c, payloadOut->c);
+  BOOST_CHECK (payloadIn == payloadOut);
 }
 
-/*
- * Blocking wrapper for the SPMCQueue
- * Assumes the SPMCQueue is bounded in size
- */
-struct Packet
-{
-  Header header;
-  std::vector<uint8_t> payload;
-};
-
-class BlockingQueueWrapper
-{
-public:
-  BlockingQueueWrapper () = delete;
-  BlockingQueueWrapper (const BlockingQueueWrapper &) = delete;
-
-  BlockingQueueWrapper (size_t capacity, size_t cache_size)
-  : m_queue (capacity)
-  {
-    m_queue.register_consumer (m_consumer);
-    m_queue.resize_cache (cache_size);
-  }
-
-  ~BlockingQueueWrapper ()
-  {
-    stop ();
-  }
-
-  void stop ()
-  {
-    m_stop = true;
-  }
-
-  bool empty ()
-  {
-    return m_queue.read_available (m_consumer) == 0;
-  }
-
-  size_t read_available ()
-  {
-    return m_queue.read_available (m_consumer);
-  }
-
-  size_t cache_size () const
-  {
-    return m_queue.cache_size ();
-  }
-
-  void push (const Packet &packet)
-  {
-    {
-      const std::scoped_lock<std::mutex> lock (m_mutex);
-
-      while (!m_stop && !m_queue.push (packet.header, packet.payload))
-      {
-        std::this_thread::sleep_for (Milliseconds (1));
-      }
-    }
-    m_event.notify_all ();
-  }
-
-  Packet pop ()
-  {
-    std::unique_lock<std::mutex> lock (m_mutex);
-
-    if (m_queue.empty (m_consumer))
-    {
-      if (m_stop)
-      {
-        return {};
-      }
-      m_event.wait (lock, [&] { return !m_queue.empty (m_consumer);});
-    }
-
-    Packet packet;
-
-    m_queue.pop (packet.header, packet.payload, m_consumer);
-
-    return packet;
-  }
-
-  const SPMCQueue<std::allocator<uint8_t>> &queue () const
-  {
-    return m_queue;
-  }
-
-private:
-  std::mutex m_mutex;
-  std::condition_variable m_event;
-
-  SPMCQueue<std::allocator<uint8_t>> m_queue;
-  detail::ConsumerState m_consumer;
-  std::atomic_bool m_stop = { false };
-};
-
-
-BOOST_AUTO_TEST_CASE (SlowConsumerWithPrefetch)
+BOOST_AUTO_TEST_CASE (SPSCQueuePushVector)
 {
   ScopedLogLevel log (error);
 
-  ASSERT (sizeof (Header) == 32,
-    "This test assumes that sizeof Header is 32 bytes. "
-    "The test expectations will need adjusting if it is not.");
-  /*
-   * SPMCQueue uses thread local variables when running in process,so the
-   * producer and consumer must be in separate threads
-   */
-  const size_t queue_capacity = 128;
-  const size_t cache_capacity = 85;
+  boost::lockfree::spsc_queue<uint8_t> queue (100);
+  size_t payloadSize = 40;
+  const std::vector<uint8_t> empty (payloadSize, 0);
 
-  BlockingQueueWrapper blocking_queue (queue_capacity, cache_capacity);
+  std::vector<uint8_t> payloadIn = empty;
+  std::vector<uint8_t> payloadOut = empty;
+  std::iota (std::begin (payloadIn), std::end (payloadIn), 1);
 
-  const size_t payloadSize = 8;
+  for (uint64_t i = 1; i < 10; ++i)
+  {
+    bool success = queue.push (payloadIn.data (), payloadIn.size ());
+    BOOST_CHECK (success);
 
-  std::vector<uint8_t> payload (payloadSize);
-  std::iota (std::begin (payload), std::end (payload), 1);
+    success = queue.pop (payloadOut.data (), payloadSize);
+    BOOST_CHECK (success);
 
-  /*
-   * The producer must run in a separate thread to the consumer to support
-   * thread local variables used
-   */
-  std::atomic<int> serve_count = { 0 }; // number of packets to produce
-  std::atomic_bool stop { false };
-  std::mutex mutex;
+    BOOST_CHECK (payloadIn == payloadOut);
 
-  auto is_valid_packet = [] (const Packet &packet) -> bool {
-    return (packet.header.seqNum > 0 &&
-            packet.header.size > 0 &&
-            packet.payload.empty () == false);
-  };
-  /*
-   * Pushing data on the queue utilises thread local variables
-   */
-  std::mutex server_mutex;
-  std::condition_variable server_condition;
-  /*
-   * Run the server in a separate thread
-   */
-  std::thread server ([&] {
-
-    Packet in;
-    in.header.seqNum = 0;
-    in.header.size = payload.size ();
-    in.payload = payload;
-
-    while (!stop)
-    {
-      while (serve_count > 0 && !stop)
-      {
-        std::unique_lock<std::mutex> lock (server_mutex);
-
-        ++in.header.seqNum;
-        in.header.timestamp = nanoseconds_since_epoch (Clock::now ());
-
-        blocking_queue.push (in);
-        --serve_count;
-
-        lock.unlock ();
-        server_condition.notify_one ();
-      }
-    }
-  });
-
-  auto serve_one = [&] () -> bool {
-    ++serve_count;
-
-    while (serve_count > 0)
-    {
-      std::unique_lock<std::mutex> lock (server_mutex);
-      bool status = server_condition.wait_for (lock, Seconds (10),
-                                 [&] { return serve_count == 0; });
-      if (!status)
-      {
-        return false;
-      }
-    }
-
-    return true;
-  };
-
-  auto consume_one = [&] ()-> Packet {
-    auto packet = blocking_queue.pop ();
-
-    return packet;
-  };
-
-  /*
-   * Note: The read_available method is the sum of data in the queue plus the
-   * data moved to the client local cache
-   */
-  BOOST_CHECK (blocking_queue.empty ());
-  BOOST_CHECK_EQUAL (blocking_queue.cache_size (), 0);
-  BOOST_CHECK_EQUAL (blocking_queue.read_available (), 0);
-
-  serve_one ();
-  BOOST_CHECK_EQUAL (blocking_queue.cache_size (), 0);
-  BOOST_CHECK_EQUAL (blocking_queue.read_available (), 40);
-
-  serve_one ();
-  BOOST_CHECK_EQUAL (blocking_queue.cache_size (), 0);
-  BOOST_CHECK_EQUAL (blocking_queue.read_available (), 80);
-
-  Packet packet;
-
-  packet = consume_one ();
-  BOOST_CHECK (is_valid_packet (packet));
-  BOOST_CHECK_EQUAL (packet.header.seqNum, 1);
-  BOOST_CHECK (packet.payload == payload);
-  BOOST_CHECK_EQUAL (blocking_queue.cache_size (), 40);
-  BOOST_CHECK_EQUAL (blocking_queue.read_available (), 40);
-
-  serve_one ();
-  BOOST_CHECK_EQUAL (blocking_queue.cache_size (), 40);
-  BOOST_CHECK_EQUAL (blocking_queue.read_available (), 80);
-
-  packet = consume_one ();
-  BOOST_CHECK (is_valid_packet (packet));
-  BOOST_CHECK_EQUAL (packet.header.seqNum, 2);
-  BOOST_CHECK (packet.payload == payload);
-  BOOST_CHECK_EQUAL (blocking_queue.cache_size (), 0);
-  BOOST_CHECK_EQUAL (blocking_queue.read_available (), 40);
-
-  packet = consume_one ();
-  BOOST_CHECK (is_valid_packet (packet));
-  BOOST_CHECK_EQUAL (packet.header.seqNum, 3);
-  BOOST_CHECK (packet.payload == payload);
-  BOOST_CHECK_EQUAL (blocking_queue.cache_size (), 0);
-  BOOST_CHECK_EQUAL (blocking_queue.read_available (), 0);
-
-  serve_one ();
-  BOOST_CHECK_EQUAL (blocking_queue.cache_size (), 0);
-  BOOST_CHECK_EQUAL (blocking_queue.read_available (), 40);
-
-  packet = consume_one ();
-  BOOST_CHECK (is_valid_packet (packet));
-  BOOST_CHECK_EQUAL (packet.header.seqNum, 4);
-  BOOST_CHECK (packet.payload == payload);
-  BOOST_CHECK_EQUAL (blocking_queue.cache_size (), 0);
-  BOOST_CHECK_EQUAL (blocking_queue.read_available (), 0);
-
-  /*
-   * Exit server and consumer
-   */
-  stop = true;
-  server.join ();
+    payloadOut = empty;
+  }
 }
+
 
 #if PREFETCH_FIXED
 
@@ -703,19 +564,22 @@ BOOST_AUTO_TEST_CASE (SlowConsumerNoMessageDrops)
 {
   ScopedLogLevel log (error);
 
-  SPMCQueue<std::allocator<uint8_t>> queue (128);
+  SPMCQueue<std::allocator<uint8_t>> queue (150);
 
   detail::ConsumerState consumer;
   queue.register_consumer (consumer);
 
+  const size_t payloadSize = 8;
+
   Header headerProducer;
   headerProducer.version = 1;
   headerProducer.type = STANDARD_MESSAGE_TYPE;
-  headerProducer.size = 5;
+  headerProducer.size = payloadSize;
   headerProducer.seqNum = 1;
   headerProducer.timestamp = nanoseconds_since_epoch (Clock::now ());
 
-  std::vector<uint8_t> payloadProducer = { 1, 2, 3, 4, 5 };
+  std::vector<uint8_t> payloadProducer (payloadSize, 0);
+  std::iota (std::begin (payloadProducer), std::end (payloadProducer), 1);
 
   Header header;
   std::vector<uint8_t> payload;
@@ -725,34 +589,25 @@ BOOST_AUTO_TEST_CASE (SlowConsumerNoMessageDrops)
    */
   BOOST_CHECK_EQUAL (queue.pop (header, payload, consumer), false);
 
-  BOOST_CHECK_EQUAL (queue.push (headerProducer, payloadProducer), true);
-
-  BOOST_CHECK_EQUAL (queue.pop (header, payload, consumer), true);
+  BOOST_CHECK_EQUAL (queue.push (headerProducer, payloadProducer), true); // commit=40
+  BOOST_CHECK_EQUAL (queue.pop (header, payload, consumer), true); // consumed=40
 
   BOOST_CHECK_EQUAL (header.version,    headerProducer.version);
   BOOST_CHECK_EQUAL (header.type,       headerProducer.type);
   BOOST_CHECK_EQUAL (header.timestamp,  headerProducer.timestamp);
-
-  BOOST_CHECK_EQUAL (payload.size (), 5);
-  for (size_t i = 0; i < payload.size (); ++i)
-  {
-    BOOST_CHECK_EQUAL (payload[i], payloadProducer[i]);
-  }
+  BOOST_CHECK_EQUAL (payload.size (), payloadSize);
+  BOOST_CHECK (payload == payloadProducer);
 
   // send enough data to wrap the buffer and exert back pressure on the producer
   ++headerProducer.seqNum;
-  BOOST_CHECK_EQUAL (queue.push (headerProducer, payloadProducer), true);
+  BOOST_CHECK_EQUAL (queue.push (headerProducer, payloadProducer), true); // commit=80
 
   ++headerProducer.seqNum;
-  BOOST_CHECK_EQUAL (queue.push (headerProducer, payloadProducer), true);
-
-  ++headerProducer.seqNum;
-  BOOST_CHECK_EQUAL (queue.push (headerProducer, payloadProducer), true);
+  BOOST_CHECK_EQUAL (queue.push (headerProducer, payloadProducer), true); // commit=120
 
   ++headerProducer.seqNum;
   BOOST_CHECK_EQUAL (queue.push (headerProducer, payloadProducer), false);
 
-  ++headerProducer.seqNum;
   BOOST_CHECK_EQUAL (queue.push (headerProducer, payloadProducer), false);
 
   BOOST_CHECK (queue.pop (header, payload, consumer));
@@ -766,10 +621,15 @@ BOOST_AUTO_TEST_CASE (SlowConsumerNoMessageDrops)
   BOOST_CHECK_EQUAL (header.version,    headerProducer.version);
   BOOST_CHECK_EQUAL (header.type,       headerProducer.type);
   BOOST_CHECK_EQUAL (header.timestamp,  headerProducer.timestamp);
-  for (size_t i = 0; i < payload.size (); ++i)
-  {
-    BOOST_CHECK_EQUAL (payload[i], payloadProducer[i]);
-  }
+  BOOST_CHECK_EQUAL (header.seqNum,     3);
+  BOOST_CHECK (payloadProducer == payload);
+
+  BOOST_CHECK_EQUAL (queue.pop (header, payload, consumer), true);
+  BOOST_CHECK_EQUAL (header.version,    headerProducer.version);
+  BOOST_CHECK_EQUAL (header.type,       headerProducer.type);
+  BOOST_CHECK_EQUAL (header.timestamp,  headerProducer.timestamp);
+  BOOST_CHECK_EQUAL (header.seqNum,     123);
+  BOOST_CHECK (payloadProducer == payload);
 }
 
 template <class Queue>
