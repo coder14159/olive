@@ -75,7 +75,7 @@ void SPSCStream<Allocator>::stop ()
 template <typename Allocator>
 bool SPSCStream<Allocator>::next (Header &header, std::vector<uint8_t> &data)
 {
-  while (!m_stop.load (std::memory_order_relaxed))
+  while (!m_stop)
   {
     if (!m_cache.enabled ())
     {
@@ -89,7 +89,7 @@ bool SPSCStream<Allocator>::next (Header &header, std::vector<uint8_t> &data)
       {
         data.resize (header.size);
 
-        while (!m_stop.load (std::memory_order_relaxed))
+        while (!m_stop)
         {
           if (SPMC_EXPECT_TRUE (pop (data.data (), header.size)))
           {
