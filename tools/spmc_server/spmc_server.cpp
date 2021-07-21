@@ -77,7 +77,7 @@ void server (const std::string& name,
 
   Sink sink (name, name + ":queue", queueSize);
 
-  bool stop = { false };// TODO probably should be atomic
+  bool stop = { false };
   /*
    * Handle signals
    */
@@ -85,7 +85,7 @@ void server (const std::string& name,
 
     if (!stop)
     {
-      std::cout << "Stop spmc_server" << std::endl;
+      BOOST_LOG_TRIVIAL (info) << "Stopping spmc_server";
 
       sink.stop ();
 

@@ -105,11 +105,11 @@ int main(int argc, char* argv[]) try
 
     if (!stop)
     {
+      BOOST_LOG_TRIVIAL (info) << "Stopping spsc_client";
+
       stop = true;
 
       stream.stop ();
-
-      std::cout << "Stopping spsc_client" << std::endl;
     }
   });
 
