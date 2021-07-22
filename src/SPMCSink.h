@@ -36,12 +36,13 @@ public:
 
   /*
    * Serialise data to the queue
+   * Blocks until successful
    */
   void next (const std::vector<uint8_t> &data);
 
   /*
    * Serialise POD data to the queue
-   * Blocking call
+   * Blocks until successful
    */
   template<typename POD>
   void next (const POD &data);
@@ -66,8 +67,6 @@ private:
 
   alignas (CACHE_LINE_SIZE)
   bool m_stop = { false };
-#pragma message "is atomic stop boolean required?"
-  // std::atomic<bool> m_stop = { false };
 
   alignas (CACHE_LINE_SIZE)
   uint64_t m_sequenceNumber = 0;

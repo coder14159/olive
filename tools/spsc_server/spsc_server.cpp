@@ -93,15 +93,15 @@ void server (const std::string& name,
 
     stop = true;
 
+    BOOST_LOG_TRIVIAL (info) << "Stopping spsc_server";
+
     for (auto &sink : sinks)
     {
       BOOST_LOG_TRIVIAL (info) << "Stop " << sink->name ();
 
       sink->stop ();
     }
-
-    std::cout << "Stopping spsc_server" << std::endl;
- });
+  });
 
   // wait for clients to be ready
   SharedMemoryCounter clientsReady (name + ":client:ready", name);
@@ -144,18 +144,15 @@ void server (const std::string& name,
   size_t first = 0;
   size_t sinkCount = sinks.size ();
 
-  TimePoint timestamp;
-
   while (SPMC_EXPECT_TRUE (!stop))
   {
-    timestamp = Clock::now ();
     /*
      * Rotate the queue which receives data first for fair data distribution of
      * message latencies and throttling
      */
     for (size_t i = first; i < first + sinkCount; ++i)
     {
-      sinks[MODULUS (i, sinkCount)]->next (message, timestamp);
+      sinks[MODULUS (i, sinkCount)]->next (message);
     }
 
     throttle.throttle<SPSCSinkProcess> (*sinks[first]);

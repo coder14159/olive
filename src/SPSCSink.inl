@@ -34,31 +34,34 @@ void SPSCSink<Allocator>::stop ()
 template <typename Allocator>
 void SPSCSink<Allocator>::next (const std::vector<uint8_t> &data)
 {
-  next (data, Clock::now ());
-}
-
-template <typename Allocator>
-void SPSCSink<Allocator>::next (const std::vector<uint8_t> &data, TimePoint timestamp)
-{
-  ++m_sequenceNumber;
-
   Header header;
-
-  header.size      = data.size ();
-  header.seqNum    = m_sequenceNumber;
-  header.timestamp = timestamp.time_since_epoch ().count ();
+  header.size   = data.size ();
+  header.seqNum = ++m_sequenceNumber;
   /*
    * Push the data packet onto the shared queue if there is available space
    * for both header and data
    */
   size_t size = sizeof (Header) + header.size;
 
-  while (m_stop == false && m_queueRef.write_available () < size)
-  { }
+  while (!m_stop && m_queueRef.write_available () >= size)
+  {
+    m_buffer.resize (size);
+    /*
+      * Set timestamp when queue space is available so that only internal queue
+      * latency is measured
+      *
+      * TODO: Add a variadic push function for spscqueue
+      */
 
-  m_queueRef.push (reinterpret_cast <uint8_t*> (&header), sizeof (Header));
+    header.timestamp = nanoseconds_since_epoch (Clock::now ());
 
-  m_queueRef.push (data.data (), header.size);
+    std::memcpy (m_buffer.data (),
+                  reinterpret_cast<uint8_t*> (&header), sizeof (Header));
+    std::memcpy (m_buffer.data () + sizeof (Header),
+                  data.data (), data.size ());
+
+    m_queueRef.push (m_buffer.data (), m_buffer.size ());
+  }
 }
 
 template <typename Allocator>
@@ -67,4 +70,4 @@ void SPSCSink<Allocator>::next_keep_warm ()
   m_queueRef.push (reinterpret_cast <uint8_t*> (&m_warmupHdr), sizeof (Header));
 }
 
-}
+} // spmc

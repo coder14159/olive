@@ -16,6 +16,46 @@ class ConsumerState
 {
 public:
   /*
+  * Updating the a range of data which can be consumed is relatively expensive
+  * as updates need to be fed back to the data producer.
+  *
+  * DataRange requests a chunk of data for a client to consume in a single call.
+  * The client then consumes the data chunk without further interaction with the
+  * producer.
+  */
+  class DataRange
+  {
+  public:
+    // Return the current size of data which can be read from the queue
+    bool empty () const { return m_readAvailable == 0; }
+
+    // Return the current size of data which can be read from the queue
+    size_t read_available () const { return m_readAvailable; }
+
+    // Reset size of consumable data after available data has been consumed
+    void read_available (size_t size)
+    {
+      m_consumed = 0;
+      m_readAvailable = size;
+    }
+
+    size_t consumed () const { return m_consumed; }
+
+
+    // Update the range with the size of data which has been consumed
+    void consumed (size_t size)
+    {
+      m_consumed += size;
+      m_readAvailable -= size;
+    }
+
+  private:
+    size_t m_consumed = 0;
+    size_t m_readAvailable = 0;
+  };
+
+public:
+  /*
    * Pointer to the raw shared queue data
    */
   const uint8_t *queue_ptr () const { return m_queue; }
@@ -46,22 +86,32 @@ public:
    * Set the cursor to the currently read queue index value
    */
   void cursor (size_t cursor) { m_cursor = cursor; }
+  /*
+   * Return the data range object defining the currently consumable data range
+   */
+  ConsumerState::DataRange &data_range () { return m_dataRange; }
+  /*
+   * Return a read-only data defining the currently consumable data range
+   */
+  const ConsumerState::DataRange &data_range () const { return m_dataRange; }
 
 private:
   /*
    * Local pointer to the shared queue
    */
-  alignas (CACHE_LINE_SIZE)
   const uint8_t *m_queue = nullptr;
   /*
    * An index to the back pressure array which holds the consumer queue cursor
    */
+  alignas (CACHE_LINE_SIZE)
   uint8_t m_index = Index::UnInitialised;
   /*
    * The cursor points to an index of the shared queue indicating how much of
    * the produced data has been consumed
    */
   size_t m_cursor = Cursor::UnInitialised;
+
+  DataRange m_dataRange;
 };
 
 /*
@@ -95,6 +145,8 @@ public:
    * Return the max size used in cursor index computations
    */
   size_t max_size () const { return m_maxSize; }
+
+  size_t consumer_count () const { return m_consumerCount; }
   /*
    * Use acquire/release space methods to atomically push more than one data
    * object onto the queue as a single contiguous unit.
@@ -119,10 +171,16 @@ public:
    * a consumers reader cursor
    */
   size_t read_available (const ConsumerState &consumer) const;
+
   /*
-   * Update consumer cursor value and producer back-pressure
+   * Return the minimum size of queue data which is writable taking into account
+   * all of the consumers
    */
-  void consumed (ConsumerState &consumer, size_t size);
+  size_t write_available () const;
+  /*
+   * Update consumer cursor value and therefore producer back-pressure state
+   */
+  void consumed (ConsumerState &consumer);
   /*
    * Return the index of the committed data cursor
    */
@@ -141,13 +199,6 @@ private:
    * cursors
    */
   size_t write_available (size_t readerCursor, size_t writerCursor) const;
-  /*
-   * Return the minimum size of queue data which is writable taking into account
-   * all of the consumers
-   *
-   * Only called by the single writer process
-   */
-  size_t write_available () const;
 
 private:
   /*
@@ -161,7 +212,7 @@ private:
    * ovewriting a range which the consumer has just read.
    */
   alignas (CACHE_LINE_SIZE)
-  size_t m_claimed = { Cursor::UnInitialised };
+  size_t m_claimed = { 0 };
   /*
    * The queue capacity + 1 for the algorithm to work
    */
@@ -182,7 +233,7 @@ private:
    * Counter used by the producer to publish a data range
    */
   alignas (CACHE_LINE_SIZE)
-  std::atomic<size_t> m_committed = { Cursor::UnInitialised };
+  std::atomic<size_t> m_committed = { 0 };
   /*
    * Current number of consumers
    * Should be atomic or is the mutex synchronise adequate??

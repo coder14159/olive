@@ -74,6 +74,11 @@ public:
   uint64_t read_available (detail::ConsumerState &consumer) const;
 
   /*
+   * Return the minimum size of queue data which is writable taking into account
+   * progress of all the consumers
+   */
+  size_t write_available () const;
+  /*
    * Return the capacity of the consumer local data cache
    */
   size_t cache_capacity () const;
@@ -126,10 +131,18 @@ public:
   bool push (const Header &header, const std::vector<uint8_t> &data);
 
   /*
-   * Pop data out of the header and data from the queue
+   * Pop header and data from the queue
+   *
+   * The BufferType should have the methods resize () and data ()
    */
-  template <class POD, class BufferType>
-  bool pop (POD &pod, BufferType &data, detail::ConsumerState &consumer);
+  template <class BufferType>
+  bool pop (Header &header, BufferType &data, detail::ConsumerState &consumer);
+
+  /*
+   * Pop a POD type from the queue
+   */
+  template <class POD>
+  bool pop (POD &pod, detail::ConsumerState &consumer);
 
 private:
 
@@ -145,51 +158,6 @@ private:
    */
   boost::interprocess::managed_shared_memory m_memory;
 
-  /*
-   * ConsumerRange is used to reduce the number of (atomic synchronised) calls
-   * to the SPMCBackPressure object.
-   *
-   * This improves throughput, latency and scalability of the queues.
-   */
-  class ConsumerRange
-  {
-    public:
-      // Return the current size of data which can be read from the queue
-      bool empty () const { return m_readAvailable == 0; }
-
-      // Return the current size of data which can be read from the queue
-      size_t read_available () const { return m_readAvailable; }
-
-      // Reset size of consumable data after available data has been consumed
-      void read_available (size_t size)
-      {
-        m_consumed = 0;
-        m_readAvailable = size;
-      }
-
-      size_t consumed () const { return m_consumed; }
-
-
-      // Update the range with the size of data which has been consumed
-      void consumed (size_t size)
-      {
-        m_consumed += size;
-        m_readAvailable -= size;
-      }
-
-    private:
-      size_t m_consumed = 0;
-      size_t m_readAvailable = 0;
-  };
-
-  alignas (CACHE_LINE_SIZE)
-  ConsumerRange m_consumerRange;
-  /*
-   * Move data to a client local cache in larger data chaunks to reduce
-   * synchronisation calls.
-   */
-  bool m_cacheEnabled = false;
-
   typedef typename std::conditional<
           std::is_same<std::allocator<uint8_t>, Allocator>::value,
           std::unique_ptr<QueueType>,
@@ -204,6 +172,7 @@ private:
    * This data cache can optionally be used to store chunks of data taken from
    * the shared queue. This cache is local to each client.
    */
+  bool m_cacheEnabled = false;
   alignas (CACHE_LINE_SIZE)
   Buffer<std::allocator<uint8_t>> m_cache;
 };

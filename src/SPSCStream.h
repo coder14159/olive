@@ -61,7 +61,7 @@ private:
 
 private:
 
-  std::atomic<bool> m_stop = { false };
+  bool m_stop = { false };
 
   using QueueType = SharedMemory::SPSCQueue;
 

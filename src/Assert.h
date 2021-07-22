@@ -25,7 +25,7 @@ namespace spmc {
 } while(0)
 
 
-#define ASSERT_SS( condition, message) do \
+#define ASSERT_SS(condition, message) do \
 {                                         \
   if (!(condition))                       \
   {                                       \

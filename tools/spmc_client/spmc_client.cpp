@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) try
   // TODO: Generate the queue name from within Stream ctor..
   Stream stream (name, name + ":queue", prefetchSize);
 
-  bool stop = { false }; // TODO probably should be atomic
+  bool stop = { false };
   /*
    * Handle signals
    */
@@ -112,11 +112,11 @@ int main(int argc, char* argv[]) try
 
     if (!stop)
     {
+      BOOST_LOG_TRIVIAL (info) << "Stopping spmc_client";
+
       stop = true;
 
       stream.stop ();
-
-      std::cout << "Stopping spmc_client" << std::endl;
     }
   });
 
@@ -251,6 +251,7 @@ int main(int argc, char* argv[]) try
 
   stats.stop ();
   stats.print_summary ();
+
 
   BOOST_LOG_TRIVIAL (info) << "Exit stream";
 

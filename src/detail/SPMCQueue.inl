@@ -163,7 +163,6 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::push (
   size_t offset)
 {
   assert (size <= m_capacity);
-
   /*
    * Claim a data range of the queue to overwrite with a header and the data.
    *
@@ -240,7 +239,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
     /*
      * Update consumer cursor value and producer back-pressure
      */
-    m_backPressure.consumed (consumer, size);
+    m_backPressure.consumed (consumer);
 
     return true;
   }
@@ -268,7 +267,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::prefetch_to_cache (
 
   if (copy_from_queue (cache, size, consumer))
   {
-    m_backPressure.consumed (consumer, size);
+    m_backPressure.consumed (consumer);
 
     return true;
   }
