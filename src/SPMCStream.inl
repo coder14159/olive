@@ -10,19 +10,18 @@ namespace spmc {
 
 template <typename QueueType>
 SPMCStream<QueueType>::SPMCStream (const std::string &memoryName,
-                        const std::string &queueName,
-                        size_t prefetchSize)
+                        const std::string &queueName)
 : m_queuePtr (std::make_unique<QueueType> (memoryName, queueName)),
   m_queue (*m_queuePtr)
 {
-  init (prefetchSize);
+  m_queue.register_consumer (m_consumer);
 }
 
 template <typename QueueType>
-SPMCStream<QueueType>::SPMCStream (QueueType &queue, size_t prefetchSize)
+SPMCStream<QueueType>::SPMCStream (QueueType &queue)
 : m_queue (queue)
 {
-  init (prefetchSize);
+  m_queue.register_consumer (m_consumer);
 }
 
 template <typename QueueType>
@@ -31,17 +30,6 @@ SPMCStream<QueueType>::~SPMCStream ()
   stop ();
 
   m_queue.unregister_consumer (m_consumer);
-}
-
-template <typename QueueType>
-void SPMCStream<QueueType>::init (size_t prefetchSize)
-{
-  if (prefetchSize > 0)
-  {
-    m_queue.resize_cache (prefetchSize);
-  }
-
-  m_queue.register_consumer (m_consumer);
 }
 
 template <typename QueueType>

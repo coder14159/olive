@@ -32,14 +32,13 @@ public:
    * Initialise a stream consuming from named shared memory
    */
   SPMCStream (const std::string &memoryName,
-              const std::string &queueName,
-              size_t prefetchSize = 0);
+              const std::string &queueName);
 
   /*
    * Initialise a stream consuming from memory shared between threads in a
    * single process.
    */
-  SPMCStream (QueueType &queue, size_t prefetchSize = 0);
+  SPMCStream (QueueType &queue);
 
   ~SPMCStream ();
 
@@ -63,9 +62,6 @@ public:
   bool next_non_blocking (Header &header, Vector &data);
 
 private:
-
-  void init (size_t prefetchSize);
-
   /*
    * Pull data from the shared queue.
    *
@@ -75,7 +71,6 @@ private:
 
 private:
 
-  alignas (CACHE_LINE_SIZE)
   bool m_stop = { false };
 
   detail::ConsumerState m_consumer;
