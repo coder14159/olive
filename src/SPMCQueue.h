@@ -102,15 +102,16 @@ public:
   void resize_cache (size_t size);
 
   /*
-   * Push a single POD type into the queue.
+   * Push a data into the queue.
+   *
+   * Types currently supported are POD and type with methds data () and size ()
+   * eg std::vector.
    *
    * Useful if the header type has no associated data. An example would be when
    * sending warmup messages.
    */
-  template <class POD>
-  bool push (const POD &pod);
-
-  // TODO PUSH VECTOR ONLY
+  template <class Data>
+  bool push (const Data &data);
 
   /*
    * Push pod type data into the queue, always succeeds unless there are slow
@@ -145,14 +146,6 @@ public:
   bool pop (POD &pod, detail::ConsumerState &consumer);
 
 private:
-
-  /*
-   * Pop a chunk of data from the shared queue to a local data cache and return
-   * a message header and associated data from the local cache
-   */
-  template <class Header, class BufferType>
-  bool pop_from_cache (Header &header, BufferType &data,
-                       detail::ConsumerState &consumer);
   /*
    * Memory shared between processes
    */
@@ -167,14 +160,6 @@ private:
    */
   alignas (CACHE_LINE_SIZE)
   QueuePtr m_queue;
-
-  /*
-   * This data cache can optionally be used to store chunks of data taken from
-   * the shared queue. This cache is local to each client.
-   */
-  bool m_cacheEnabled = false;
-  alignas (CACHE_LINE_SIZE)
-  Buffer<std::allocator<uint8_t>> m_cache;
 };
 
 } // namespace spmc {
