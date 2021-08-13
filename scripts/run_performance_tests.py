@@ -60,8 +60,6 @@ parser.add_argument ("--client_stats", nargs='+', default=["latency,throughput"]
                     help="Select statistics for output")
 parser.add_argument ("--client_directory", required=False,
                     help="Set output directory to write stats to file")
-parser.add_argument ("--client_prefetch_size_list", nargs='+', required=False,
-                    type=int, default=[0], help="Client prefetch size")
 parser.add_argument ("--client_pgo", default=False, action="store_true",
                     help="Use profile guided optimised client binary")
 
@@ -103,26 +101,23 @@ for server_rate in args.server_rate_list:
         client_count = int (client_count_str)
 
         for server_queue_size in args.server_queue_size_list:
-            for client_prefetch_size in args.client_prefetch_size_list:
+            client_cpu_list = utils.cpu_bind_list (args.client_cpu_list, client_count)
 
-                client_cpu_list = utils.cpu_bind_list (args.client_cpu_list, client_count)
+            directory = None
 
-                directory = None
+            if args.client_directory is not None:
+                directory = utils.output_directory_path (args.client_directory,
+                                                    server_queue_size,
+                                                    server_rate,
+                                                    args.server_message_size,
+                                                    client_count)
 
-                if args.client_directory is not None:
-                    directory = utils.output_directory_path (args.client_directory,
-                                                        server_queue_size,
-                                                        server_rate,
-                                                        args.server_message_size,
-                                                        client_count,
-                                                        client_prefetch_size)
-
-                    print ("client_directory:    " + str (directory))
-                    print ("")
-                    if directory.exists () is True:
-                        print ('ERROR path exists. Ignore test: ' +
-                                str (directory))
-                        continue
+                print ("client_directory:    " + str (directory))
+                print ("")
+                if directory.exists () is True:
+                    print ('ERROR path exists. Ignore test: ' +
+                            str (directory))
+                    continue
 
                 # Delete shared memory if it exists
                 print ('remove shared memory:' + str (args.memory_name))
@@ -169,15 +164,11 @@ for server_rate in args.server_rate_list:
                     if cpu_bind != -1:
                         client_cmd.extend (["--cpu", str (cpu_bind)])
 
-                    if args.tool_type == 'spmc':
-                        client_cmd.extend (["--prefetch_size", str (client_prefetch_size)])
-
                     if (client_index == (client_count -1)):
                         client_cmd.extend (["--stats", stats])
 
                         if (directory):
                             client_cmd.extend (["--directory", directory])
-
 
                     print ('%s' % ' '.join (map (str, client_cmd)))
 
