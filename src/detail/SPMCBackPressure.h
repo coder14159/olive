@@ -39,8 +39,8 @@ public:
       m_readAvailable = size;
     }
 
+    // Return size of data currently consumed
     size_t consumed () const { return m_consumed; }
-
 
     // Update the range with the size of data which has been consumed
     void consumed (size_t size)
@@ -111,6 +111,7 @@ private:
    */
   size_t m_cursor = Cursor::UnInitialised;
 
+  alignas (CACHE_LINE_SIZE)
   DataRange m_dataRange;
 };
 
@@ -125,8 +126,6 @@ class SPMCBackPressure
 {
 public:
   SPMCBackPressure (size_t capacity);
-
-  void register_producer ();
   /*
    * If a consumer registers successful then back-pressure is exerted on the
    * producer by all registered consumers so that message dropping is prevented.
@@ -145,8 +144,6 @@ public:
    * Return the max size used in cursor index computations
    */
   size_t max_size () const { return m_maxSize; }
-
-  size_t consumer_count () const { return m_consumerCount; }
   /*
    * Use acquire/release space methods to atomically push more than one data
    * object onto the queue as a single contiguous unit.
@@ -167,6 +164,10 @@ public:
    */
   void release_space ();
   /*
+   * Update local consumer state and the state shared with the producer
+   */
+  void update_consumer_state (ConsumerState &consumer);
+  /*
    * Return the size of queue data available to be read from the perspective of
    * a consumers reader cursor
    */
@@ -177,10 +178,6 @@ public:
    * all of the consumers
    */
   size_t write_available () const;
-  /*
-   * Update consumer cursor value and therefore producer back-pressure state
-   */
-  void consumed (ConsumerState &consumer);
   /*
    * Return the index of the committed data cursor
    */
@@ -202,9 +199,27 @@ private:
 
 private:
   /*
+   * Index used to implement fair servicing of the ConsumerArray
+   * TODO: make use of this variable!!
+   */
+  #pragma message "make use of m_consumerIndex variable!!"
+  uint8_t m_consumerIndex = { 0 };
+  /*
    * Current maximum value of consumer indexes
+   * Used during consumer registration
    */
   uint8_t m_maxConsumerIndex = { 0 };
+  /*
+   * Current number of consumers
+   * Should be atomic or is the mutex synchronise adequate??
+   */
+  alignas (CACHE_LINE_SIZE)
+  uint8_t m_maxConsumers = { 0 };
+  /*
+   *
+   * Queue capacity + 1
+   */
+  const size_t m_maxSize = { 0 };
   /*
    * Counter used to claim a data range by the producer before writing data.
    *
@@ -214,32 +229,16 @@ private:
   alignas (CACHE_LINE_SIZE)
   size_t m_claimed = { 0 };
   /*
-   * The queue capacity + 1 for the algorithm to work
-   */
-  const size_t m_maxSize = { 0 };
-  /*
-   * Array holding the bytes consumed for each non message dropping consumer
-   */
-  alignas (CACHE_LINE_SIZE)
-  std::array<size_t, MaxNoDropConsumers> m_consumers;
-  /*
-   * Index used to implement fair servicing of the ConsumerArray
-   * TODO: make use of this variable!!
-   */
-  #pragma message "make use of m_consumerIndex variable!!"
-  // uint8_t m_consumerIndex = { 0 };
-
-  /*
    * Counter used by the producer to publish a data range
    */
   alignas (CACHE_LINE_SIZE)
   std::atomic<size_t> m_committed = { 0 };
   /*
-   * Current number of consumers
-   * Should be atomic or is the mutex synchronise adequate??
+   * Array holding the bytes consumed for each non message dropping consumer
    */
-  // alignas (CACHE_LINE_SIZE)
-  uint8_t m_consumerCount = { 0 };
+#pragma message "dont think this is neeeded - test deleting next!!"
+  alignas (CACHE_LINE_SIZE)
+  std::array<size_t, MaxNoDropConsumers> m_consumerIndexes;
   /*
    * Mutex used to register/unregister consumer threads
    */
