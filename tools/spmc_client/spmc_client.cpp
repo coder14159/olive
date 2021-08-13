@@ -32,9 +32,6 @@ CxxOptsHelper parse (int argc, char* argv[])
     ("cpu", "Bind main thread to a cpu processor integer, "
             "use -1 for no binding",
       cxxopts::value<int> ()->default_value ("-1"))
-    ("prefetch_size", "Set size of a prefetch cache. "
-                      "The default of 0 indicates no prefetching",
-      cxxopts::value<size_t> ()->default_value ("0"))
     ("directory", "Directory for statistics files",
       cxxopts::value<std::string> ())
     ("test", "Enable basic tests for message validity",
@@ -73,16 +70,15 @@ int main(int argc, char* argv[]) try
   /*
    * Get required and default values
    */
-  auto name          = options.required<std::string> ("name");
-  auto directory     = options.value<std::string>    ("directory", "");
-  auto cpu           = options.value<int>            ("cpu", -1);
-  auto prefetchSize  = options.value<size_t>         ("prefetch_size", 0);
-  auto test          = options.value<bool>           ("test", false);
-  auto logLevel      = options.value<std::string>    ("log_level",
+  auto name       = options.required<std::string> ("name");
+  auto directory  = options.value<std::string>    ("directory", "");
+  auto cpu        = options.value<int>            ("cpu", -1);
+  auto test       = options.value<bool>           ("test", false);
+  auto logLevel   = options.value<std::string>    ("log_level",
                                                       log_levels (),"INFO");
-  auto latency       = options.positional ("stats", "latency");
-  auto throughput    = options.positional ("stats", "throughput");
-  auto interval      = options.positional ("stats", "interval");
+  auto latency    = options.positional ("stats", "latency");
+  auto throughput = options.positional ("stats", "throughput");
+  auto interval   = options.positional ("stats", "interval");
 
   set_log_level (logLevel);
 
@@ -93,16 +89,12 @@ int main(int argc, char* argv[]) try
   {
     BOOST_LOG_TRIVIAL (info) << "Bind to CPU: " << cpu;
   }
-  if (prefetchSize > 0)
-  {
-    BOOST_LOG_TRIVIAL (info) <<  "Use prefetch cache size: " << prefetchSize;
-  }
 
   using Queue  = SPMCQueue<SharedMemory::Allocator>;
   using Stream = SPMCStream<Queue>;
 
   // TODO: Generate the queue name from within Stream ctor..
-  Stream stream (name, name + ":queue", prefetchSize);
+  Stream stream (name, name + ":queue");
 
   bool stop = { false };
   /*
@@ -182,8 +174,8 @@ int main(int argc, char* argv[]) try
       }
       else
       {
-#define TEST1_B
-// #define TEST1_B_STATIC
+#define TEST1
+// #define TEST1_SMALLVECTOR
 
 
 #ifdef TEST1
@@ -192,11 +184,12 @@ int main(int argc, char* argv[]) try
         a.clear ();
 #endif
 
-#ifdef TEST1_B_STATIC
+#ifdef TEST1_SMALLVECTOR
         // 1.6 GB/s 27.0 M msgs/s
         boost::container::small_vector<uint8_t, 64> a (data);
         a.clear ();
 #endif
+
 #ifdef TEST1_B
         // 1.6 GB/s 27.0 M msgs/s
         std::vector<uint8_t> a (data);
@@ -235,7 +228,7 @@ int main(int argc, char* argv[]) try
 #endif
 
 #ifdef TEST5
-        // 947 MB/s 15.5 M msgs/sexpected
+        // 947 MB/s 15.5 M msgs/expected
         expected = data;
         expected.clear ();
 #endif
