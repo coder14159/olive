@@ -96,11 +96,6 @@ public:
    */
   uint8_t *buffer () const;
   /*
-   * Register the producer. This is required if previously existing shared
-   * memory is re-used.
-   */
-  void register_producer ();
-  /*
    * Register a consumer thread / process
    */
   void register_consumer (ConsumerState &consumer);
@@ -113,8 +108,6 @@ public:
    * Return the capacity of the queue
    */
   size_t capacity () const;
-
-  void consumer_checks (ConsumerState &consumer);
 
 private:
   /*
@@ -215,15 +208,6 @@ private:
    * Copy consumer data from the internal queue to a data buffer
    */
   size_t copy_from_queue (uint8_t *to, size_t size, ConsumerState &consumer);
-
-  /*
-   * Copy a batch of data from the internal queue into a consumer local cache
-   * from which the consumer subsequently retrieves data.
-   *
-   * Consuming batches of data reduces contention on the queue.
-   */
-  template <typename BufferType>
-  bool copy_from_queue (BufferType &to, size_t size, ConsumerState &consumer);
 
 private:
   /*

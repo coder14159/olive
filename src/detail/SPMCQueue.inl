@@ -51,27 +51,25 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::~SPMCQueue ()
 }
 
 template <typename Allocator, uint8_t MaxNoDropConsumers>
-void SPMCQueue<Allocator, MaxNoDropConsumers>::register_producer ()
-{
-  BOOST_LOG_TRIVIAL (info) << "Register producer";
-
-  m_backPressure.register_producer ();
-}
-
-template <typename Allocator, uint8_t MaxNoDropConsumers>
 void SPMCQueue<Allocator, MaxNoDropConsumers>::register_consumer (
   ConsumerState &consumer)
 {
   /*
-   * Store a local pointer to the shared memory data buffer
+   * Register the consumer with a producer
    */
-  consumer.queue_ptr (buffer ());
-  /*
-    * Register a consumer thread
-    */
-  if (consumer.index () == Index::UnInitialised)
+  if (!consumer.registered ())
   {
-    m_backPressure.register_consumer (consumer);
+   /*
+    * Store a local pointer to the shared memory data buffer
+    */
+    consumer.queue_ptr (buffer ());
+    /*
+      * Register a consumer thread
+      */
+    if (consumer.index () == Index::UnInitialised)
+    {
+      m_backPressure.register_consumer (consumer);
+    }
   }
 }
 
@@ -239,35 +237,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
     /*
      * Update consumer cursor value and producer back-pressure
      */
-    m_backPressure.consumed (consumer);
-
-    return true;
-  }
-
-  return false;
-}
-
-template <typename Allocator, uint8_t MaxNoDropConsumers>
-template <typename BufferType>
-bool SPMCQueue<Allocator, MaxNoDropConsumers>::prefetch_to_cache (
-  BufferType   &cache,
-  ConsumerState &consumer)
-{
-  size_t available = m_backPressure.read_available (consumer);
-
-  if (available == 0)
-  {
-    return false;
-  }
-
-  /*
-   * Append as much available data as possible to the cache
-   */
-  size_t size = std::min (cache.capacity () - cache.size (), available);
-
-  if (copy_from_queue (cache, size, consumer))
-  {
-    m_backPressure.consumed (consumer);
+    m_backPressure.update_consumer_state (consumer);
 
     return true;
   }
@@ -314,7 +284,7 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_queue (
 
   const uint8_t* from = consumer.queue_ptr ();
 
-  if (BOOST_LIKELY (readerCursor + size <= m_maxSize))
+  if (readerCursor + size < m_maxSize)
   {
     std::memcpy (to, from + readerCursor, size);
   }
@@ -327,51 +297,6 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_queue (
   }
 
   return size;
-}
-
-template <typename Allocator, uint8_t MaxNoDropConsumers>
-template <typename BufferType>
-bool SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_queue (
-  BufferType &to, size_t size, ConsumerState &consumer)
-{
-  ASSERT (size <= to.capacity (),
-          "Message size larger than capacity buffer capacity");
-
-  size_t readerCursor = consumer.cursor ();
-
-  const uint8_t* from = consumer.queue_ptr ();
-
-  if (readerCursor + size < m_maxSize)
-  {
-    to.push (from + readerCursor, size);
-  }
-  else
-  {
-    const size_t spaceToEnd = m_maxSize - readerCursor;
-
-    to.push (from + readerCursor, spaceToEnd);
-    to.push (from, size - spaceToEnd);
-  }
-
-  return true;
-}
-
-template <typename Allocator, uint8_t MaxNoDropConsumers>
-void SPMCQueue<Allocator, MaxNoDropConsumers>::consumer_checks (
-  ConsumerState &consumer)
-{
-  /*
-   * The header and data must be popped from the queue in a single call to
-   * pop () so that the committed / claimed indexes represent a state valid
-   * for both header and data.
-   *
-   * On the first attempt to consume data, register the consumer with the
-   * producer.
-   */
-  if (!consumer.registered ())
-  {
-    register_consumer (consumer);
-  }
 }
 
 } // namespace detail {
