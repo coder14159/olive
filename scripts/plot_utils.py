@@ -20,7 +20,7 @@ def cpu_bind_list (cpu_list, client_count):
 def output_directory_path (
   base_directory,
   server_queue_size, server_rate, server_message_size,
-  client_count, client_prefetch_size = 0):
+  client_count):
 
   server_rate_str = 'max' if server_rate is '0' else str (server_rate)
 
@@ -28,8 +28,7 @@ def output_directory_path (
             / 'server_queue_size'    / str (server_queue_size) \
             / 'server_rate'          / server_rate_str  \
             / 'server_message_size'  / str (server_message_size) \
-            / 'client_count'         / str (client_count) \
-            / 'client_prefetch_size' / str (client_prefetch_size)
+            / 'client_count'         / str (client_count)
 
   return path
 
@@ -84,74 +83,65 @@ def load_performance_data (args, filename, transpose_data=False):
         for message_size in args.server_message_sizes:
 
           for client_count in args.client_counts:
+            data_directory = output_directory_path (dir,
+                                            server_queue_size,
+                                            server_rate,
+                                            message_size,
+                                            client_count)
 
-            for client_prefetch_size in args.client_prefetch_sizes:
+            file_path = Path (data_directory) / filename
 
-              data_directory = output_directory_path (dir,
-                                              server_queue_size,
-                                              server_rate,
-                                              message_size,
-                                              client_count,
-                                              client_prefetch_size)
+            if file_path.exists () == False:
+              print (str (file_path) + " does not exist")
+              continue
 
-              file_path = Path (data_directory) / filename
+            df = None
+            print ('loading: ' + str (file_path))
+            df = pd.read_csv (file_path)
 
-              if file_path.exists () == False:
-                print (str (file_path) + " does not exist")
-                continue
+            if 'throughput-interval' in filename:
+              if dataframe is None:
 
-              df = None
-              print ('loading: ' + str (file_path))
-              df = pd.read_csv (file_path)
-
-              if 'throughput-interval' in filename:
-                if dataframe is None:
-
-                  dataframe = pd.DataFrame (df['messages_per_sec'])
-                else:
-                  column_count += 1
-                  dataframe = pd.concat ([dataframe, df['messages_per_sec']],
-                                          axis=1, ignore_index=True)
-
-              if 'latency-summary' in filename:
-                df = df.transpose ()
-
-                if dataframe is None:
-                  dataframe = df
-                else:
-                  column_count += 1
-                  dataframe[column_count] = df
-
-              legend_line_label = [legend_prefix + ' ']
-
-              rate = (server_rate if server_rate != '0' else 'max')
-
-              if len (args.server_rates) > 1:
-                legend_line_label.append ('rate:' + str (rate))
+                dataframe = pd.DataFrame (df['messages_per_sec'])
               else:
-                title_text.add ('rate:' + str (rate))
+                column_count += 1
+                dataframe = pd.concat ([dataframe, df['messages_per_sec']],
+                                        axis=1, ignore_index=True)
 
-              if len (args.server_message_sizes) > 1:
-                legend_line_label.append ('message_size:' + str (message_size))
+            if 'latency-summary' in filename:
+              df = df.transpose ()
+
+              if dataframe is None:
+                dataframe = df
               else:
-                title_text.add ('msg_size:' + str (message_size))
+                column_count += 1
+                dataframe[column_count] = df
 
-              if len (args.server_queue_sizes) > 1:
-                legend_line_label.append ('queue_size:' + str (server_queue_size))
-              else:
-                title_text.add ('queue_size:' + str (server_queue_size))
+            legend_line_label = [legend_prefix + ' ']
 
-              if len (args.client_counts) > 1:
-                legend_line_label.append ('clients:' + str (client_count))
-              else:
-                title_text.add ('clients:' + str (client_count))
+            rate = (server_rate if server_rate != '0' else 'max')
 
-              if len (args.client_prefetch_sizes) > 1:
-                legend_line_label.append ('prefetch_size:' + str (client_prefetch_size))
-              else:
-                title_text.add ('prefetch_size:' + str (client_prefetch_size))
+            if len (args.server_rates) > 1:
+              legend_line_label.append ('rate:' + str (rate))
+            else:
+              title_text.add ('rate:' + str (rate))
 
-              legend_texts.append (legend_line_label)
+            if len (args.server_message_sizes) > 1:
+              legend_line_label.append ('message_size:' + str (message_size))
+            else:
+              title_text.add ('msg_size:' + str (message_size))
+
+            if len (args.server_queue_sizes) > 1:
+              legend_line_label.append ('queue_size:' + str (server_queue_size))
+            else:
+              title_text.add ('queue_size:' + str (server_queue_size))
+
+            if len (args.client_counts) > 1:
+              legend_line_label.append ('clients:' + str (client_count))
+            else:
+              title_text.add ('clients:' + str (client_count))
+
+            legend_texts.append (legend_line_label)
 
   return dict (dataframe=dataframe,
                legend_texts=legend_texts,
