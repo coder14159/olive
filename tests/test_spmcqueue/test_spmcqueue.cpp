@@ -1161,9 +1161,7 @@ BOOST_AUTO_TEST_CASE (SinkStreamInSharedMemory)
     }
   });
 
-  size_t prefetchSize = 0;
-
-  SPMCStreamProcess stream (name, name + ":queue", prefetchSize);
+  SPMCStreamProcess stream (name, name + ":queue");
 
   PerformanceStats stats;
 

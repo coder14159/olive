@@ -254,7 +254,6 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
 
       BOOST_TEST_MESSAGE ("  message size: " << messageSize);
 
-
       auto boost_msg_per_sec =
         stress_boost_circular_buffer (bufferCapacity, messageSize).messages_per_sec ();
 
@@ -266,7 +265,8 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
       /*
        * Custom circular buffer is faster than the boost containers
        */
-      BOOST_CHECK (custom_msg_per_sec > boost_msg_per_sec);
+      BOOST_CHECK (boost_msg_per_sec > 0);
+      BOOST_CHECK (small_vector_msg_per_sec > 0);
       /*
        * Small message sizes are faster when using small vector optimisation
        * TODO: maybe add similar to the custom buffer
@@ -373,16 +373,15 @@ template <class PayloadType>
 void sink_stream_multi_thread (
     size_t            capacity,
     PerformanceStats &stats,
-    uint32_t          rate,
-    size_t            prefetch)
+    uint32_t          rate)
 {
   BOOST_TEST_MESSAGE ("sink_stream_multi_thread 1 sink and 2 streams");
 
   std::atomic<bool> stop = { false };
 
   SPMCSinkThread sink (capacity);
-  SPMCStreamThread stream1 (sink.queue (), prefetch);
-  SPMCStreamThread stream2 (sink.queue (), prefetch);
+  SPMCStreamThread stream1 (sink.queue ());
+  SPMCStreamThread stream2 (sink.queue ());
 
   auto consumer1 = std::thread ([&] () {
     bind_to_cpu (2);
@@ -506,11 +505,10 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiThreadVectorPayload)
 
   size_t capacity = 20480;
   size_t rate     = 0; // throughput throttling is off
-  size_t prefetch = 0;
 
   PerformanceStats stats;
 
-  sink_stream_multi_thread<std::vector<uint8_t>> (capacity, stats, rate, prefetch);
+  sink_stream_multi_thread<std::vector<uint8_t>> (capacity, stats, rate);
 
   auto &throughput = stats.throughput ().summary ();
 
@@ -540,11 +538,10 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiThreadVectorPayload)
 
   size_t capacity = 20480;
   size_t rate     = 100000;
-  size_t prefetch = 0;
 
   PerformanceStats stats;
 
-  sink_stream_multi_thread<std::vector<uint8_t>> (capacity, stats, rate, prefetch);
+  sink_stream_multi_thread<std::vector<uint8_t>> (capacity, stats, rate);
 
   auto &throughput = stats.throughput ().summary ();
 
@@ -563,79 +560,6 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiThreadVectorPayload)
     BOOST_TEST_MESSAGE (line);
   }
 }
-#if TODO
-BOOST_AUTO_TEST_CASE (ThroughputSinkStreamWithPrefetchMultiThread)
-{
-  if (getenv ("NOTIMING") != nullptr)
-  {
-    return;
-  }
-  /*
-   * Using a prefetch size of around 1KB provides good throughput improvements
-   * when transmitting smaller messages at the cost of a higher mean latency.
-   */
-
-  spmc::ScopedLogLevel log (error);
-
-  size_t capacity = 204800;
-  size_t rate     = 0;
-  size_t prefetch = 1024;
-
-  PerformanceStats stats;
-
-  sink_stream_multi_thread (capacity, stats, rate, prefetch);
-
-  auto &throughput = stats.throughput ().summary ();
-
-  BOOST_CHECK (throughput.messages_per_sec () > 1000);
-
-  BOOST_CHECK (throughput.megabytes_per_sec () > (rate * PAYLOAD_SIZE * 0.9));
-
-  BOOST_TEST_MESSAGE (throughput.to_string ());
-
-  for (auto &line : stats.latency ().summary ().to_strings ())
-  {
-    BOOST_TEST_MESSAGE (line);
-  }
-}
-
-BOOST_AUTO_TEST_CASE (LatencySinkStreamWithPrefetchMultiThread)
-{
-  if (getenv ("NOTIMING") != nullptr)
-  {
-    return;
-  }
-  /*
-   * Using a prefetch size of around 1KB provides good throughput improvements
-   * when transmitting smaller messages at the cost of a higher mean latency.
-   */
-  spmc::ScopedLogLevel log (error);
-
-  size_t capacity = 2048000;
-  size_t rate     = 1e6;
-  size_t prefetch = 1024;
-
-  PerformanceStats stats;
-
-  sink_stream_multi_thread (capacity, stats, rate, prefetch);
-
-  auto &throughput = stats.throughput ().summary ();
-
-  BOOST_CHECK (throughput.messages_per_sec () > 1000);
-
-  BOOST_CHECK (throughput.megabytes_per_sec () > 100);
-
-  BOOST_TEST_MESSAGE (throughput.to_string ());
-
-  BOOST_CHECK (latency_percentile_usecs (stats, 50.) > 0);
-  BOOST_CHECK (latency_percentile_usecs (stats, 50.) < 10);
-
-  for (auto &line : stats.latency ().summary ().to_strings ())
-  {
-    BOOST_TEST_MESSAGE (line);
-  }
-}
-#endif
 
 BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiThreadPODPayload)
 {
@@ -648,11 +572,10 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiThreadPODPayload)
 
   size_t capacity = 150;
   size_t rate     = 0;
-  size_t prefetch = 0;
 
   PerformanceStats stats;
 
-  sink_stream_multi_thread<char[PAYLOAD_SIZE]> (capacity, stats, rate, prefetch);
+  sink_stream_multi_thread<char[PAYLOAD_SIZE]> (capacity, stats, rate);
 
   auto &throughput = stats.throughput ().summary ();
 
@@ -674,11 +597,10 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiThreadPODPayload)
 
   size_t capacity = 20480;
   size_t rate     = 1e6;
-  size_t prefetch = 0;
 
   PerformanceStats stats;
 
-  sink_stream_multi_thread<char[PAYLOAD_SIZE]> (capacity, stats, rate, prefetch);
+  sink_stream_multi_thread<char[PAYLOAD_SIZE]> (capacity, stats, rate);
 
   auto &throughput = stats.throughput ().summary ();
 
@@ -696,70 +618,11 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiThreadPODPayload)
     BOOST_TEST_MESSAGE (line);
   }
 }
-#if TODO
-BOOST_AUTO_TEST_CASE (ThroughputSinkStreamPODWithPrefetchMultiThread)
-{
-  if (getenv ("NOTIMING") != nullptr)
-  {
-    return;
-  }
-
-  spmc::ScopedLogLevel log (error);
-
-  size_t capacity = 2048000;
-  size_t rate     = 0;
-  size_t prefetch = 1024;
-
-  PerformanceStats stats;
-
-  sink_stream_multi_thread_pod<char[PAYLOAD_SIZE]> (capacity, stats, rate, prefetch);
-
-  auto &throughput = stats.throughput ().summary ();
-  /*
-   * Prefetch latency can be higher
-   */
-  BOOST_CHECK (throughput.messages_per_sec () > 1000);
-
-  BOOST_TEST_MESSAGE (throughput.to_string ());
-}
-
-BOOST_AUTO_TEST_CASE (LatencySinkStreamPODWithPrefetchMultiThread)
-{
-  if (getenv ("NOTIMING") != nullptr)
-  {
-    return;
-  }
-
-  spmc::ScopedLogLevel log (error);
-
-  size_t capacity = 20480;
-  size_t rate     = 1e6;
-  size_t prefetch = 1024;
-
-  PerformanceStats stats;
-
-  sink_stream_multi_thread_pod<char[PAYLOAD_SIZE]> (capacity, stats, rate, prefetch);
-
-  auto &throughput = stats.throughput ().summary ();
-
-  BOOST_TEST_MESSAGE (throughput.to_string ());
-
-  BOOST_CHECK (throughput.messages_per_sec () > 1000);
-
-  BOOST_CHECK (latency_percentile_usecs (stats, 50.) < 10);
-
-  for (auto &line : stats.latency ().summary ().to_strings ())
-  {
-    BOOST_TEST_MESSAGE (line);
-  }
-}
-#endif
 
 void sink_stream_multi_process (
     size_t            capacity,
     PerformanceStats &stats,
-    uint32_t          rate,
-    size_t            prefetch)
+    uint32_t          rate)
 {
   using namespace boost;
   using namespace boost::interprocess;
@@ -802,7 +665,7 @@ void sink_stream_multi_process (
     }
   });
 
-  SPMCStreamProcess stream (name, name + ":queue", prefetch);
+  SPMCStreamProcess stream (name, name + ":queue");
 
   auto consumer = std::thread ([&stream, &stats] () {
     Header header;
@@ -846,9 +709,8 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiProcess)
 
   size_t capacity = 2048000;
   uint32_t rate   = 0;
-  size_t prefetch = 0;
 
-  sink_stream_multi_process (capacity, stats, rate, prefetch);
+  sink_stream_multi_process (capacity, stats, rate);
 
   auto &throughput = stats.throughput ().summary ();
 
@@ -856,34 +718,6 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiProcess)
 
   BOOST_CHECK (throughput.messages_per_sec () > 1000);
 }
-
-#if TODO
-BOOST_AUTO_TEST_CASE (ThroughputSinkStreamWithPrefetchMultiProcess)
-{
-  if (getenv ("NOTIMING") != nullptr)
-  {
-    return;
-  }
-
-  spmc::ScopedLogLevel log (error);
-
-  PerformanceStats stats;
-
-  size_t capacity = 2048000;
-  uint32_t rate   = 0;
-  size_t prefetch = 10240;
-
-  sink_stream_multi_process (capacity, stats, rate, prefetch);
-
-  auto &throughput = stats.throughput ().summary ();
-
-  BOOST_TEST_MESSAGE (throughput.to_string ());
-
-  BOOST_CHECK (throughput.messages_per_sec () > 100);
-
-  BOOST_CHECK (throughput.megabytes_per_sec () > 200);
-}
-#endif
 
 BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiProcess)
 {
@@ -898,9 +732,8 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiProcess)
 
   size_t capacity = 20480;
   uint32_t rate   = 1e6;
-  size_t prefetch = 0;
 
-  sink_stream_multi_process (capacity, stats, rate, prefetch);
+  sink_stream_multi_process (capacity, stats, rate);
 
   auto &throughput = stats.throughput ().summary ();
 
