@@ -1,7 +1,6 @@
 #ifndef IPC_SPMC_QUEUE_H
 #define IPC_SPMC_QUEUE_H
 
-#include "Buffer.h"
 #include "detail/SharedMemory.h"
 #include "detail/SPMCQueue.h"
 
@@ -18,29 +17,29 @@ namespace spmc {
  * The producers and consumers can be separate threads or processes.
  */
 template <class Allocator,
-          size_t MaxNoDropConsumers = MAX_NO_DROP_CONSUMERS_DEFAULT>
+          uint8_t MaxNoDropConsumers = MAX_NO_DROP_CONSUMERS_DEFAULT>
 class SPMCQueue
 {
   using QueueType = detail::SPMCQueue<Allocator, MaxNoDropConsumers>;
 
 public:
   /*
-   * Construct an SPMCQueue for multiple threads in a single process.
+   * Construct an SPMCQueue for use by a single producer and multiple consumer
+   * threads in a single process.
    */
   SPMCQueue (size_t capacity);
 
   /*
-   * Construct an SPMCQueue for multiple processes.
-   *
-   * Finds or creates named shared memory and then finds or creates a queue
-   * object within the shared memory.
+   * Creates named shared memory and creates an SPMCQueue (or opens an existing
+   * queue if available) for inter-process communication.
    */
   SPMCQueue (const std::string &memoryName,
              const std::string &queueName,
              size_t             capacity);
 
   /*
-   * Find a shared memory SPMCQueue for multiple process access.
+   * Open an existing shared memory SPMCQueue for use by a consumer in
+   * inter-process communication.
    *
    * Does not create shared memory or shared objects.
    */
@@ -74,6 +73,11 @@ public:
   uint64_t read_available (detail::ConsumerState &consumer) const;
 
   /*
+   * Return the minimum size of queue data which is writable taking into account
+   * progress of all the consumers
+   */
+  size_t write_available () const;
+  /*
    * Return the capacity of the consumer local data cache
    */
   size_t cache_capacity () const;
@@ -89,20 +93,24 @@ public:
   size_t cache_size () const;
 
   /*
-   * Set the capacity of the data cache which is local to each consumer
+   * Set the capacity of the consumer local data cache.
+   *
+   * Using the cache enables higher throughput, particularly for multiple
+   * clients, at the expense of latency values
    */
   void resize_cache (size_t size);
 
   /*
-   * Push a single POD type into the queue.
+   * Push a data into the queue.
+   *
+   * Types currently supported are POD and type with methds data () and size ()
+   * eg std::vector.
    *
    * Useful if the header type has no associated data. An example would be when
    * sending warmup messages.
    */
-  template <class POD>
-  bool push (const POD &pod);
-
-  // TODO PUSH VECTOR ONLY
+  template <class Data>
+  bool push (const Data &data);
 
   /*
    * Push pod type data into the queue, always succeeds unless there are slow
@@ -117,32 +125,30 @@ public:
    * Push data into the queue, always succeeds unless there are slow consumers
    * configured to be non-dropping.
    *
-   * The queue should be greater than or equal to data size + pod size.
+   * The queue should be greater than or equal to data size + header size.
    */
   template <class Header>
   bool push (const Header &header, const std::vector<uint8_t> &data);
 
   /*
-   * Pop data out of the header and data from the queue
+   * Pop header and data from the queue
+   *
+   * The BufferType should have the methods resize () and data ()
    */
-  template <class POD, class BufferType>
-  bool pop (POD &pod, BufferType &data, detail::ConsumerState &consumer);
-
-private:
+  template <class BufferType>
+  bool pop (Header &header, BufferType &data, detail::ConsumerState &consumer);
 
   /*
-   * Pop a chunk of data from the shared queue to a local data cache and return
-   * a message header and associated data from the local cache
+   * Pop a POD type from the queue
    */
-  template <class Header, class BufferType>
-  bool pop_from_cache (Header &header, BufferType &data,
-                       detail::ConsumerState &consumer);
+  template <class POD>
+  bool pop (POD &pod, detail::ConsumerState &consumer);
+
+private:
   /*
    * Memory shared between processes
    */
   boost::interprocess::managed_shared_memory m_memory;
-
-  bool m_cacheEnabled  = false;
 
   typedef typename std::conditional<
           std::is_same<std::allocator<uint8_t>, Allocator>::value,
@@ -153,13 +159,6 @@ private:
    */
   alignas (CACHE_LINE_SIZE)
   QueuePtr m_queue;
-  /*
-   * This data cache can optionally be used to store chunks of data taken from
-   * the shared queue. This cache is local to each client.
-   */
-  alignas (CACHE_LINE_SIZE)
-  Buffer<std::allocator<uint8_t>> m_cache;
-
 };
 
 } // namespace spmc {

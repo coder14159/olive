@@ -69,7 +69,6 @@ private:
   uint64_t m_intervalMessages = { 0 };
   uint64_t m_seqNum = { 0 };
 
-
   std::atomic<bool> m_stop { false };
 
   ThroughputStats m_throughput;

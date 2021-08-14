@@ -8,8 +8,8 @@ namespace spmc {
 namespace {
 
 /*
- * Additional spacializations for types copying it/from the queue must have data
- * which is contiguous in memory
+ * Additional spacializations for types copying to/from the queue.
+ * The type must have data which is contiguous in memory
  */
 template<typename T>
 size_t get_size (const std::vector<T> &v)

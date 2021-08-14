@@ -32,9 +32,6 @@ CxxOptsHelper parse (int argc, char* argv[])
     ("cpu", "Bind main thread to a cpu processor integer, "
             "use -1 for no binding",
       cxxopts::value<int> ()->default_value ("-1"))
-    ("prefetch_size", "Set size of a prefetch cache. "
-                      "The default of 0 indicates no prefetching",
-      cxxopts::value<size_t> ()->default_value ("0"))
     ("directory", "Directory for statistics files",
       cxxopts::value<std::string> ())
     ("test", "Enable basic tests for message validity",
@@ -73,16 +70,15 @@ int main(int argc, char* argv[]) try
   /*
    * Get required and default values
    */
-  auto name          = options.required<std::string> ("name");
-  auto directory     = options.value<std::string>    ("directory", "");
-  auto cpu           = options.value<int>            ("cpu", -1);
-  auto prefetchSize  = options.value<size_t>         ("prefetch_size", 0);
-  auto test          = options.value<bool>           ("test", false);
-  auto logLevel      = options.value<std::string>    ("log_level",
+  auto name       = options.required<std::string> ("name");
+  auto directory  = options.value<std::string>    ("directory", "");
+  auto cpu        = options.value<int>            ("cpu", -1);
+  auto test       = options.value<bool>           ("test", false);
+  auto logLevel   = options.value<std::string>    ("log_level",
                                                       log_levels (),"INFO");
-  auto latency       = options.positional ("stats", "latency");
-  auto throughput    = options.positional ("stats", "throughput");
-  auto interval      = options.positional ("stats", "interval");
+  auto latency    = options.positional ("stats", "latency");
+  auto throughput = options.positional ("stats", "throughput");
+  auto interval   = options.positional ("stats", "interval");
 
   set_log_level (logLevel);
 
@@ -93,19 +89,14 @@ int main(int argc, char* argv[]) try
   {
     BOOST_LOG_TRIVIAL (info) << "Bind to CPU: " << cpu;
   }
-  if (prefetchSize > 0)
-  {
-    BOOST_LOG_TRIVIAL (info) <<  "Use prefetch cache size: " << prefetchSize;
-  }
 
   using Queue  = SPMCQueue<SharedMemory::Allocator>;
   using Stream = SPMCStream<Queue>;
 
   // TODO: Generate the queue name from within Stream ctor..
-  Stream stream (name, name + ":queue", prefetchSize);
+  Stream stream (name, name + ":queue");
 
   bool stop = { false };
-
   /*
    * Handle signals
    */
@@ -113,11 +104,11 @@ int main(int argc, char* argv[]) try
 
     if (!stop)
     {
+      BOOST_LOG_TRIVIAL (info) << "Stopping spmc_client";
+
       stop = true;
 
       stream.stop ();
-
-      std::cout << "Stopping spmc_client" << std::endl;
     }
   });
 
@@ -138,7 +129,7 @@ int main(int argc, char* argv[]) try
   std::vector<uint8_t> data;
   std::vector<uint8_t> expected;
 
-  while (SPMC_EXPECT_TRUE (!stop))
+  while (!stop)
   {
     if (stream.next (header, data))
     {
@@ -162,6 +153,7 @@ int main(int argc, char* argv[]) try
 
         CHECK_SS (header.size == data.size (), "Unexpected payload size: "
                   << data.size () << " expected: " << header.size);
+
         /*
          * Initialise the expected packet on receipt of the first message
          */
@@ -180,11 +172,79 @@ int main(int argc, char* argv[]) try
 
         data.clear ();
       }
+      else
+      {
+#define TEST1
+// #define TEST1_SMALLVECTOR
+
+
+#ifdef TEST1
+        // 1.6 GB/s 26.4 M msgs/s
+        auto a = data;
+        a.clear ();
+#endif
+
+#ifdef TEST1_SMALLVECTOR
+        // 1.6 GB/s 27.0 M msgs/s
+        boost::container::small_vector<uint8_t, 64> a (data);
+        a.clear ();
+#endif
+
+#ifdef TEST1_B
+        // 1.6 GB/s 27.0 M msgs/s
+        std::vector<uint8_t> a (data);
+        a.clear ();
+#endif
+
+#ifdef TEST1_A
+        // 1.5 GB/s 24.6 M msgs/s
+        auto a = data;
+        a.clear ();
+#endif
+
+#ifdef TEST2
+        // 932 MB/s 15.3 M msgs/s
+        data.clear ();
+#endif
+#ifdef TEST3
+        // 924 MB/s 15.1 M msgs/s
+        // uint8_t i = 0;
+        for (uint8_t i : data)
+        {
+          i = 0;
+          (void)i;
+        }
+        // (void)i;
+        // data.clear ();
+#endif
+#ifdef TEST4
+        // 1.3 GB/s 22.6 M msgs/s
+        // uint8_t i = 0;
+        for (uint8_t i : data)
+        {
+          i = 0;
+          (void)i;
+        }
+#endif
+
+#ifdef TEST5
+        // 947 MB/s 15.5 M msgs/expected
+        expected = data;
+        expected.clear ();
+#endif
+#ifdef TEST6
+        // 947 MB/s 15.5 M msgs/s
+        expected = data;
+#endif
+
+        // ASSERT (header.size == data.size (), "header.size != data.size");
+      }
     }
   }
 
   stats.stop ();
   stats.print_summary ();
+
 
   BOOST_LOG_TRIVIAL (info) << "Exit stream";
 

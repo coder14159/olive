@@ -1,7 +1,6 @@
 #ifndef IPC_DETAIL_SPMC_QUEUE_H
 #define IPC_DETAIL_SPMC_QUEUE_H
 
-#include "Buffer.h"
 #include "Logger.h"
 #include "detail/SharedMemory.h"
 #include "detail/SPMCBackPressure.h"
@@ -49,13 +48,27 @@ namespace detail {
  * a producer and multiple consumers.
  */
 template <typename Allocator,
-          uint16_t MaxNoDropConsumers = MAX_NO_DROP_CONSUMERS_DEFAULT>
+          uint8_t MaxNoDropConsumers = MAX_NO_DROP_CONSUMERS_DEFAULT>
 class SPMCQueue : private Allocator
 {
 private:
 
   SPMCQueue () = delete;
   SPMCQueue (const SPMCQueue &) = delete;
+
+  typedef SPMCBackPressure<std::mutex, MaxNoDropConsumers>
+          InprocessBackPressure;
+
+  typedef SPMCBackPressure<SharedMemoryMutex, MaxNoDropConsumers>
+          MultiProcessBackPressure;
+
+public:
+
+  typedef typename std::conditional<
+    std::is_same<std::allocator<typename Allocator::value_type>,
+                                Allocator>::value,
+          InprocessBackPressure,
+          MultiProcessBackPressure>::type BackPressureType;
 
 public:
   /*
@@ -95,8 +108,6 @@ public:
    */
   size_t capacity () const;
 
-  void consumer_checks (ConsumerState &consumer);
-
 private:
   /*
    * Copy a POD type to the end of the queue.
@@ -122,6 +133,8 @@ public:
    * Return the size of data available to consume for a particular consumer
    */
   size_t read_available (const ConsumerState &consumer) const;
+
+  BackPressureType &back_pressure () { return m_backPressure; }
   /*
    * Push one or more data items to the queue. The data is published for
    * consuming once all the data items have been copied to the queue.
@@ -129,8 +142,6 @@ public:
    * Space is acquired/released once for all head..tail objects.
    *
    * Currently supports POD types and type std::vector<uint8_t>
-   *
-   * TODO: make std::vector<uint8_t> a template type
    */
   template<typename Head, typename...Tail>
   bool push_variadic (const Head &head, const Tail&...tail);
@@ -161,6 +172,16 @@ public:
    * Pop a POD type from the queue
    */
   template<typename POD>
+  bool pop_test (POD &pod, ConsumerState &consumer);
+  /*
+   * Pop seralised data from the queue
+   */
+  bool pop_test (uint8_t *data, size_t size, ConsumerState &consumer);
+
+  /*
+   * Pop a POD type from the queue
+   */
+  template<typename POD>
   bool pop (POD &pod, ConsumerState &consumer);
   /*
    * Pop seralised data from the queue
@@ -187,24 +208,6 @@ private:
    */
   size_t copy_from_queue (uint8_t *to, size_t size, ConsumerState &consumer);
 
-  /*
-   * Copy a batch of data from the internal queue into a consumer local cache
-   * from which the consumer subsequently retrieves data.
-   *
-   * Consuming batches of data reduces contention on the queue.
-   */
-  template <typename BufferType>
-  bool copy_from_queue (BufferType &to, size_t size, ConsumerState &consumer);
-
-private:
-
-  typedef typename std::conditional<
-          std::is_same<std::allocator<typename Allocator::value_type>, Allocator>::value,
-          SPMCBackPressure<std::mutex,
-                           MaxNoDropConsumers>,
-          SPMCBackPressure<SharedMemoryMutex,
-                           MaxNoDropConsumers>>::type BackPressureType;
-
 private:
   /*
    * Structure used by consumers exert back pressure on the producer
@@ -230,7 +233,6 @@ private:
    */
   alignas (CACHE_LINE_SIZE)
   Pointer m_buffer = { nullptr };
-
   /*
    * A thread or process local pointer to shared memory data.
    *
@@ -243,7 +245,6 @@ private:
    * Cache the producer buffer pointer to avoid the dereferencing cost when used
    * with shared memory
    */
-  alignas (CACHE_LINE_SIZE)
   LocalPointer m_bufferProducer = { nullptr };
 };
 

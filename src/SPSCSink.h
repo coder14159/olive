@@ -37,17 +37,9 @@ public:
 
   /*
    * Send a data packet to a shared memory queue
+   * Blocks until successful
    */
   void next (const std::vector<uint8_t> &data);
-
-  /*
-   * Send a data packet to a shared memory queue.
-   *
-   * If sending to multiple queues it is more accurate to use ther same
-   * timestamp for each queue.
-   */
-  void next (const std::vector<uint8_t> &data, TimePoint timestamp);
-
   /*
    * Send a null message to keep the cache warm
    */
@@ -65,7 +57,7 @@ private:
   SharedMemory::Allocator m_allocator;
 
   alignas (CACHE_LINE_SIZE)
-  std::atomic<bool> m_stop = { false };
+  bool m_stop = { false };
 
   uint64_t m_sequenceNumber = 0;
 
@@ -78,7 +70,10 @@ private:
       DEFAULT_TIMESTAMP
   };
 
+  std::vector<uint8_t> m_buffer;
+
   SharedMemory::SPSCQueue *m_queue = { nullptr };
+  SharedMemory::SPSCQueue &m_queueRef;
 };
 
 /*

@@ -9,11 +9,51 @@
 namespace spmc {
 namespace detail {
 /*
- * Class to track how much data has been consumed by a consumer
- * process or thread
+ * Class to track how much data has been consumed by a consumer process
+ * or thread.
  */
 class ConsumerState
 {
+public:
+  /*
+  * Updating the a range of data which can be consumed is relatively expensive
+  * as updates need to be fed back to the data producer.
+  *
+  * DataRange requests a chunk of data for a client to consume in a single call.
+  * The client then consumes the data chunk without further interaction with the
+  * producer.
+  */
+  class DataRange
+  {
+  public:
+    // Return the current size of data which can be read from the queue
+    bool empty () const { return m_readAvailable == 0; }
+
+    // Return the current size of data which can be read from the queue
+    size_t read_available () const { return m_readAvailable; }
+
+    // Reset size of consumable data after available data has been consumed
+    void read_available (size_t size)
+    {
+      m_consumed = 0;
+      m_readAvailable = size;
+    }
+
+    // Return size of data currently consumed
+    size_t consumed () const { return m_consumed; }
+
+    // Update the range with the size of data which has been consumed
+    void consumed (size_t size)
+    {
+      m_consumed += size;
+      m_readAvailable -= size;
+    }
+
+  private:
+    size_t m_consumed = 0;
+    size_t m_readAvailable = 0;
+  };
+
 public:
   /*
    * Pointer to the raw shared queue data
@@ -27,14 +67,11 @@ public:
     m_queue = queue;
   }
   /*
-   * Return true if the ConsmerState object has been registered with a producer
+   * Return true if the ConsumerState object has been registered with a producer
    */
-  bool registered () const
-  {
-    return (m_cursor < Consumer::Reserved);
-  }
+  bool registered () const { return (m_index != Index::UnInitialised); }
   /*
-   * Return the index id of the consumer - used by BackPressure class
+   * Each registered consumer has a different index value
    */
   uint8_t index () const { return m_index; }
   /*
@@ -49,26 +86,33 @@ public:
    * Set the cursor to the currently read queue index value
    */
   void cursor (size_t cursor) { m_cursor = cursor; }
+  /*
+   * Return the data range object defining the currently consumable data range
+   */
+  ConsumerState::DataRange &data_range () { return m_dataRange; }
+  /*
+   * Return a read-only data defining the currently consumable data range
+   */
+  const ConsumerState::DataRange &data_range () const { return m_dataRange; }
 
 private:
   /*
    * Local pointer to the shared queue
    */
-  alignas (CACHE_LINE_SIZE)
   const uint8_t *m_queue = nullptr;
   /*
    * An index to the back pressure array which holds the consumer queue cursor
    */
-  uint8_t m_index = Producer::InvalidIndex;
+  alignas (CACHE_LINE_SIZE)
+  uint8_t m_index = Index::UnInitialised;
   /*
    * The cursor points to an index of the shared queue indicating how much of
    * the produced data has been consumed
    */
-  size_t m_cursor = Consumer::UnInitialised;
-  /*
-   * Set to true if message drops are permitted for a consumer
-   */
-  // bool m_messageDropsAllowed = false;
+  size_t m_cursor = Cursor::UnInitialised;
+
+  alignas (CACHE_LINE_SIZE)
+  DataRange m_dataRange;
 };
 
 /*
@@ -120,18 +164,20 @@ public:
    */
   void release_space ();
   /*
+   * Update local consumer state and the state shared with the producer
+   */
+  void update_consumer_state (ConsumerState &consumer);
+  /*
    * Return the size of queue data available to be read from the perspective of
    * a consumers reader cursor
    */
   size_t read_available (const ConsumerState &consumer) const;
+
   /*
-   * Return true if there are any consumers configured not to drop messages
+   * Return the minimum size of queue data which is writable taking into account
+   * all of the consumers
    */
-  bool has_non_drop_consumers () const;
-  /*
-   * Update consumer cursor value and producer back-pressure
-   */
-  void consumed (ConsumerState &consumer, size_t size);
+  size_t write_available () const;
   /*
    * Return the index of the committed data cursor
    */
@@ -150,26 +196,28 @@ private:
    * cursors
    */
   size_t write_available (size_t readerCursor, size_t writerCursor) const;
-  /*
-   * Return the minimum size of queue data which is writable taking into account
-   * the potentially multiple consumers
-   *
-   * Only called by the single writer process
-   */
-  size_t write_available () const;
 
 private:
   /*
+   * Index used to implement fair servicing of the ConsumerArray
+   * TODO: make use of this variable!!
+   */
+  #pragma message "make use of m_consumerIndex variable!!"
+  uint8_t m_consumerIndex = { 0 };
+  /*
    * Current maximum value of consumer indexes
+   * Used during consumer registration
    */
   uint8_t m_maxConsumerIndex = { 0 };
   /*
    * Current number of consumers
+   * Should be atomic or is the mutex synchronise adequate??
    */
   alignas (CACHE_LINE_SIZE)
-  uint8_t m_consumerCount = { 0 };
+  uint8_t m_maxConsumers = { 0 };
   /*
-   * The queue capacity + 1 for the algorithm to work
+   *
+   * Queue capacity + 1
    */
   const size_t m_maxSize = { 0 };
   /*
@@ -181,11 +229,6 @@ private:
   alignas (CACHE_LINE_SIZE)
   size_t m_claimed = { 0 };
   /*
-   * Index used to implement fair servicing of the ConsumerArray
-   * TODO: make use of this variable!!
-   */
-  // uint8_t m_lastIndex = { 0 };
-  /*
    * Counter used by the producer to publish a data range
    */
   alignas (CACHE_LINE_SIZE)
@@ -193,10 +236,11 @@ private:
   /*
    * Array holding the bytes consumed for each non message dropping consumer
    */
+#pragma message "dont think this is neeeded - test deleting next!!"
   alignas (CACHE_LINE_SIZE)
-  std::array<size_t, MaxNoDropConsumers> m_consumers;
+  std::array<size_t, MaxNoDropConsumers> m_consumerIndexes;
   /*
-   * Mutex used to register/unregister new consumer threads
+   * Mutex used to register/unregister consumer threads
    */
   Mutex m_mutex;
 };

@@ -46,12 +46,10 @@ parser.add_argument ('--client_directory_descriptions', nargs='+',
                     ' the same order as client_directories')
 parser.add_argument ('--client_counts', nargs='+', type=int,
                     help='Number of consumer clients')
-parser.add_argument ('--client_prefetch_sizes', required=False, default='0',
-                    nargs='+', help='Client prefetch size')
 
 parser.add_argument ('--latency_log_scale', action='store_true',
                     help='Plot latency on a log scale')
-parser.add_argument ('--throughput', action='store_true',
+parser.add_argument ('--show_throughput', action='store_true',
                     help='Plot throughput')
 
 args = parser.parse_args ()
@@ -72,7 +70,6 @@ print ('server_message_sizes:  ' + str (args.server_message_sizes) + ' bytes')
 print ('server_rate:          ' + str (args.server_rates) + ' messages/second')
 print ('client_count:         ' + str (args.client_counts) +
                         (' client' if args.client_counts == 1 else ' clients'))
-print ('client_prefetch_sizes: ' + str (args.client_prefetch_sizes))
 
 def sub_title (server_rate, message_size, client_count):
   # A value of zero also denotes max server rate
@@ -152,7 +149,7 @@ def plot_interval_throughput (axis):
 # Throughput over time is plotted if explcitly enabled.
 # This is useful at high throughput values
 #
-if args.throughput is True:
+if args.show_throughput is True:
   fig, axes = plt.subplots (2, 1, gridspec_kw={'height_ratios': [3, 1]})
 
   plot_summary_latencies (axes[0], args.latency_log_scale)

@@ -1,7 +1,6 @@
 #ifndef IPC_SPMC_STREAM_H
 
 #include "SPMCQueue.h"
-#include "Buffer.h"
 #include "detail/SharedMemory.h"
 
 #include <atomic>
@@ -32,14 +31,13 @@ public:
    * Initialise a stream consuming from named shared memory
    */
   SPMCStream (const std::string &memoryName,
-              const std::string &queueName,
-              size_t prefetchSize = 0);
+              const std::string &queueName);
 
   /*
    * Initialise a stream consuming from memory shared between threads in a
    * single process.
    */
-  SPMCStream (QueueType &queue, size_t prefetchSize = 0);
+  SPMCStream (QueueType &queue);
 
   ~SPMCStream ();
 
@@ -54,8 +52,6 @@ public:
   template<typename Vector>
   bool next (Header &header, Vector &data);
 
-  bool next (Header &header, Buffer<std::allocator<uint8_t>> &data);
-
   /*
    * Retrieve the next packet of data, non-blocking
    */
@@ -63,9 +59,6 @@ public:
   bool next_non_blocking (Header &header, Vector &data);
 
 private:
-
-  void init (size_t prefetchSize);
-
   /*
    * Pull data from the shared queue.
    *
@@ -75,17 +68,13 @@ private:
 
 private:
 
-  bool m_registered = { false };
-
-  std::unique_ptr<QueueType> m_queuePtr;
-
-  std::atomic<bool> m_stop = { false };
+  bool m_stop = { false };
 
   detail::ConsumerState m_consumer;
 
-  QueueType &m_queue;
+  std::unique_ptr<QueueType> m_queuePtr;
 
-  Buffer<std::allocator<uint8_t>> m_cache;
+  QueueType &m_queue;
 };
 
 /*

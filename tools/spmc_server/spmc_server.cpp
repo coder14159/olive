@@ -63,6 +63,8 @@ void server (const std::string& name,
    * Create enough shared memory for a single queue which is shared by all the
    * clients.
    */
+  #pragma message "creation of memory should be in sink or SPMCQueue"
+
   size_t memory_size = queueSize
                      + SharedMemory::BOOK_KEEPING
                      + sizeof (SPMCQueue<SharedMemory::Allocator>);
@@ -75,7 +77,7 @@ void server (const std::string& name,
 
   Sink sink (name, name + ":queue", queueSize);
 
-  bool stop { false };
+  bool stop = { false };
   /*
    * Handle signals
    */
@@ -83,11 +85,11 @@ void server (const std::string& name,
 
     if (!stop)
     {
-      stop = true;
+      BOOST_LOG_TRIVIAL (info) << "Stopping spmc_server";
 
       sink.stop ();
 
-      std::cout << "Stopping spmc_server" << std::endl;
+      stop = true;
     }
   });
 
@@ -103,7 +105,7 @@ void server (const std::string& name,
    */
   Throttle throttle (rate);
 
-  while (SPMC_EXPECT_FALSE (!stop))
+  while (!stop)
   {
     sink.next (message);
     /*
