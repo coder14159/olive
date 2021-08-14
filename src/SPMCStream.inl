@@ -54,21 +54,6 @@ bool SPMCStream<QueueType>::next (Header &header, Vector &data)
 }
 
 template <typename QueueType>
-bool SPMCStream<QueueType>::next (Header &header,
-                                  Buffer<std::allocator<uint8_t>> &data)
-{
-  while (!m_stop)
-  {
-    if (SPMC_EXPECT_TRUE (m_queue.pop (header, data)))
-    {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-template <typename QueueType>
 template<typename Vector>
 bool SPMCStream<QueueType>::next_non_blocking (Header &header, Vector &data)
 {

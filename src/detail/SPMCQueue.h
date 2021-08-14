@@ -1,7 +1,6 @@
 #ifndef IPC_DETAIL_SPMC_QUEUE_H
 #define IPC_DETAIL_SPMC_QUEUE_H
 
-#include "Buffer.h"
 #include "Logger.h"
 #include "detail/SharedMemory.h"
 #include "detail/SPMCBackPressure.h"

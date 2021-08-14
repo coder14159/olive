@@ -1,7 +1,6 @@
 #ifndef IPC_SPMC_STREAM_H
 
 #include "SPMCQueue.h"
-#include "Buffer.h"
 #include "detail/SharedMemory.h"
 
 #include <atomic>
@@ -52,8 +51,6 @@ public:
    */
   template<typename Vector>
   bool next (Header &header, Vector &data);
-
-  bool next (Header &header, Buffer<std::allocator<uint8_t>> &data);
 
   /*
    * Retrieve the next packet of data, non-blocking
