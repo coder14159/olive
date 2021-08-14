@@ -1,7 +1,6 @@
 #ifndef IPC_SPMC_QUEUE_H
 #define IPC_SPMC_QUEUE_H
 
-#include "Buffer.h"
 #include "detail/SharedMemory.h"
 #include "detail/SPMCQueue.h"
 
