@@ -8,8 +8,6 @@ Throttle::Throttle (uint32_t rate)
 
 void Throttle::throttle ()
 {
-  using namespace std::chrono_literals;
-
   /*
    * No throttling by default
    */
@@ -17,6 +15,8 @@ void Throttle::throttle ()
   {
     return;
   }
+
+  using namespace std::chrono_literals;
 
   ++m_counter;
 
@@ -63,23 +63,23 @@ void Throttle::throttle (Sink &sink)
 
   auto intervalStart = Clock::now ();
 
-  auto actualInterval = intervalStart - m_startTime;
+  auto currentInterval = intervalStart - m_startTime;
 
-  auto keepWarmInterval = std::min (actualInterval, 1000ns);
+  auto keepWarmInterval = std::min (currentInterval, 1000ns);
 
-  while (actualInterval < (targetInterval - 500ns))
+  while (currentInterval < (targetInterval - 500ns))
   {
     std::this_thread::sleep_for (keepWarmInterval - 100ns);
 
-    actualInterval = Clock::now () - m_startTime;
+    currentInterval = Clock::now () - m_startTime;
 
     sink.next_keep_warm ();
   }
   /*
-    * Periodically reset the counters so that the throttle is better able to
-    * handle variations in workload.
-    */
-  if (actualInterval > 1s)
+   * Periodically reset the counters so that the throttle is better able to
+   * handle variations in workload.
+   */
+  if (currentInterval > 1s)
   {
     m_startTime = Clock::now ();
     m_counter = 0;
