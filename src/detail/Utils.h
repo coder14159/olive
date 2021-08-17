@@ -11,21 +11,15 @@
     #define SPMC_EXPECT_FALSE(expr)  (SPMC_COND_EXPECT((expr), 0))
 #endif
 
-#if defined SPMC_MODULUS
-
+/*
+ * Macro defining a faster modulus
+ */
 #define MODULUS(number, divisor) (number - (divisor * (number / divisor)))
 
-#elif defined SPMC_MODULUS_DIVISOR_POWER_OF_2
- /*
-  * Marginally faster if and *only if* divisor is a power of 2
-  * Probably not worth using as too inflexible
-  */
-#define MODULUS(number, divisor) (number & (divisor - 1))
-
-#else
-
-#define MODULUS(number, divisor) (number % divisor)
-
-#endif
+/*
+ * Marginally faster if and only if the divisor is a power of 2
+ * Probably not worth using as too inflexible
+ */
+#define MODULUS_POWER_OF_2(number, divisor) (number & (divisor - 1))
 
 #endif // IPC_DETAIL_UTILS_H

@@ -202,7 +202,6 @@ private:
    * Index used to implement fair servicing of the ConsumerArray
    * TODO: make use of this variable!!
    */
-  #pragma message "make use of m_consumerIndex variable!!"
   uint8_t m_consumerIndex = { 0 };
   /*
    * Current maximum value of consumer indexes

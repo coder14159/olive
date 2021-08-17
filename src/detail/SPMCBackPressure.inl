@@ -201,8 +201,13 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::write_available () const
 
     size_t minAvailable = Cursor::UnInitialised;
 
-    for (uint8_t index = 0; consumerCount < MaxNoDropConsumers; ++index)
+    for (uint8_t i = m_consumerIndex; consumerCount < MaxNoDropConsumers; ++i)
     {
+      /*
+       * Rotate the order of the client first served data for improved fairness
+       */
+      auto index = MODULUS (i, MaxNoDropConsumers);
+
       size_t consumerCursor = m_consumerIndexes[index];
 
       if (is_valid_cursor (consumerCursor))
