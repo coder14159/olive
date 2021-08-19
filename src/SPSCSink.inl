@@ -43,25 +43,29 @@ void SPSCSink<Allocator>::next (const std::vector<uint8_t> &data)
    */
   size_t size = sizeof (Header) + header.size;
 
-  while (!m_stop && m_queueRef.write_available () >= size)
+  while (!m_stop && m_queueRef.write_available () < size)
+  { }
+
+  if (m_stop)
   {
-    m_buffer.resize (size);
-    /*
-      * Set timestamp when queue space is available so that only internal queue
-      * latency is measured
-      *
-      * TODO: Add a variadic push function for spscqueue
-      */
-
-    header.timestamp = nanoseconds_since_epoch (Clock::now ());
-
-    std::memcpy (m_buffer.data (),
-                  reinterpret_cast<uint8_t*> (&header), sizeof (Header));
-    std::memcpy (m_buffer.data () + sizeof (Header),
-                  data.data (), data.size ());
-
-    m_queueRef.push (m_buffer.data (), m_buffer.size ());
+    return;
   }
+
+  m_buffer.resize (size);
+  /*
+   * Set timestamp when queue space is available so that only internal queue
+   * latency is measured
+   *
+   * TODO: Add a variadic push function for spscqueue
+   */
+  header.timestamp = nanoseconds_since_epoch (Clock::now ());
+
+  std::memcpy (m_buffer.data (),
+                reinterpret_cast<uint8_t*> (&header), sizeof (Header));
+  std::memcpy (m_buffer.data () + sizeof (Header),
+                data.data (), data.size ());
+
+  m_queueRef.push (m_buffer.data (), m_buffer.size ());
 }
 
 template <typename Allocator>
