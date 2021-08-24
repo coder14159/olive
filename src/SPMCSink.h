@@ -35,6 +35,11 @@ public:
             size_t             capacity);
 
   /*
+   * Stop sink sending data
+   */
+  void stop ();
+
+  /*
    * Serialise data to the queue
    * Blocks until successful
    */
@@ -52,8 +57,6 @@ public:
    */
   void next_keep_warm ();
 
-  void stop ();
-
   /*
    * Reference to the queue to be shared with SPMCStream objects for
    * inter-thread communication
@@ -66,9 +69,8 @@ private:
   QueueType m_queue;
 
   alignas (CACHE_LINE_SIZE)
-  bool m_stop = { false };
+  std::atomic<bool> m_stop = { false };
 
-  alignas (CACHE_LINE_SIZE)
   uint64_t m_sequenceNumber = 0;
 
   alignas (CACHE_LINE_SIZE)

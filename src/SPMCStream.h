@@ -68,7 +68,7 @@ private:
 
 private:
 
-  bool m_stop = { false };
+  std::atomic<bool> m_stop = { false };
 
   detail::ConsumerState m_consumer;
 
