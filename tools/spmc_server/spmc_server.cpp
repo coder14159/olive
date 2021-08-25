@@ -109,7 +109,7 @@ void server (const std::string& name,
   }
   else
   {
-    /*
+   /*
     * If rate is not set to the maximum rate throttle sends null messages to
     * keep the fast path warm
     */
@@ -119,12 +119,12 @@ void server (const std::string& name,
     {
       sink.next (message);
       /*
-      * If throughput is not set to maximum rate, Throttle reduces message
-      * throughput to the required rate.
-      *
-      * Throttle also periodically sends a WARMUP_MESSAGE_TYPE message to keep
-      * the cache warm.
-      */
+       * If rate is not set to the maximum throttle sends null messages to
+       * keep the fast path warm.
+       *
+       * Throttle also periodically sends a WARMUP_MESSAGE_TYPE message to keep
+       * the cache warm.
+       */
       throttle.throttle<Sink> (sink);
     }
   }
