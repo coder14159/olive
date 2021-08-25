@@ -96,7 +96,7 @@ int main(int argc, char* argv[]) try
 
   SPSCStreamProcess stream (name, prefetchSize);
 
-  bool stop = { false };
+  std::atomic<bool> stop = { false };
 
   /*
    * Handle signals
@@ -125,6 +125,7 @@ int main(int argc, char* argv[]) try
   bind_to_cpu (cpu);
 
   Header header;
+  uint64_t testSeqNum = 0;
 
   std::vector<uint8_t> data;
   std::vector<uint8_t> expected;
@@ -135,8 +136,22 @@ int main(int argc, char* argv[]) try
     {
       stats.update (sizeof (Header) + header.size, header.seqNum,
                     timepoint_from_nanoseconds_since_epoch (header.timestamp));
-      if (test)
+
+      if (SPMC_EXPECT_FALSE (test))
       {
+        if (testSeqNum == 0)
+        {
+          testSeqNum = header.seqNum;
+        }
+        else
+        {
+          CHECK_SS ((header.seqNum - testSeqNum) == 1,
+            "Invalid sequence number: header.seqNum: " << header.seqNum <<
+            " testSeqNum: " << testSeqNum);
+
+          testSeqNum = header.seqNum;
+        }
+
         CHECK_SS (header.size == data.size (), "Unexpected payload size: "
                   << data.size () << " expected: " << header.size);
         /*
@@ -163,7 +178,7 @@ int main(int argc, char* argv[]) try
          * Keep the reused data hot in cache for a performance gain
          */
         std::vector<uint8_t> a (data);
-        a.clear ();
+        (void)a;
       }
     }
   }
@@ -172,11 +187,15 @@ int main(int argc, char* argv[]) try
   stats.stop ();
   stats.print_summary ();
 
-  BOOST_LOG_TRIVIAL (info) << "Exit stream";
+  BOOST_LOG_TRIVIAL (info) << "Exit SPSCstream";
 
   return EXIT_SUCCESS;
 }
 catch (const cxxopts::OptionException &e)
+{
+  std::cerr << e.what () << std::endl;
+}
+catch (const std::exception &e)
 {
   std::cerr << e.what () << std::endl;
 }
