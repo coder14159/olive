@@ -126,8 +126,7 @@ template<typename Head, typename...Tail>
 bool SPMCQueue<Allocator, MaxNoDropConsumers>::push_variadic (
   const Head &head, const Tail&...tail)
 {
-  if (SPMC_EXPECT_TRUE (m_backPressure.acquire_space (
-                          get_size (head, tail...))))
+  if (m_backPressure.acquire_space (get_size (head, tail...)))
   {
     push_variadic_item (tail..., push_variadic_item (head));
 
