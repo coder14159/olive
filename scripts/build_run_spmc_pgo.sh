@@ -56,8 +56,6 @@ cd $base_dir && \
                                 --message_size 32 --queue_size $queue_size \
                                 --rate 0&
 
-sleep 2
-
 sleep 1
 cd $base_dir && \
    $release_bin_dir/spmc_client --cpu 3 --name $memory_name \
