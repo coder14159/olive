@@ -178,7 +178,7 @@ void server (const std::string& name,
 
       first = ((first + 1) < sinkCount) ? first + 1 : 0;
 
-      throttle.throttle<Sink> (sink);
+      throttle.throttle ();
     }
   }
 
