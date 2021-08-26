@@ -1113,6 +1113,7 @@ BOOST_AUTO_TEST_CASE (Modulus)
   std::thread ([&] () {
 
     Timer timer;
+
     for (int64_t i = 0; i < cycles; ++i)
     {
       modulus = remainder<int64_t> (i, size);
@@ -1149,7 +1150,6 @@ BOOST_AUTO_TEST_CASE (Modulus)
     BOOST_TEST_MESSAGE (per_call << " ns\thardwired remainder operation");
 
     dummy = modulus;
-    (void) dummy;
   }).join ();
 }
 

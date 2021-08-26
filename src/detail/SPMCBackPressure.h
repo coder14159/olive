@@ -103,7 +103,6 @@ private:
   /*
    * An index to the back pressure array which holds the consumer queue cursor
    */
-  alignas (CACHE_LINE_SIZE)
   uint8_t m_index = Index::UnInitialised;
   /*
    * The cursor points to an index of the shared queue indicating how much of
@@ -111,7 +110,6 @@ private:
    */
   size_t m_cursor = Cursor::UnInitialised;
 
-  alignas (CACHE_LINE_SIZE)
   DataRange m_dataRange;
 };
 
@@ -213,7 +211,7 @@ private:
    * Should be atomic or is the mutex synchronise adequate??
    */
   alignas (CACHE_LINE_SIZE)
-  uint8_t m_maxConsumers = { 0 };
+  std::atomic<uint8_t> m_maxConsumers = { 0 };
   /*
    *
    * Queue capacity + 1
@@ -235,11 +233,10 @@ private:
   /*
    * Array holding the bytes consumed for each non message dropping consumer
    */
-#pragma message "dont think this is neeeded - test deleting next!!"
   alignas (CACHE_LINE_SIZE)
   std::array<size_t, MaxNoDropConsumers> m_consumerIndexes;
   /*
-   * Mutex used to register/unregister consumer threads
+   * Mutex used to register and unregister consumer threads
    */
   Mutex m_mutex;
 };

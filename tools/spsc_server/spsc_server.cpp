@@ -87,13 +87,13 @@ void server (const std::string& name,
     sinks.push_back (std::move (sink));
   }
 
-  bool stop { false };
+  std::atomic<bool> stop = { false };
 
   SignalCatcher s({ SIGINT, SIGTERM }, [&sinks, &stop] (int) {
 
     stop = true;
 
-    BOOST_LOG_TRIVIAL (info) << "Stopping spsc_server";
+    BOOST_LOG_TRIVIAL (debug) << "Stop spsc_server";
 
     for (auto &sink : sinks)
     {
@@ -117,7 +117,7 @@ void server (const std::string& name,
 
   while (clientsReady.get () < numClients && !stop)
   {
-    std::this_thread::sleep_for (5ms);
+    std::this_thread::sleep_for (1ms);
 
     if ((numClients - clientsReady.get ()) != toConnect)
     {
@@ -139,26 +139,49 @@ void server (const std::string& name,
 
   std::iota (std::begin (message), std::end (message), 1);
 
-  Throttle throttle (rate);
-
   size_t first = 0;
   size_t sinkCount = sinks.size ();
 
-  while (SPMC_EXPECT_TRUE (!stop))
+  /*
+   * For fair data distribution of message latencies rotate the ordering the
+   * that clients receives data.
+   */
+  if (rate == 0)
+  {
+    while (!stop)
+    {
+      for (size_t i = first; i < first + sinkCount; ++i)
+      {
+        sinks[MODULUS (i, sinkCount)]->next (message);
+      }
+
+      first = ((first + 1) < sinkCount) ? first + 1 : 0;
+    }
+  }
+  else
   {
     /*
-     * Rotate the queue which receives data first for fair data distribution of
-     * message latencies and throttling
+     * If rate is not set to the maximum throttle sends null messages to
+     * keep the fast path warm.
+     *
+     * Throttle also periodically sends a WARMUP_MESSAGE_TYPE message to keep
+     * the cache warm.
      */
-    for (size_t i = first; i < first + sinkCount; ++i)
+    Throttle throttle (rate);
+
+    while (!stop)
     {
-      sinks[MODULUS (i, sinkCount)]->next (message);
+      for (size_t i = first; i < first + sinkCount; ++i)
+      {
+        sinks[MODULUS (i, sinkCount)]->next (message);
+      }
+
+      first = ((first + 1) < sinkCount) ? first + 1 : 0;
+
+      throttle.throttle ();
     }
-
-    throttle.throttle<SPSCSinkProcess> (*sinks[first]);
-
-    first = ((first + 1) < sinkCount) ? first + 1 : 0;
   }
+
 }
 
 } // namespace {

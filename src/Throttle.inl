@@ -69,7 +69,7 @@ void Throttle::throttle (Sink &sink)
 
   while (currentInterval < (targetInterval - 500ns))
   {
-    std::this_thread::sleep_for (keepWarmInterval - 100ns);
+    std::this_thread::sleep_for (keepWarmInterval - 200ns);
 
     currentInterval = Clock::now () - m_startTime;
 

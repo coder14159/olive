@@ -18,12 +18,30 @@ namespace bi = boost::interprocess;
 
 namespace {
 
+bool validate_options (const std::vector<std::string> &options,
+                       const std::vector<std::string> &valid_options)
+{
+  for (auto option : options)
+  {
+    if (std::find (valid_options.begin (), valid_options.end (),
+                         option) == valid_options.end ())
+    {
+      std::cerr << "Invalid option: " << option << std::endl;
+
+      return false;
+    }
+  }
+
+  return true;
+}
+
 CxxOptsHelper parse (int argc, char* argv[])
 {
   cxxopts::Options cxxopts ("spmc_client",
                 "Consume messages sent to local named shared memory");
 
   std::vector<std::string> stats;
+  std::vector<std::string> valid_stats { "throughput", "latency", "interval" };
 
   cxxopts.add_options ()
     ("h,help", "Performance test consuming of shared memory messages")
@@ -34,23 +52,27 @@ CxxOptsHelper parse (int argc, char* argv[])
       cxxopts::value<int> ()->default_value ("-1"))
     ("directory", "Directory for statistics files",
       cxxopts::value<std::string> ())
-    ("test", "Enable basic tests for message validity",
-      cxxopts::value<bool> ())
     ("stats", "Statistics to log. "
      "Comma separated list (throughput,latency,interval)",
       cxxopts::value<std::vector<std::string>> (stats))
+    ("test", "Enable basic tests for message validity", cxxopts::value<bool> ())
     ("log_level", "Logging level",
       cxxopts::value<std::string> ()->default_value ("NOTICE"));
 
   CxxOptsHelper options (cxxopts.parse (argc, argv));
-
-  options.positional ("stats", stats);
 
   if (options.exists ("help"))
   {
     std::cout << cxxopts.help ({"", "Group"}) << std::endl;
 
     exit (EXIT_SUCCESS);
+  }
+
+  options.positional ("stats", stats);
+
+  if (!validate_options (stats, valid_stats))
+  {
+    exit (EXIT_FAILURE);
   }
 
   return options;
@@ -96,7 +118,7 @@ int main(int argc, char* argv[]) try
   // TODO: Generate the queue name from within Stream ctor..
   Stream stream (name, name + ":queue");
 
-  bool stop = { false };
+  std::atomic<bool> stop = { false };
   /*
    * Handle signals
    */
@@ -104,7 +126,7 @@ int main(int argc, char* argv[]) try
 
     if (!stop)
     {
-      BOOST_LOG_TRIVIAL (info) << "Stopping spmc_client";
+      BOOST_LOG_TRIVIAL (debug) << "Stop spmc_client";
 
       stop = true;
 
@@ -174,70 +196,8 @@ int main(int argc, char* argv[]) try
       }
       else
       {
-#define TEST1
-// #define TEST1_SMALLVECTOR
-
-
-#ifdef TEST1
-        // 1.6 GB/s 26.4 M msgs/s
-        auto a = data;
-        a.clear ();
-#endif
-
-#ifdef TEST1_SMALLVECTOR
-        // 1.6 GB/s 27.0 M msgs/s
-        boost::container::small_vector<uint8_t, 64> a (data);
-        a.clear ();
-#endif
-
-#ifdef TEST1_B
-        // 1.6 GB/s 27.0 M msgs/s
         std::vector<uint8_t> a (data);
-        a.clear ();
-#endif
-
-#ifdef TEST1_A
-        // 1.5 GB/s 24.6 M msgs/s
-        auto a = data;
-        a.clear ();
-#endif
-
-#ifdef TEST2
-        // 932 MB/s 15.3 M msgs/s
-        data.clear ();
-#endif
-#ifdef TEST3
-        // 924 MB/s 15.1 M msgs/s
-        // uint8_t i = 0;
-        for (uint8_t i : data)
-        {
-          i = 0;
-          (void)i;
-        }
-        // (void)i;
-        // data.clear ();
-#endif
-#ifdef TEST4
-        // 1.3 GB/s 22.6 M msgs/s
-        // uint8_t i = 0;
-        for (uint8_t i : data)
-        {
-          i = 0;
-          (void)i;
-        }
-#endif
-
-#ifdef TEST5
-        // 947 MB/s 15.5 M msgs/expected
-        expected = data;
-        expected.clear ();
-#endif
-#ifdef TEST6
-        // 947 MB/s 15.5 M msgs/s
-        expected = data;
-#endif
-
-        // ASSERT (header.size == data.size (), "header.size != data.size");
+        (void)a;
       }
     }
   }
@@ -245,12 +205,15 @@ int main(int argc, char* argv[]) try
   stats.stop ();
   stats.print_summary ();
 
-
-  BOOST_LOG_TRIVIAL (info) << "Exit stream";
+  BOOST_LOG_TRIVIAL (info) << "Exit SPMCStream";
 
   return EXIT_SUCCESS;
 }
 catch (const cxxopts::OptionException &e)
+{
+  std::cerr << e.what () << std::endl;
+}
+catch (const std::exception &e)
 {
   std::cerr << e.what () << std::endl;
 }

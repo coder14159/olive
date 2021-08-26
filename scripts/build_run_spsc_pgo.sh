@@ -5,11 +5,10 @@ base_dir=$(dirname $script_dir)
 cur_dir=`pwd`
 
 # Use environment variables to set command line parameters
-clients=1
-
 jobs=${JOBS:-1}
 queue_size=${QUEUE_SIZE:-20480}
 prefetch_size=${PREFETCH_SIZE:-0}
+run_time=${RUN_TIME:-17}
 
 memory_name=test_memory_spsc
 bin_dir=build/x86_64/bin
@@ -31,7 +30,7 @@ echo "# Run the tests generating profile guiding data"
 cd $base_dir && \
    $profile_bin_dir/spsc_server --cpu 1 --name $memory_name \
                                 --message_size 32 --queue_size $queue_size \
-                                --rate 0 --clients $clients&
+                                --rate 0 --clients 1&
 
 sleep 2
 

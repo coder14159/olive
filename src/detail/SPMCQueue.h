@@ -141,7 +141,8 @@ public:
    *
    * Space is acquired/released once for all head..tail objects.
    *
-   * Currently supports POD types and type std::vector<uint8_t>
+   * Currently supports POD types and classes with methods data () and size ()
+   * in bytes, for example std::vector<uint8_t>
    */
   template<typename Head, typename...Tail>
   bool push_variadic (const Head &head, const Tail&...tail);

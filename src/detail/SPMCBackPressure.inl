@@ -52,7 +52,7 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer (
   {
     if (m_consumerIndexes[i] == Cursor::UnInitialised)
     {
-      m_consumerIndexes[i] = m_committed.load (std::memory_order_acquire);
+      m_consumerIndexes[i] = m_committed;
       index          = i;
       registered     = true;
       break;
@@ -66,7 +66,7 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer (
    */
   if (!registered)
   {
-    m_consumerIndexes[m_maxConsumerIndex] = m_committed.load (std::memory_order_acquire);
+    m_consumerIndexes[m_maxConsumerIndex] = m_committed;
 
     index = m_maxConsumerIndex;
 
@@ -103,17 +103,18 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::unregister_consumer (
   {
     m_consumerIndexes[consumer.index ()] = Cursor::UnInitialised;
 
+    --m_maxConsumers;
+
     BOOST_LOG_TRIVIAL (debug) << "Unregistered consumer (index="
                               << index_to_string (consumer.index ()) << ")";
-
-    --m_maxConsumers;
+    BOOST_LOG_TRIVIAL (debug) << "Consumer count: " << std::to_string (m_maxConsumers);
   }
 }
 
 template<class Mutex, uint8_t MaxNoDropConsumers>
 size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::committed_cursor () const
 {
-  return m_committed.load (std::memory_order_relaxed);
+  return m_committed.load (std::memory_order_release);
 }
 
 template<class Mutex, uint8_t MaxNoDropConsumers>

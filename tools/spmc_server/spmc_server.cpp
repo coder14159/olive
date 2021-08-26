@@ -77,7 +77,7 @@ void server (const std::string& name,
 
   Sink sink (name, name + ":queue", queueSize);
 
-  bool stop = { false };
+  std::atomic<bool> stop = { false };
   /*
    * Handle signals
    */
@@ -85,11 +85,11 @@ void server (const std::string& name,
 
     if (!stop)
     {
-      BOOST_LOG_TRIVIAL (info) << "Stopping spmc_server";
-
-      sink.stop ();
+      BOOST_LOG_TRIVIAL (debug) << "Stop spmc_server";
 
       stop = true;
+
+      sink.stop ();
     }
   });
 
@@ -99,23 +99,34 @@ void server (const std::string& name,
   std::vector<uint8_t> message (messageSize, 0);
 
   std::iota (std::begin (message), std::end (message), 1);
-  /*
-   * If rate is not set to the maximum rate Throttle sends null messages to keep
-   * the fast path warm
-   */
-  Throttle throttle (rate);
 
-  while (!stop)
+  if (rate == 0)
   {
-    sink.next (message);
-    /*
-     * If throughput is not set to maximum rate, Throttle reduces message
-     * throughput to the required rate.
-     *
-     * Throttle also periodically sends a WARMUP_MESSAGE_TYPE message to keep
-     * the cache warm.
-     */
-    throttle.throttle<Sink> (sink);
+    while (!stop)
+    {
+      sink.next (message);
+    }
+  }
+  else
+  {
+   /*
+    * If rate is not set to the maximum rate throttle sends null messages to
+    * keep the fast path warm
+    */
+    Throttle throttle (rate);
+
+    while (!stop)
+    {
+      sink.next (message);
+      /*
+       * If rate is not set to the maximum throttle sends null messages to
+       * keep the fast path warm.
+       *
+       * Throttle also periodically sends a WARMUP_MESSAGE_TYPE message to keep
+       * the cache warm.
+       */
+      throttle.throttle<Sink> (sink);
+    }
   }
 }
 
@@ -139,7 +150,13 @@ int main(int argc, char *argv[]) try
 
   server (name, messageSize, queueSize, rate);
 
+  BOOST_LOG_TRIVIAL (info) << "Exit spmc_server";
+
   return EXIT_SUCCESS;
+}
+catch (const cxxopts::OptionException &e)
+{
+  std::cerr << e.what () << std::endl;
 }
 catch (const std::exception &e)
 {
