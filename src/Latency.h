@@ -121,7 +121,6 @@ private:
 private:
   const std::map<float, Quantile> m_empty; // empty quantiles used for resetting
   std::map<float, Quantile> m_quantiles;
-  std::string               m_path;
   std::ofstream             m_file;
   bool                      m_stop = false;
   Nanoseconds               m_min  = Nanoseconds::max ();
