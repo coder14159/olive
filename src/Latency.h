@@ -125,10 +125,6 @@ private:
   bool                      m_stop = false;
   Nanoseconds               m_min  = Nanoseconds::max ();
   Nanoseconds               m_max  = Nanoseconds::min ();
-
-  const uint64_t DEFAULT_QUEUE_SIZE = 10;
-
-  boost::lockfree::spsc_queue<int64_t> m_queue { DEFAULT_QUEUE_SIZE };
 };
 
 } // namespace spmc
