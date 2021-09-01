@@ -103,6 +103,7 @@ private:
   /*
    * An index to the back pressure array which holds the consumer queue cursor
    */
+  alignas (CACHE_LINE_SIZE)
   uint8_t m_index = Index::UnInitialised;
   /*
    * The cursor points to an index of the shared queue indicating how much of
@@ -175,7 +176,7 @@ public:
    * Return the minimum size of queue data which is writable taking into account
    * all of the consumers
    */
-  size_t write_available () const;
+  size_t write_available ();
   /*
    * Return the index of the committed data cursor
    */
