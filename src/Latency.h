@@ -121,15 +121,10 @@ private:
 private:
   const std::map<float, Quantile> m_empty; // empty quantiles used for resetting
   std::map<float, Quantile> m_quantiles;
-  std::string               m_path;
   std::ofstream             m_file;
   bool                      m_stop = false;
   Nanoseconds               m_min  = Nanoseconds::max ();
   Nanoseconds               m_max  = Nanoseconds::min ();
-
-  const uint64_t DEFAULT_QUEUE_SIZE = 10;
-
-  boost::lockfree::spsc_queue<int64_t> m_queue { DEFAULT_QUEUE_SIZE };
 };
 
 } // namespace spmc

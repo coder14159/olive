@@ -85,7 +85,7 @@ void server (const std::string& name,
 
     if (!stop)
     {
-      BOOST_LOG_TRIVIAL (debug) << "Stop spmc_server";
+      BOOST_LOG_TRIVIAL (info) << "Stop spmc_server";
 
       stop = true;
 

@@ -84,13 +84,14 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::register_consumer (
   consumer.index (index);
 
   BOOST_LOG_TRIVIAL (info) << "Registered consumer index="
-                           << std::to_string (index);
+                           << std::to_string (index)
+                           << " consumer count="
+                           << static_cast<size_t> (m_maxConsumers);
 
   BOOST_LOG_TRIVIAL (debug)
-    << "consumers=" << static_cast<size_t> (m_maxConsumers)
-    << " max consumer index=" << static_cast<size_t> (m_maxConsumerIndex)
-    << " cursor=" << cursor_to_string (consumer.cursor ())
-    << " write available=" << write_available (consumer.cursor (), m_claimed);
+    << "max consumer index=" << static_cast<size_t> (m_maxConsumerIndex)
+    << "|cursor=" << cursor_to_string (consumer.cursor ())
+    << "|write available=" << write_available (consumer.cursor (), m_claimed);
 }
 
 template<class Mutex, uint8_t MaxNoDropConsumers>
@@ -191,7 +192,7 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::write_available (
 }
 
 template<class Mutex, uint8_t MaxNoDropConsumers>
-size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::write_available () const
+size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::write_available ()
 {
   if (BOOST_LIKELY (m_maxConsumers > 0))
   {
@@ -207,9 +208,7 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::write_available () const
       /*
        * Rotate the order of the client first served data for improved fairness
        */
-      auto index = MODULUS (i, MaxNoDropConsumers);
-
-      size_t consumerCursor = m_consumerIndexes[index];
+      size_t consumerCursor = m_consumerIndexes[MODULUS (i, MaxNoDropConsumers)];
 
       if (is_valid_cursor (consumerCursor))
       {
@@ -228,6 +227,11 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::write_available () const
         break;
       }
     }
+    /*
+     * Update consumer servicing order after each data push
+     */
+    m_consumerIndex = ((m_consumerIndex + 1) < m_maxConsumers)
+                    ? m_consumerIndex + 1 : 0;
 
     return minAvailable;
   }

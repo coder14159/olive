@@ -26,6 +26,11 @@ void Throughput::reset ()
 inline
 void Throughput::next (uint64_t bytes, uint64_t messages)
 {
+  if (m_stop)
+  {
+    return;
+  }
+
   m_messages += messages;
 
   m_bytes += bytes;
