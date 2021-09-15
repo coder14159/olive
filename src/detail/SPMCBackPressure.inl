@@ -222,7 +222,7 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::write_available ()
         }
       }
 
-      if (consumerCount == m_maxConsumers)
+      if (consumerCount == m_maxConsumers || m_maxConsumers == 0)
       {
         break;
       }
