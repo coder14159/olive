@@ -56,7 +56,7 @@ private:
   /*
    * Store sampled latency values
    */
-  static const size_t QUEUE_CAPACITY = 10;
+  static const size_t QUEUE_CAPACITY = 3;
 
   struct Stats
   {
@@ -69,7 +69,7 @@ private:
   uint64_t m_intervalMessages = { 0 };
   uint64_t m_seqNum = { 0 };
 
-  std::atomic<bool> m_stop { false };
+  bool m_stop { false };
 
   ThroughputStats m_throughput;
 
