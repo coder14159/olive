@@ -85,7 +85,7 @@ void server (const std::string& name,
 
     if (!stop)
     {
-      BOOST_LOG_TRIVIAL (info) << "Stop spmc_server";
+      BOOST_LOG_TRIVIAL (debug) << "Stop spmc_server";
 
       stop = true;
 
@@ -102,7 +102,7 @@ void server (const std::string& name,
 
   if (rate == 0)
   {
-    while (!stop)
+    while (!stop.load (std::memory_order_relaxed))
     {
       sink.next (message);
     }
@@ -115,7 +115,7 @@ void server (const std::string& name,
     */
     Throttle throttle (rate);
 
-    while (!stop)
+    while (!stop.load (std::memory_order_relaxed))
     {
       sink.next (message);
       /*

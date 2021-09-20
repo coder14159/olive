@@ -148,7 +148,7 @@ void server (const std::string& name,
    */
   if (rate == 0)
   {
-    while (!stop)
+    while (!stop.load (std::memory_order_relaxed))
     {
       for (size_t i = first; i < first + sinkCount; ++i)
       {
@@ -169,7 +169,7 @@ void server (const std::string& name,
      */
     Throttle throttle (rate);
 
-    while (!stop)
+    while (!stop.load (std::memory_order_relaxed))
     {
       for (size_t i = first; i < first + sinkCount; ++i)
       {
