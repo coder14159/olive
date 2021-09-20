@@ -23,6 +23,11 @@ bool validate_options (const std::vector<std::string> &options,
 {
   for (auto option : options)
   {
+    if (option == "")
+    {
+      BOOST_LOG_TRIVIAL (info) << "stats option is empty";
+      continue;
+    }
     if (std::find (valid_options.begin (), valid_options.end (),
                          option) == valid_options.end ())
     {
@@ -151,7 +156,7 @@ int main(int argc, char* argv[]) try
   std::vector<uint8_t> data;
   std::vector<uint8_t> expected;
 
-  while (!stop)
+  while (!stop.load (std::memory_order_relaxed))
   {
     if (stream.next (header, data))
     {

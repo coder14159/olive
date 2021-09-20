@@ -194,7 +194,9 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::write_available (
 template<class Mutex, uint8_t MaxNoDropConsumers>
 size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::write_available ()
 {
-  if (BOOST_LIKELY (m_maxConsumers > 0))
+  uint8_t maxConsumers = m_maxConsumers.load (std::memory_order_relaxed);
+
+  if (BOOST_LIKELY (maxConsumers > 0))
   {
     /*
      * Get the bytes consumed by the slowest consumer.
@@ -212,9 +214,8 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::write_available ()
 
       if (is_valid_cursor (consumerCursor))
       {
-        size_t available = write_available (consumerCursor, m_claimed);
-
-        minAvailable = std::min (minAvailable, available);
+        minAvailable = std::min (minAvailable,
+                                 write_available (consumerCursor, m_claimed));
 
         if (minAvailable != Cursor::UnInitialised)
         {
@@ -222,7 +223,8 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::write_available ()
         }
       }
 
-      if (consumerCount == m_maxConsumers || m_maxConsumers == 0)
+      if (consumerCount == maxConsumers ||
+          m_maxConsumers.load (std::memory_order_relaxed) == 0)
       {
         break;
       }
@@ -230,7 +232,8 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::write_available ()
     /*
      * Update consumer servicing order after each data push
      */
-    m_consumerIndex = ((m_consumerIndex + 1) < m_maxConsumers)
+    m_consumerIndex = ((m_consumerIndex + 1)
+                          < m_maxConsumers.load (std::memory_order_relaxed))
                     ? m_consumerIndex + 1 : 0;
 
     return minAvailable;

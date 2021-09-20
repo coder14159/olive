@@ -69,7 +69,7 @@ private:
   QueueType m_queue;
 
   alignas (CACHE_LINE_SIZE)
-  std::atomic<bool> m_stop = { false };
+  bool m_stop = { false };
 
   uint64_t m_sequenceNumber = 0;
 

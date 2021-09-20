@@ -65,7 +65,7 @@ void PerformanceStats::start ()
      */
     bool warmup = true;
 
-    while (!m_stop)
+    while (!m_stop.load (std::memory_order_relaxed))
     {
       if (m_throughput.is_stopped () && m_latency.is_stopped ())
       {
