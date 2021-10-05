@@ -15,17 +15,20 @@ profile_bin_dir=build/x86_64.pgo_profile/bin
 release_bin_dir=build/x86_64.pgo_release/bin
 
 echo "# Build executable for removing shared memory"
-cd $base_dir && make $bin_dir/remove_shared_memory --jobs $jobs
+cd $base_dir && make remove_shared_memory --jobs $jobs
 
 echo "# Removing shared memory $memory_name"
 cd $base_dir && $bin_dir/remove_shared_memory --names $memory_name
+
+echo "# Build standard release executables"
+cd $base_dir && make spmc --jobs $jobs
 
 echo "# Build executables for generating profile data"
 cd $base_dir && \
    make PGO_PROFILE=1 $profile_bin_dir/spmc_server \
                       $profile_bin_dir/spmc_client --jobs $jobs
 
-echo "# Run the tests generating profile guiding data"
+echo "# Run the tests generating profile guided data"
 cd $base_dir && \
    $profile_bin_dir/spmc_server --cpu 1 --name $memory_name \
                                 --message_size 32 --queue_size $queue_size \
@@ -36,13 +39,12 @@ cd $base_dir && \
    $profile_bin_dir/spmc_client --cpu 2 --name $memory_name \
                                 --log_level INFO \
                                 --stats latency,throughput,interval&
-
 sleep $run_time
 
 pkill spmc_server
 pkill spmc_client
 
-echo "# Removing shared memory $memory_name"
+echo "# Remove shared memory $memory_name"
 cd $base_dir && ${bin_dir}/remove_shared_memory --names $memory_name
 
 echo "# Build profile guided release"
@@ -57,11 +59,11 @@ cd $base_dir && \
                                 --rate 0&
 
 sleep 1
+
 cd $base_dir && \
-   $release_bin_dir/spmc_client --cpu 3 --name $memory_name \
+   $release_bin_dir/spmc_client --cpu 2 --name $memory_name \
                                 --log_level INFO \
                                 --stats latency,throughput,interval&
-
 sleep $run_time
 
 pkill spmc_server
