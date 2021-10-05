@@ -19,7 +19,7 @@ script_dir = os.path.dirname (os.path.realpath(__file__))
 
 base_dir = os.path.normpath (script_dir + "/../")
 
-exe_dir_non_pgo  = os.path.join (base_dir, "build",
+exe_dir  = os.path.join (base_dir, "build",
                             platform.processor (), "bin")
 
 exe_dir_pgo = os.path.join (base_dir, "build",
@@ -40,6 +40,7 @@ parser.add_argument ("--log_level", default="INFO",
                     help="Set the logging level")
 parser.add_argument ("--timeout", required=True, help="Run time (seconds)")
 
+# Server configuration
 parser.add_argument ("--server_cpu",  type=int, default=-1,
                     help="Bind server to cpu id")
 parser.add_argument ("--server_queue_size_list", required=True, nargs='+',
@@ -50,6 +51,7 @@ parser.add_argument ("--server_rate_list", default=0, nargs='+',
 parser.add_argument ("--server_pgo", default=False, action="store_true",
                     help="Use profile guided optimised server binary")
 
+# Client configuration
 parser.add_argument ("--client_cpu_list", nargs='+', type=int, default=-1,
                     help="Bind client(s) to cpu id list. "
                          "Can be fewer than the total number of clients")
@@ -65,18 +67,18 @@ parser.add_argument ("--client_pgo", default=False, action="store_true",
 
 args = parser.parse_args ()
 
-server_exe_dir = exe_dir_pgo if args.server_pgo is True else exe_dir_non_pgo
+server_exe_dir = exe_dir_pgo if args.server_pgo is True else exe_dir
 server_exe     = os.path.join (server_exe_dir, args.tool_type + '_server')
 
-client_exe_dir = exe_dir_pgo if args.client_pgo is True else exe_dir_non_pgo
+client_exe_dir = exe_dir_pgo if args.client_pgo is True else exe_dir
 client_exe     = os.path.join (client_exe_dir, args.tool_type + '_client')
 
 print ("host_name:              " + socket.gethostname ())
 print ("cpu_count:              " + str (cpu_count))
 print ("arch:                   " + str (platform.processor ()))
-print ("name:                   " + args.memory_name)
 print ("run_time:               " + str (args.timeout) + " seconds")
 print ("log_level:              " + args.log_level)
+print ("memory_name:            " + args.memory_name)
 print ("")
 print ("server_exe              " + server_exe)
 print ("server_cpu:             " + str (args.server_cpu))
@@ -92,7 +94,7 @@ print ("client_stats:           " + ' '.join (args.client_stats))
 if args.client_directory is not None:
     print ("client_directory: " + str (args.client_directory))
 
-# avoid using cpu 0 where possible
+# Avoid using cpu 0 where possible for performance reasons
 
 # Create the server command
 for server_rate in args.server_rate_list:
@@ -122,7 +124,7 @@ for server_rate in args.server_rate_list:
                 # Delete shared memory if it exists
                 print ('remove shared memory:' + str (args.memory_name))
 
-                subprocess.check_call ([pathlib.Path (exe_dir_non_pgo) / "remove_shared_memory",
+                subprocess.check_call ([pathlib.Path (exe_dir) / "remove_shared_memory",
                                         "--names", args.memory_name])
                 server_cmd = [server_exe,
                     "--cpu",          str (args.server_cpu),
@@ -185,7 +187,7 @@ for server_rate in args.server_rate_list:
                 server.wait ()
                 print ("server exited")
 
-                subprocess.check_call ([os.path.join (exe_dir_non_pgo, "remove_shared_memory"),
+                subprocess.check_call ([os.path.join (exe_dir, "remove_shared_memory"),
                                         "--names", args.memory_name])
 
                 print ("Latency test finished")
