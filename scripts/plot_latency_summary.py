@@ -5,7 +5,6 @@
 ##########################################
 
 import argparse
-import cpuinfo
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -19,9 +18,8 @@ import plot_utils as utils
 
 plt.style.use ('seaborn-darkgrid')
 
-script_dir = os.path.dirname (os.path.realpath(__file__))
+base_dir = Path (__file__).parent.parent.absolute ()
 
-base_dir = os.path.normpath (script_dir + '/../')
 exe_dir = os.path.join (base_dir, 'build', platform.processor (), 'bin')
 
 parser = argparse.ArgumentParser (description='Plot performance test results')
@@ -66,7 +64,7 @@ if args.client_directory_descriptions is not None and \
 max = '0'
 
 print ('server_queue_size:    ' + str (args.server_queue_sizes) + ' bytes')
-print ('server_message_sizes:  ' + str (args.server_message_sizes) + ' bytes')
+print ('server_message_sizes: ' + str (args.server_message_sizes) + ' bytes')
 print ('server_rate:          ' + str (args.server_rates) + ' messages/second')
 print ('client_count:         ' + str (args.client_counts) +
                         (' client' if args.client_counts == 1 else ' clients'))
