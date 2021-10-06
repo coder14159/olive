@@ -191,14 +191,14 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::push (
 
 template <typename Allocator, uint8_t MaxNoDropConsumers>
 template <typename POD>
-bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_test (
+bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   POD &pod, ConsumerState &consumer)
 {
-  return pop_test (reinterpret_cast<uint8_t*> (&pod), sizeof (POD), consumer);
+  return pop (reinterpret_cast<uint8_t*> (&pod), sizeof (POD), consumer);
 }
 
 template <typename Allocator, uint8_t MaxNoDropConsumers>
-bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_test (
+bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   uint8_t* to, size_t size, ConsumerState &consumer)
 {
   /*
@@ -209,39 +209,6 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop_test (
   consumer.cursor (m_backPressure.advance_cursor (consumer.cursor (), copied));
 
   return (size == copied);
-}
-
-
-template <typename Allocator, uint8_t MaxNoDropConsumers>
-template <typename POD>
-bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
-    POD &pod,
-    ConsumerState &consumer)
-{
-  return pop (reinterpret_cast<uint8_t*> (&pod), sizeof (POD), consumer);
-}
-
-template <typename Allocator, uint8_t MaxNoDropConsumers>
-bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
-    uint8_t* to,
-    size_t   size,
-    ConsumerState &consumer)
-{
-  /*
-   * Copy data from the queue if new data is available.
-   */
-  if (m_backPressure.read_available (consumer) >= size)
-  {
-    copy_from_queue (to, size, consumer);
-    /*
-     * Update consumer cursor value and producer back-pressure
-     */
-    m_backPressure.update_consumer_state (consumer);
-
-    return true;
-  }
-
-  return false;
 }
 
 template <typename Allocator, uint8_t MaxNoDropConsumers>

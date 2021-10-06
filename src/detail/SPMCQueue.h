@@ -169,25 +169,18 @@ public:
   size_t push (const uint8_t *data, size_t size,
              AcquireRelease acquire_release = AcquireRelease::Yes,
              size_t offset = 0);
-  /*
-   * Pop a POD type from the queue
-   */
-  template<typename POD>
-  bool pop_test (POD &pod, ConsumerState &consumer);
-  /*
-   * Pop seralised data from the queue
-   */
-  bool pop_test (uint8_t *data, size_t size, ConsumerState &consumer);
 
   /*
    * Pop a POD type from the queue
    */
   template<typename POD>
   bool pop (POD &pod, ConsumerState &consumer);
+
   /*
    * Pop seralised data from the queue
    */
   bool pop (uint8_t *data, size_t size, ConsumerState &consumer);
+
   /*
    * Prefetch a chunk of data for caching in a local non-shared circular buffer
    */

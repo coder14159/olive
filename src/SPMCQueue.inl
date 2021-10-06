@@ -175,7 +175,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   /*
    * Test caching all available consumer data
    */
-  if (m_queue->pop_test (header, consumer))
+  if (m_queue->pop (header, consumer))
   {
     if (header.type == WARMUP_MESSAGE_TYPE)
     {
@@ -187,7 +187,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
 
     data.resize (header.size);
 
-    m_queue->pop_test (data.data (), header.size, consumer);
+    m_queue->pop (data.data (), header.size, consumer);
 
     consumer.data_range ().consumed (sizeof (Header) + header.size);
 
@@ -230,7 +230,7 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   /*
     * Test caching all available consumer data
     */
-  if (m_queue->pop_test (pod, consumer))
+  if (m_queue->pop (pod, consumer))
   {
     consumer.data_range ().consumed (sizeof (POD));
 
