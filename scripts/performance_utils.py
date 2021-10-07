@@ -90,14 +90,14 @@ def throughput_to_pretty (rate):
 
   float_rate = float (rate)
 
-  if float_rate > G:
+  if float_rate >= G:
       return str (round (float_rate / G, 1)) + " G msgs/s"
-  if float_rate > M:
+  if float_rate >= M:
       return str (round (float_rate / M, 1)) + " M msgs/s"
-  if float_rate > K:
-      return str (round (float_rate / K)) + " K msgs/s"
+  if float_rate >= K:
+      return str (round (float_rate / K, 1)) + " K msgs/s"
 
-  return str (round (float_rate)) + " msgs/s"
+  return str (round (float_rate, 0)) + " msgs/s"
 
 
 #
