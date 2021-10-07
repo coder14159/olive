@@ -8,7 +8,7 @@ namespace spmc {
 /*
  * Function get_size () returns the total size of a list of parameters.
  *
- * Currently supported are POD types and vector
+ * Currently supported types are POD types and std::vector
  */
 template<typename Head, typename...Tail>
 size_t get_size (const Head& head, const Tail&...tail);
