@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) try
   auto cpu        = options.value<int>            ("cpu", -1);
   auto test       = options.value<bool>           ("test", false);
   auto logLevel   = options.value<std::string>    ("log_level",
-                                                      log_levels (),"INFO");
+                                                   log_levels (),"INFO");
   auto latency    = options.positional ("stats", "latency");
   auto throughput = options.positional ("stats", "throughput");
   auto interval   = options.positional ("stats", "interval");
