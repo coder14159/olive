@@ -51,7 +51,7 @@ parser.add_argument ("--log_level", default="INFO",
                             "ERROR", "FATAL"],
                     help="Set the logging level")
 parser.add_argument ("--run_time", required=True, help="Run time (seconds)")
-parser.add_argument ("--memory_name", required=False, default='spmc',
+parser.add_argument ("--memory_name", required=False, default='spmc_pgo',
                     help="Name of shared memory")
 
 # Server configuration
