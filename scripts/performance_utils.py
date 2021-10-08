@@ -174,15 +174,13 @@ def build_executable (exe_name, build_type, jobs):
 
   os.chdir (initial_dir)
 
-def build_run_spmc_server (args, build_type):
-  print ("# Build spmc_server")
-
-  exe_name = "spmc_server"
-
-  build_executable (exe_name, build_type, args.jobs)
+#
+# Run the SPMC server
+#
+def run_spmc_server (args, build_type):
 
   print ("# Run the spmc_server")
-  server = execute ([str (sub_dir_path_bin (build_type) / exe_name),
+  server = execute ([str (sub_dir_path_bin (build_type) / "spmc_server"),
               "--log_level", str (args.log_level),
               "--name", args.memory_name,
               "--cpu", str (args.server_cpu),
@@ -200,7 +198,7 @@ def build_run_spmc_server (args, build_type):
 #
 # Run the SPMC clients and return an array of the running clients
 #
-def build_run_spmc_clients (args, build_type):
+def run_spmc_clients (args, build_type):
   assert int (args.client_count) >= 1, "client count should be at least 1"
 
   print ("# Run " + str (args.client_count) + " SPMC clients")
@@ -210,8 +208,6 @@ def build_run_spmc_clients (args, build_type):
   cpu_list = args.client_cpu_list
 
   clients = []
-
-  build_executable (exe_name, build_type, args.jobs)
 
   client_exe_path = sub_dir_path_bin (build_type) / exe_name
 
