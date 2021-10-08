@@ -99,7 +99,10 @@ utils.execute ([str (utils.sub_dir_path_bin (
                 "--names", args.memory_name])
 
 ###############################################################################
-print ("# Generate Profile Guided Optimisation (PGO) data")
+print ("# Build Profile Guided Optimisation (PGO) binaries")
+
+print ("# Build/run client and server genarating PGO data")
+
 utils.build_executable ("spmc_client",
                         utils.BuildType.PGO_PROFILE, args.jobs)
 utils.build_executable ("spmc_server",
@@ -120,7 +123,7 @@ utils.execute ([str (utils.sub_dir_path_bin (
                 "--names", args.memory_name])
 
 ###############################################################################
-print ("# Generate binaries utilising the PGO data")
+print ("# Build/run client and server utilising the PGO data")
 
 utils.build_executable ("spmc_client",
                         utils.BuildType.PGO_RELEASE, args.jobs)
@@ -138,5 +141,5 @@ utils.monitor_server_and_clients (args, clients, server)
 
 print ("# Remove the named shared memory")
 utils.execute ([str (utils.sub_dir_path_bin (
-                      utils.BuildType.RELEASE) / "remove_shared_memory"),
+                  utils.BuildType.RELEASE) / "remove_shared_memory"),
                 "--names", args.memory_name])
