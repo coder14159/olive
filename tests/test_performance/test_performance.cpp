@@ -1163,19 +1163,6 @@ BOOST_AUTO_TEST_CASE (ExpectCondition)
 
   BOOST_CHECK (SPMC_EXPECT_FALSE (true)  == 1);
   BOOST_CHECK (SPMC_EXPECT_FALSE (false) == 0);
-
-  struct A {
-    std::ofstream f;
-  };
-
-  auto return_file ([] () -> A
-  {
-    A a;
-
-    return a;
-  });
-
-  A a = return_file ();
 }
 /*
  * Test the core SPMC queue
