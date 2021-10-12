@@ -35,7 +35,7 @@ enum AcquireRelease
   Yes,
   /*
    * If items are copied to the queue in a single call there is no need to
-   * acquire space, push data items and then release space explcitly.
+   * acquire space, push data items and then release space explicitly.
    */
   No
 };
