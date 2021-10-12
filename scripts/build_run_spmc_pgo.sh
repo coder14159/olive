@@ -17,7 +17,7 @@ release_bin_dir=build/x86_64.pgo_release/bin
 echo "# Build executable for removing shared memory"
 cd $base_dir && make remove_shared_memory --jobs $jobs
 
-echo "# Removing shared memory $memory_name"
+echo "# Remove shared memory $memory_name"
 cd $base_dir && $bin_dir/remove_shared_memory --names $memory_name
 
 echo "# Build standard release executables"
@@ -69,5 +69,5 @@ sleep $run_time
 pkill spmc_server
 pkill spmc_client
 
-echo "# Removing shared memory $memory_name"
+echo "# Remove shared memory $memory_name"
 cd $base_dir && ${bin_dir}/remove_shared_memory --names $memory_name
