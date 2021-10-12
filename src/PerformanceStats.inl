@@ -17,7 +17,7 @@ inline
 void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
                                TimePoint timestamp)
 {
-#pragma message "Is check for sequence number reset required? Think threaded operation"
+#pragma message "Is check for sequence number reset required? Think threaded operation ie restart of server will not have a persisted seqnum"
 #if 0 // TODO // is this required?
   if (SPMC_EXPECT_FALSE (seqNum < m_seqNum))
   {
