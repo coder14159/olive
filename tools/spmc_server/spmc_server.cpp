@@ -63,15 +63,6 @@ void server (const std::string& name,
    * Create enough shared memory for a single queue which is shared by all the
    * clients.
    */
-  #pragma message "creation of memory should be in sink or SPMCQueue"
-
-  size_t memory_size = queueSize
-                     + SharedMemory::BOOK_KEEPING
-                     + sizeof (SPMCQueue<SharedMemory::Allocator>);
-
-  auto memory = bi::managed_shared_memory (bi::open_or_create, name.c_str(),
-                                           memory_size);
-
   using Queue = SPMCQueue<SharedMemory::Allocator>;
   using Sink  = SPMCSink<Queue>;
 

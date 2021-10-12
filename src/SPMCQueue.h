@@ -30,8 +30,8 @@ public:
   SPMCQueue (size_t capacity);
 
   /*
-   * Creates named shared memory and creates an SPMCQueue (or opens an existing
-   * queue if available) for inter-process communication.
+   * Creates named shared memory and then constructs an SPMCQueue (or opens an
+   * existing queue if available) for inter-process communication.
    */
   SPMCQueue (const std::string &memoryName,
              const std::string &queueName,

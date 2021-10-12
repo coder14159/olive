@@ -23,12 +23,20 @@ SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (
   const std::string &memoryName,
   const std::string &queueName,
   size_t capacity)
-: m_memory (boost::interprocess::open_only, memoryName.c_str ())
 {
   CHECK (capacity > sizeof (Header),
         "SPMCQueue capacity must be greater than header size");
+  /*
+   * Create named shared memory block, or open it if it already exists
+   */
+  size_t memory_size = capacity
+                     + SharedMemory::BOOK_KEEPING
+                     + sizeof (SPMCQueue<SharedMemory::Allocator>);
 
   namespace bi = boost::interprocess;
+
+  m_memory = bi::managed_shared_memory (bi::open_or_create,
+                             memoryName.c_str (), memory_size);
 
   SharedMemory::Allocator allocator (m_memory.get_segment_manager ());
 
