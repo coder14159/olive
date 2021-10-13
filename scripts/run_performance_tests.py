@@ -28,8 +28,7 @@ exe_dir_pgo = os.path.join (base_dir, "build",
 parser = argparse.ArgumentParser (description="Latency testing")
 
 # note only allowing one shared memory name
-parser.add_argument ("--tool_type",
-                    choices=['spmc', 'spsc'], default='spmc',
+parser.add_argument ("--tool_type", choices=['spmc', 'spsc'], required=True,
                     help="The tool type to use")
 parser.add_argument ("--memory_name", required=True,
                     help="Provide a name for shared memory")
@@ -37,7 +36,7 @@ parser.add_argument ("--directory_name", required=False,
                     help="Optional directory name")
 parser.add_argument ("--log_level", default="INFO",
                     choices=["TRACE", "DEBUG", "INFO", "WARNING",
-                            "ERROR", "FATAL"],
+                             "ERROR", "FATAL"],
                     help="Set the logging level")
 parser.add_argument ("--timeout", required=True, help="Run time (seconds)")
 
@@ -53,9 +52,9 @@ parser.add_argument ("--server_pgo", default=False, action="store_true",
                     help="Use profile guided optimised server binary")
 
 # Client configuration
-parser.add_argument ("--client_cpu_list", nargs='+', type=int, default=-1,
+parser.add_argument ("--client_cpu_list", nargs='+', type=int, default=[],
                     help="Bind client(s) to cpu id list. "
-                         "Can be fewer than the total number of clients")
+                         "List may hold fewer values than the total number of clients")
 parser.add_argument ("--client_count_list",  required=True, nargs='+',
                     help="Number of consumer clients")
 parser.add_argument ("--client_stats", nargs='+', default=["latency,throughput"],
@@ -82,7 +81,7 @@ print ("log_level:              " + args.log_level)
 print ("memory_name:            " + args.memory_name)
 print ("")
 print ("server_exe              " + server_exe)
-print ("server_cpu:             " + str (args.server_cpu))
+print ("server_cpu:             " + (str ("") if args.server_cpu is -1 else str (args.server_cpu)))
 print ("server_queue_size_list: " + ' '.join (map (str, args.server_queue_size_list)))
 print ("server_message_size:    " + str (args.server_message_size) + " bytes")
 print ("server_rate_list:       " + ' '.join (map (str, args.server_rate_list))
@@ -90,12 +89,10 @@ print ("server_rate_list:       " + ' '.join (map (str, args.server_rate_list))
 print ("")
 print ("client_exe:             " + client_exe)
 print ("client_count_list:      " + ' '.join (map (str, args.client_count_list)))
-print ("client_cpu_list:        " + ' '.join (map (str, args.client_cpu_list)))
+print ("client_cpu_list:        " + ','.join (map (str, args.client_cpu_list)))
 print ("client_stats:           " + ' '.join (args.client_stats))
 if args.client_directory is not None:
     print ("client_directory:       " + str (args.client_directory))
-
-# Avoid using cpu 0 where possible for performance reasons
 
 # Create the server command
 for server_rate in args.server_rate_list:
@@ -123,73 +120,78 @@ for server_rate in args.server_rate_list:
                     continue
 
                 print ("")
-                # Delete shared memory if it exists
-                print ('remove shared memory:' + str (args.memory_name))
+            # Delete shared memory if it exists
+            print ('remove shared memory:' + str (args.memory_name))
 
-                subprocess.check_call ([pathlib.Path (exe_dir) / "remove_shared_memory",
-                                        "--names", args.memory_name])
-                server_cmd = [server_exe,
-                    "--cpu",          str (args.server_cpu),
-                    "--name",         args.memory_name,
-                    "--message_size", str (args.server_message_size),
-                    "--queue_size",   str (server_queue_size),
-                    "--rate",         str (server_rate),
-                    "--log_level",    args.log_level]
+            subprocess.check_call ([pathlib.Path (exe_dir) / "remove_shared_memory",
+                                    "--names", args.memory_name])
+            server_cmd = [server_exe,
+                "--cpu",          str (args.server_cpu),
+                "--name",         args.memory_name,
+                "--message_size", str (args.server_message_size),
+                "--queue_size",   str (server_queue_size),
+                "--rate",         str (server_rate),
+                "--log_level",    args.log_level]
 
-                if args.tool_type == 'spsc':
-                    server_cmd += ['--clients', str (client_count)]
+            if args.tool_type == 'spsc':
+                server_cmd += ['--clients', str (client_count)]
 
-                # Run the server
-                print ('%s' % ' '.join (map (str, server_cmd)))
+            # Run the server
+            print ('%s' % ' '.join (map (str, server_cmd)))
 
-                server = subprocess.Popen (server_cmd, stdout=subprocess.PIPE)
+            server = subprocess.Popen (server_cmd, stdout=subprocess.PIPE)
 
-                # Allow the server time to start, then check if it is running
-                time.sleep (1)
-                poll = server.poll ()
-                if poll is not None:
-                    print ("spmc_server did not run")
-                    server.send_signal (signal.SIGINT)
-                    exit (1)
+            # Allow the server time to start, then check if it is running
+            time.sleep (1)
+            poll = server.poll ()
+            if poll is not None:
+                print ("spmc_server did not run")
+                server.send_signal (signal.SIGINT)
+                exit (1)
 
-                # Run the client(s)
-                clients = []
+            # Run the client(s)
+            clients = []
 
-                stats = ','.join (args.client_stats)
+            stats = ','.join (args.client_stats)
 
-                for client_index in range (client_count):
-                    client_cmd = [client_exe,
-                                "--name",     args.memory_name,
-                                "--log_level", "INFO"]
+            for client_index in range (client_count):
+                client_cmd = [client_exe,
+                            "--name",     args.memory_name,
+                            "--log_level", "INFO"]
 
-                    cpu_bind = -1
-                    if client_index < len (client_cpu_list):
-                        cpu_bind = client_cpu_list[client_index]
-                    if cpu_bind != -1:
-                        client_cmd.extend (["--cpu", str (cpu_bind)])
+                cpu_bind = -1
+                if client_index < len (client_cpu_list):
+                    cpu_bind = client_cpu_list[client_index]
+                if cpu_bind != -1:
+                    client_cmd.extend (["--cpu", str (cpu_bind)])
 
-                    if (client_index == (client_count -1)):
-                        client_cmd.extend (["--stats", stats])
+                client_cmd.extend (["--stats", stats])
 
-                        if (directory):
-                            client_cmd.extend (["--directory", directory])
+                if (client_index == (client_count -1)):
+                    if (directory):
+                        client_cmd.extend (["--directory", directory])
 
                     print ('%s' % ' '.join (map (str, client_cmd)))
-
                     clients.append (subprocess.Popen (client_cmd))
+                else:
+                    print ('%s' % ' '.join (map (str, client_cmd)))
+                    clients.append (subprocess.Popen (client_cmd,
+                                    stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.DEVNULL))
 
-                time.sleep (int (args.timeout))
+            time.sleep (int (args.timeout))
 
-                for client in clients:
-                    client.send_signal (signal.SIGINT)
-                    client.wait ()
-                    print ("client exited")
+            for client in clients:
+                client.send_signal (signal.SIGINT)
+                client.wait ()
 
-                server.send_signal (signal.SIGINT)
-                server.wait ()
-                print ("server exited")
+            print ("client(s) exited")
 
-                subprocess.check_call ([os.path.join (exe_dir, "remove_shared_memory"),
-                                        "--names", args.memory_name])
+            server.send_signal (signal.SIGINT)
+            server.wait ()
+            print ("server exited")
 
-                print ("Latency test finished")
+            subprocess.check_call ([os.path.join (exe_dir, "remove_shared_memory"),
+                                    "--names", args.memory_name])
+
+            print ("Performance testing finished")
