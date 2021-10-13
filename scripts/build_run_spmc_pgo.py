@@ -51,15 +51,15 @@ parser.add_argument ("--client_stats", nargs='+',
                     default=["latency,throughput,interval"],
                     choices=["latency", "throughput", "interval"],
                     help="Select statistics for output")
-parser.add_argument ("--client_cpu_list", nargs='+', type=int, default=-1,
+parser.add_argument ("--client_cpu_list", nargs='+', type=int, default=[],
                     help="Bind client(s) to cpu id list. "
                          "Can be fewer than the total number of clients")
 
 args = parser.parse_args ()
 
 if len (args.client_stats) is 1 and args.client_stats[0] == 'interval':
-  print ('If using client stats "latency" and/or "throughput" must be included')
-  exit ()
+  sys.exit ('Error: Argument --client_stats option requires "latency and/or" ' +
+            'throughput" to be included')
 
 print ("host_name:              " + socket.gethostname ())
 print ("cpu_count:              " + str (multiprocessing.cpu_count ()))
@@ -102,7 +102,6 @@ utils.execute ([str (utils.sub_dir_path_bin (
 print ("# Build Profile Guided Optimisation (PGO) binaries")
 
 print ("# Build/run client and server genarating PGO data")
-
 utils.build_executable ("spmc_client",
                         utils.BuildType.PGO_PROFILE, args.jobs)
 utils.build_executable ("spmc_server",
