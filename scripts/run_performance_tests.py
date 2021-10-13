@@ -28,10 +28,11 @@ exe_dir_pgo = os.path.join (base_dir, "build",
 parser = argparse.ArgumentParser (description="Latency testing")
 
 # note only allowing one shared memory name
-parser.add_argument ("--tool_type", required=False,
+parser.add_argument ("--tool_type",
                     choices=['spmc', 'spsc'], default='spmc',
                     help="The tool type to use")
-parser.add_argument ("--memory_name", required=True, help="Shared memory name to use")
+parser.add_argument ("--memory_name", required=True,
+                    help="Provide a name for shared memory")
 parser.add_argument ("--directory_name", required=False,
                     help="Optional directory name")
 parser.add_argument ("--log_level", default="INFO",
@@ -92,7 +93,7 @@ print ("client_count_list:      " + ' '.join (map (str, args.client_count_list))
 print ("client_cpu_list:        " + ' '.join (map (str, args.client_cpu_list)))
 print ("client_stats:           " + ' '.join (args.client_stats))
 if args.client_directory is not None:
-    print ("client_directory: " + str (args.client_directory))
+    print ("client_directory:       " + str (args.client_directory))
 
 # Avoid using cpu 0 where possible for performance reasons
 
@@ -115,12 +116,13 @@ for server_rate in args.server_rate_list:
                                                     client_count)
 
                 print ("client_directory:    " + str (directory))
-                print ("")
                 if directory.exists () is True:
-                    print ('ERROR path exists. Ignore test: ' +
-                            str (directory))
+                    print ('WARNING: Ignore test. Output directory ' +
+                           'already exists: ' + str (directory))
+                    print ("")
                     continue
 
+                print ("")
                 # Delete shared memory if it exists
                 print ('remove shared memory:' + str (args.memory_name))
 
