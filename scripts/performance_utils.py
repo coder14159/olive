@@ -223,7 +223,7 @@ def run_spmc_clients (args, build_type):
     client = execute ([str (client_exe_path),
           "--name", args.memory_name,
           "--stats", ','.join (args.client_stats),
-          "--cpu",  str (cpu),
+          "" if cpu is NO_CPU_BIND else "--cpu " + str (cpu),
           "--log_level", log_level])
 
     clients.append (client)
