@@ -44,7 +44,7 @@ bool SPMCStream<QueueType>::next (Header &header, Vector &data)
 {
   while (!m_stop)
   {
-    if (SPMC_EXPECT_TRUE (m_queue.pop (header, data, m_consumer)))
+    if (m_queue.pop (header, data, m_consumer))
     {
       return true;
     }
@@ -57,7 +57,7 @@ template <typename QueueType>
 template<typename Vector>
 bool SPMCStream<QueueType>::next_non_blocking (Header &header, Vector &data)
 {
-  return (SPMC_EXPECT_TRUE (m_queue.pop (header, data)));
+  return (m_queue.pop (header, data));
 }
 
 // TODO receive policies (eg backoff/yield)
