@@ -32,9 +32,10 @@ PerformanceStats::~PerformanceStats ()
 
 void PerformanceStats::stop ()
 {
+  m_stop = true;
+
   if (m_thread.joinable ())
   {
-    m_stop = true;
     m_thread.join ();
   }
 }
