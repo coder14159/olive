@@ -55,8 +55,8 @@ throughput_messages_to_pretty (uint64_t messages, TimeDuration duration)
   double messages_per_second =
     static_cast<double> (messages / to_seconds (duration));
 
-  constexpr double K = 1.0e3;
-  constexpr double M = 1.0e6;
+  constexpr double K = 1.0e3 - (1.0e3 * 0.001);
+  constexpr double M = 1.0e6 - (1.0e6 * 0.001);
   constexpr double G = 1.0e9 - (1.0e9 * 0.001);
 
   if (messages_per_second > G)
