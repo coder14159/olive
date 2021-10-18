@@ -93,7 +93,7 @@ void server (const std::string& name,
 
   if (rate == 0)
   {
-    while (!stop.load (std::memory_order_relaxed))
+    while (SPMC_EXPECT_TRUE (!stop.load (std::memory_order_relaxed)))
     {
       sink.next (message);
     }
@@ -106,7 +106,7 @@ void server (const std::string& name,
     */
     Throttle throttle (rate);
 
-    while (!stop.load (std::memory_order_relaxed))
+    while (SPMC_EXPECT_TRUE (!stop.load (std::memory_order_relaxed)))
     {
       sink.next (message);
       /*
