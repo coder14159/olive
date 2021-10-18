@@ -97,6 +97,12 @@ print ("# Delete the named test shared memory if it exists")
 utils.execute ([str (utils.sub_dir_path_bin (
                       utils.BuildType.RELEASE) / "remove_shared_memory"),
                 "--names", args.memory_name])
+###############################################################################
+print ("# Build standard release spmc_client and spmc_server")
+utils.build_executable ("spmc_client",
+                        utils.BuildType.RELEASE, args.jobs)
+utils.build_executable ("spmc_server",
+                        utils.BuildType.RELEASE, args.jobs)
 
 ###############################################################################
 print ("# Build Profile Guided Optimisation (PGO) binaries")
