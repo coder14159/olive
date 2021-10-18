@@ -64,7 +64,7 @@ BOOST_AUTO_TEST_CASE (TestTimeDuration)
 {
   const auto start = Clock::now ();
 
-  const int count = 50000;
+  const int count = 50000000;
   TimePoint now;
 
   for (int i = 0; i < count; ++i)
@@ -74,6 +74,10 @@ BOOST_AUTO_TEST_CASE (TestTimeDuration)
 
   auto per_call = (Nanoseconds (now - start) / count);
 
+  /*
+   * On the test machine: Intel(R) Core(TM) i5-3450 CPU @ 3.10GHz
+   * the duration of a Clock::now () call is ~20 nanoseconds
+   */
   BOOST_TEST_MESSAGE ("Duration Clock::now () per call: "
       << nanoseconds_to_pretty (per_call) << " nanoseconds");
 
