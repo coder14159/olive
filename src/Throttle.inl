@@ -61,6 +61,10 @@ void Throttle::throttle (Sink &sink)
 
   auto targetInterval = Seconds (m_counter / m_rate);
 
+  /*
+   * On the test machine: Intel(R) Core(TM) i5-3450 CPU @ 3.10GHz
+   * the duration of a Clock::now () call is ~20 nanoseconds
+   */
   auto intervalStart = Clock::now ();
 
   auto currentInterval = intervalStart - m_startTime;
