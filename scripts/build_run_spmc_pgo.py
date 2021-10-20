@@ -64,7 +64,7 @@ if len (args.client_stats) is 1 and args.client_stats[0] == 'interval':
 print ("host_name:              " + socket.gethostname ())
 print ("cpu_count:              " + str (multiprocessing.cpu_count ()))
 print ("arch:                   " + str (platform.processor ()))
-print ("jobs:                   " + str (args.jobs))
+print ("build_jobs:             " + str (args.jobs))
 print ("run_time:               " + str (args.run_time) + " seconds")
 print ("log_level:              " + args.log_level)
 print ("memory_name:            " + args.memory_name)
