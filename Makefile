@@ -128,34 +128,34 @@ $(BIN_DIR):
 	@mkdir -p $(BIN_DIR)
 
 # Build tools
-spmc_client:  $(BIN_DIR)/spmc_client
+spmc_client: $(BIN_DIR)/spmc_client
 $(BIN_DIR)/spmc_client: Makefile tools/spmc_client/spmc_client.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) tools/spmc_client/spmc_client.cpp -o $@ -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_DIR) tools/spmc_client/spmc_client.cpp -o $@ -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
 
 spmc_server: $(BIN_DIR)/spmc_server
 $(BIN_DIR)/spmc_server: Makefile tools/spmc_server/spmc_server.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) tools/spmc_server/spmc_server.cpp -o $@ -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_DIR) tools/spmc_server/spmc_server.cpp -o $@ -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
 
 spmc: spmc_client spmc_server
 
 spsc_client: $(BIN_DIR)/spsc_client
 $(BIN_DIR)/spsc_client: Makefile tools/spsc_client/spsc_client.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) tools/spsc_client/spsc_client.cpp -o $@ -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_DIR) tools/spsc_client/spsc_client.cpp -o $@ -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
 
 spsc_server: $(BIN_DIR)/spsc_server
 $(BIN_DIR)/spsc_server: Makefile tools/spsc_server/spsc_server.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) tools/spsc_server/spsc_server.cpp -o $@ -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_DIR) tools/spsc_server/spsc_server.cpp -o $@ -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
 
 spsc: spsc_client spsc_server
 
 $(BIN_DIR)/remove_shared_memory: Makefile tools/remove_shared_memory/remove_shared_memory.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) tools/remove_shared_memory/remove_shared_memory.cpp -o $@ $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_DIR) tools/remove_shared_memory/remove_shared_memory.cpp -o $@ $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
 
 remove_shared_memory: $(BIN_DIR)/remove_shared_memory
 
 ping_pong: $(BIN_DIR)/ping_pong
 $(BIN_DIR)/ping_pong: Makefile tools/ping_pong/ping_pong.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_HEADER_DIR) tools/ping_pong/ping_pong.cpp -o $@ -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_FILESYSTEM)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_DIR) tools/ping_pong/ping_pong.cpp -o $@ -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_FILESYSTEM)
 
 test_allocator: $(BIN_DIR)/test_allocator
 $(BIN_DIR)/test_allocator: Makefile tests/test_allocator/test_allocator.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
@@ -180,11 +180,11 @@ tests: $(BIN_DIR)/test_allocator \
 
 # Build all binaries
 all : $(BIN_DIR)/spmc_client \
-       $(BIN_DIR)/spmc_server \
-       $(BIN_DIR)/spsc_server \
-       $(BIN_DIR)/spsc_client \
-       $(BIN_DIR)/remove_shared_memory \
-       tests
+      $(BIN_DIR)/spmc_server \
+      $(BIN_DIR)/spsc_server \
+      $(BIN_DIR)/spsc_client \
+      $(BIN_DIR)/remove_shared_memory \
+      tests
 
 clean:
 	rm -rf build/$(PROCESSOR)$(BUILD_SUFFIX)
@@ -199,5 +199,3 @@ test:
 	$(call run_test,test_performance)
 	$(call run_test,test_spmcqueue)
 	$(call run_test,test_stats)
-
-

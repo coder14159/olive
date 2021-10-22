@@ -77,19 +77,15 @@ endif
 BIN_DIR    := build/$(PROCESSOR)$(BUILD_SUFFIX)/bin
 LIB_DIR    := build/$(PROCESSOR)$(BUILD_SUFFIX)/lib
 
-# Third party libraries
-THIRD_PARTY_DIR := /home/ian/thirdparty
-
 # Boost
-BOOST_BASE_DIR    := $(THIRD_PARTY_DIR)/boost_1_73_0
-BOOST_LIB_DIR     := $(BOOST_BASE_DIR)/build/lib
-BOOST_HEADER_DIR  := $(BOOST_BASE_DIR)/build/include
+BOOST_BASE_DIR    := /usr/local/boost
+BOOST_LIB_DIR     := $(BOOST_BASE_DIR)/lib
+BOOST_HEADER_DIR  := $(BOOST_BASE_DIR)/include
 CXXFLAGS          += -L$(BOOST_LIB_DIR)
 CXXFLAGS          += -Wl,-rpath=$(BOOST_LIB_DIR)
 
 # CxxOpts
-CXXOPTS_BASE_DIR   := $(THIRD_PARTY_DIR)/cxxopts-2.2.0
-CXXOPTS_HEADER_DIR := $(CXXOPTS_BASE_DIR)/include
+CXXOPTS_DIR := thirdparty/cxxopts-2.2.0
 
 # Intel VTune
 ifdef VTUNE
@@ -106,7 +102,7 @@ endif
 
 # Valgrind
 ifdef VALGRIND
-  VALGRIND_BASE_DIR   := $(THIRD_PARTY_DIR)/valgrind/build/$(PROCESSOR)
+  VALGRIND_BASE_DIR   := $(THIRD_PARTY_LIBS_DIR)/valgrind/build/$(PROCESSOR)
   VALGRIND_HEADER_DIR := $(VALGRIND_BASE_DIR)/include
   CXXFLAGS            += -I$(VALGRIND_HEADER_DIR)
 endif
