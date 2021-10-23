@@ -13,12 +13,11 @@ import sys
 import time
 
 from time import sleep
-
 from enum import Enum
 from subprocess import Popen, PIPE, STDOUT, CalledProcessError
-
-import performance_utils as utils
 from pathlib import Path
+
+import build_run_spmc_pgo_utils as utils
 
 parser = argparse.ArgumentParser (
   description="Generate Profile Guided Optimised (PGO) binaries")
@@ -68,26 +67,28 @@ print ("build_jobs:             " + str (args.jobs))
 print ("run_time:               " + str (args.run_time) + " seconds")
 print ("log_level:              " + args.log_level)
 print ("memory_name:            " + args.memory_name)
-print ("server_queue_size:      " + args.server_queue_size)
+print ("server_queue_size:      " + args.server_queue_size + " bytes")
 print ("base_dir:               " + str (utils.base_path ()))
 print ("")
-if args.server_cpu:
-  print ("server_cpu:             " + str (args.server_cpu))
-else:
-  print ("server_cpu:             None")
-print ("server_message_size:    " + str (args.server_message_size) + " bytes")
-print ("server_rate:            " + str (args.server_rate) + " msgs/sec")
-print ("")
-print ("client_count:           " + str (args.client_count))
-if args.client_stats is None:
-  print ("client_stats:             None")
-else:
-  print ("client_stats:           " + ' '.join (args.client_stats))
 
-if args.client_cpu_list is None:
-  print ("client_cpu_list:        None")
-else:
-  print ("client_cpu_list:        " + ' '.join (map (str, args.client_cpu_list)))
+cpu = "-" if args.server_cpu is -1 else args.server_cpu
+print ("server_cpu:             " + str (cpu))
+print ("server_message_size:    " + str (args.server_message_size) + " bytes")
+
+# rate = "0" if args.server_rate is "max" else str (args.server_rate)
+rate = utils.throughput_to_pretty (args.server_rate)
+print ("server_rate:            " + rate + " msgs/sec")
+print ("")
+
+client_cpu_list = None if args.client_cpu_list is None else \
+                          ' '.join (map (str, args.client_cpu_list))
+print ("client_cpu_list:        " + client_cpu_list)
+print ("client_count:           " + str (args.client_count))
+
+stats = 'None' if args.client_stats is None else  ' '.join (args.client_stats)
+print ("client_stats:           " + stats)
+
+
 print ("")
 
 utils.build_executable ("remove_shared_memory",
