@@ -214,7 +214,6 @@ private:
   alignas (CACHE_LINE_SIZE)
   std::atomic<uint8_t> m_maxConsumers = { 0 };
   /*
-   *
    * Queue capacity + 1
    */
   const size_t m_maxSize = { 0 };

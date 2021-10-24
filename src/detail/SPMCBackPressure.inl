@@ -124,11 +124,11 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::advance_cursor (
 {
   cursor += advance;
 
-  if (BOOST_LIKELY (cursor < m_maxSize))
+  if (SPMC_EXPECT_TRUE (cursor < m_maxSize))
   {
     return cursor;
   }
-  if (BOOST_LIKELY (cursor > m_maxSize))
+  if (SPMC_EXPECT_TRUE (cursor > m_maxSize))
   {
     return cursor - m_maxSize;
   }
@@ -164,7 +164,7 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::read_available (
   size_t readerCursor = consumer.cursor ();
   size_t writerCursor = m_committed.load (std::memory_order_acquire);
 
-  if (BOOST_LIKELY (is_valid_cursor (writerCursor)))
+  if (SPMC_EXPECT_TRUE (is_valid_cursor (writerCursor)))
   {
     if (writerCursor >= readerCursor)
     {
@@ -196,7 +196,7 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::write_available ()
 {
   uint8_t maxConsumers = m_maxConsumers.load (std::memory_order_relaxed);
 
-  if (BOOST_LIKELY (maxConsumers > 0))
+  if (SPMC_EXPECT_TRUE (maxConsumers > 0))
   {
     /*
      * Get the bytes consumed by the slowest consumer.
