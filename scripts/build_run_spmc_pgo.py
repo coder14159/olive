@@ -22,7 +22,7 @@ import build_run_spmc_pgo_utils as utils
 parser = argparse.ArgumentParser (
   description="Generate Profile Guided Optimised (PGO) binaries")
 
-parser.add_argument ("--jobs", required=False, default='2',
+parser.add_argument ("--build_jobs", required=False, default='2',
                     help="Build job count")
 parser.add_argument ("--log_level", default="INFO",
                     choices=["TRACE", "DEBUG", "INFO", "WARNING",
@@ -63,7 +63,7 @@ if len (args.client_stats) is 1 and args.client_stats[0] == 'interval':
 print ("host_name:              " + socket.gethostname ())
 print ("cpu_count:              " + str (multiprocessing.cpu_count ()))
 print ("arch:                   " + str (platform.processor ()))
-print ("build_jobs:             " + str (args.jobs))
+print ("build_jobs:             " + str (args.build_jobs))
 print ("run_time:               " + str (args.run_time) + " seconds")
 print ("log_level:              " + args.log_level)
 print ("memory_name:            " + args.memory_name)
