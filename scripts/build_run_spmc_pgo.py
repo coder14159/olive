@@ -91,7 +91,7 @@ print ("client_stats:           " + stats)
 print ("")
 
 utils.build_executable ("remove_shared_memory",
-                        utils.BuildType.RELEASE, args.jobs)
+                        utils.BuildType.RELEASE, args.build_jobs)
 
 print ("# Delete the named test shared memory if it exists")
 utils.execute ([str (utils.sub_dir_path_bin (
@@ -100,18 +100,18 @@ utils.execute ([str (utils.sub_dir_path_bin (
 ###############################################################################
 print ("# Build standard release spmc_client and spmc_server")
 utils.build_executable ("spmc_client",
-                        utils.BuildType.RELEASE, args.jobs)
+                        utils.BuildType.RELEASE, args.build_jobs)
 utils.build_executable ("spmc_server",
-                        utils.BuildType.RELEASE, args.jobs)
+                        utils.BuildType.RELEASE, args.build_jobs)
 
 ###############################################################################
 print ("# Build Profile Guided Optimisation (PGO) binaries")
 
 print ("# Build/run client and server genarating PGO data")
 utils.build_executable ("spmc_client",
-                        utils.BuildType.PGO_PROFILE, args.jobs)
+                        utils.BuildType.PGO_PROFILE, args.build_jobs)
 utils.build_executable ("spmc_server",
-                        utils.BuildType.PGO_PROFILE, args.jobs)
+                        utils.BuildType.PGO_PROFILE, args.build_jobs)
 
 print ("# Run SPMC server [BuildType=PGO_PROFILE]")
 server = utils.run_spmc_server (args, utils.BuildType.PGO_PROFILE)
@@ -131,9 +131,9 @@ utils.execute ([str (utils.sub_dir_path_bin (
 print ("# Build/run client and server utilising the PGO data")
 
 utils.build_executable ("spmc_client",
-                        utils.BuildType.PGO_RELEASE, args.jobs)
+                        utils.BuildType.PGO_RELEASE, args.build_jobs)
 utils.build_executable ("spmc_server",
-                        utils.BuildType.PGO_RELEASE, args.jobs)
+                        utils.BuildType.PGO_RELEASE, args.build_jobs)
 
 print ("# Run SPMC server [BuildType=PGO_RELEASE]")
 server = utils.run_spmc_server (args, utils.BuildType.PGO_RELEASE)
