@@ -11,7 +11,9 @@ import subprocess
 import sys
 import time
 
-import performance_utils as utils
+import build_run_spmc_pgo_utils as utils
+
+import plot_utils
 
 cpu_count = multiprocessing.cpu_count ()
 
@@ -82,15 +84,15 @@ print ("memory_name:            " + args.memory_name)
 print ("")
 print ("server_exe              " + server_exe)
 print ("server_cpu:             " + (str ("") if args.server_cpu is -1 else str (args.server_cpu)))
-print ("server_queue_size_list: " + ' '.join (map (str, args.server_queue_size_list)))
+print ("server_queue_size_list: " + ','.join (map (str, args.server_queue_size_list)))
 print ("server_message_size:    " + str (args.server_message_size) + " bytes")
-print ("server_rate_list:       " + ' '.join (map (str, args.server_rate_list))
+print ("server_rate_list:       " + ','.join (map (str, args.server_rate_list))
                                   + ' msgs/sec')
 print ("")
 print ("client_exe:             " + client_exe)
-print ("client_count_list:      " + ' '.join (map (str, args.client_count_list)))
+print ("client_count_list:      " + ','.join (map (str, args.client_count_list)))
 print ("client_cpu_list:        " + ','.join (map (str, args.client_cpu_list)))
-print ("client_stats:           " + ' '.join (args.client_stats))
+print ("client_stats:           " + ','.join (args.client_stats))
 if args.client_directory is not None:
     print ("client_directory:       " + str (args.client_directory))
 
@@ -111,8 +113,6 @@ for server_rate in args.server_rate_list:
                                                     server_rate,
                                                     args.server_message_size,
                                                     client_count)
-
-                print ("client_directory:    " + str (directory))
                 if directory.exists () is True:
                     print ('WARNING: Ignore test. Output directory ' +
                            'already exists: ' + str (directory))
