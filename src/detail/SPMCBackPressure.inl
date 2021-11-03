@@ -124,11 +124,11 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::advance_cursor (
 {
   cursor += advance;
 
-  if (SPMC_EXPECT_TRUE (cursor < m_maxSize))
+  if (cursor < m_maxSize)
   {
     return cursor;
   }
-  if (SPMC_EXPECT_TRUE (cursor > m_maxSize))
+  if (cursor > m_maxSize)
   {
     return cursor - m_maxSize;
   }
@@ -164,7 +164,7 @@ size_t SPMCBackPressure<Mutex, MaxNoDropConsumers>::read_available (
   size_t readerCursor = consumer.cursor ();
   size_t writerCursor = m_committed.load (std::memory_order_acquire);
 
-  if (SPMC_EXPECT_TRUE (is_valid_cursor (writerCursor)))
+  if (is_valid_cursor (writerCursor))
   {
     if (writerCursor >= readerCursor)
     {
