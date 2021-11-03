@@ -2,6 +2,8 @@
 
 from pathlib import Path
 import pandas as pd
+import platform
+import psutil
 import queue
 
 #
@@ -34,25 +36,31 @@ def output_directory_path (
 
 # Return a human readable message throughput string
 def throughput_messages_to_pretty (rate):
-    if rate == 'max':
-        return rate
-    if rate == '0':
-        return 'max'
+  if rate == 'max' or rate == '0':
+    return 'max'
 
-    K = 1.0e3
-    M = 1.0e6
-    G = 1.0e6
+  K = 1.0e3
+  M = 1.0e6
+  G = 1.0e6
 
-    float_rate = float (rate)
+  float_rate = float (rate)
 
-    if float_rate > G:
-        return str (round (float_rate / G, 1)) + " G msgs/s"
-    if float_rate > M:
-        return str (round (float_rate / M, 1)) + " M msgs/s"
-    if float_rate > K:
-        return str (round (float_rate / K)) + " K msgs/s"
+  if float_rate > G:
+    return str (round (float_rate / G, 1)) + " G msgs/s"
+  if float_rate > M:
+    return str (round (float_rate / M, 1)) + " M msgs/s"
+  if float_rate > K:
+    return str (round (float_rate / K)) + " K msgs/s"
 
-    return str (round (float_rate)) + " msgs/s"
+  return str (round (float_rate)) + " msgs/s"
+
+# Return human readable data size string
+def size_to_pretty (bytes, suffix="B"):
+    factor = 1024
+    for unit in ["", "K", "M", "G", "T", "P"]:
+        if bytes < factor:
+            return f"{bytes:.2f}{unit}{suffix}"
+        bytes /= factor
 
 def load_performance_data (args, filename, transpose_data=False):
   legend_texts = []
@@ -102,10 +110,10 @@ def load_performance_data (args, filename, transpose_data=False):
             if 'throughput-interval' in filename:
               if dataframe is None:
 
-                dataframe = pd.DataFrame (df['messages_per_sec'])
+                dataframe = pd.DataFrame (df['megabytes_per_sec'])
               else:
                 column_count += 1
-                dataframe = pd.concat ([dataframe, df['messages_per_sec']],
+                dataframe = pd.concat ([dataframe, df['megabytes_per_sec']],
                                         axis=1, ignore_index=True)
 
             if 'latency-summary' in filename:
@@ -166,4 +174,17 @@ def get_throughput_interval_data (args):
   return dict (throughput_intervals=throughput_data['dataframe'],
                legend_texts=throughput_data['legend_texts'],
                title_texts=throughput_data['title_texts'])
+
+def get_hardware_stats ():
+
+  stats = f'Processor core_count={psutil.cpu_count (logical=False)} '
+  stats += f'core_frequency min={psutil.cpu_freq ().min:.0f}Mhz '
+  stats += f'max={psutil.cpu_freq ().max:.0f}Mhz'
+
+  svmem = psutil.virtual_memory ()
+  stats += f'|RAM total={size_to_pretty (svmem.total)}'
+  stats += f' free={size_to_pretty (svmem.available)}'
+  stats += f' used={size_to_pretty (svmem.used)} ({svmem.percent}%)'
+
+  return stats
 
