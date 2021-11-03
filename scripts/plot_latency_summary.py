@@ -16,6 +16,8 @@ from pathlib import Path
 
 import plot_utils as utils
 
+import psutil
+
 plt.style.use ('seaborn-darkgrid')
 
 base_dir = Path (__file__).parent.parent.absolute ()
@@ -25,7 +27,7 @@ exe_dir = os.path.join (base_dir, 'build', platform.processor (), 'bin')
 parser = argparse.ArgumentParser (description='Plot performance test results')
 
 parser.add_argument ('--title', required=False,
-                     default='IPC Performance Profile',
+                     default='Shared Memory IPC Performance',
                      help='Title of the plot')
 parser.add_argument ('--subtitle', required=False,  help='Subtitle of the plot')
 
@@ -65,9 +67,11 @@ max = '0'
 
 print ('server_queue_size:    ' + str (args.server_queue_sizes) + ' bytes')
 print ('server_message_sizes: ' + str (args.server_message_sizes) + ' bytes')
-print ('server_rate:          ' + str (args.server_rates) + ' messages/second')
+print ('server_rate:          ' + str (args.server_rates) + ' msgs/second')
 print ('client_count:         ' + str (args.client_counts) +
                         (' client' if args.client_counts == 1 else ' clients'))
+print ('Machine specs')
+print ('Cores: ' + str (psutil.cpu_count(logical=False)))
 
 def sub_title (server_rate, message_size, client_count):
   # A value of zero also denotes max server rate
@@ -78,7 +82,6 @@ def sub_title (server_rate, message_size, client_count):
        + ' client_count=' + str (client_count)
 
 def latency_dataframe (file_path):
-
   print (str (file_path))
 
   if file_path.exists () == False:
@@ -124,6 +127,14 @@ def plot_summary_latencies (axis, latency_log_scale):
 
   axis.legend (get_legend_list (latency_data), fontsize=8)
 
+  # matplotlib.pyplot experiences problems when resizing the graphs using
+  # matplotlib.pyplot.text with 'tight layout'
+  #
+  # plt.text (x=0.5, y=0.94, s=args.title, fontsize=12, ha='center',
+  #           transform=fig.transFigure)
+  # plt.text (x=0.5, y=0.90, s=' '.join (latency_data['title_texts']), fontsize=9, ha='center',
+  #           transform=fig.transFigure)
+
   axis.set_title (' '.join (latency_data['title_texts']), fontsize=10)
   axis.set_xlabel ('Percentiles', fontsize=9)
   axis.set_ylabel ('Latency (nanoseconds)', fontsize=9)
@@ -134,9 +145,11 @@ def plot_interval_throughput (axis):
   axis = sns.lineplot (ax=axis, data=throughput_data['throughput_intervals'],
                        dashes=False)
 
-  axis.legend (get_legend_list (throughput_data), fontsize=8)
+  axis.get_legend ().remove ()
 
-  axis.set_xlabel ('Time (seconds)', fontsize=9)
+  axis.set_xlabel ('Time (seconds)\n\n'
+                  + platform.platform (terse=1) + '\n'
+                  + utils.get_hardware_stats (), fontsize=9)
   axis.set_ylabel ('Throughput (MB/sec)', fontsize=9)
 
   return axis
