@@ -88,7 +88,6 @@ print ("client_count:           " + str (args.client_count))
 stats = 'None' if args.client_stats is None else  ' '.join (args.client_stats)
 print ("client_stats:           " + stats)
 
-
 print ("")
 
 utils.build_executable ("remove_shared_memory",
