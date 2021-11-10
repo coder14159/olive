@@ -201,8 +201,8 @@ int main(int argc, char* argv[]) try
       }
       else
       {
-        std::vector<uint8_t> a (data);
-        (void)a;
+        // Keep the data vector hot in the cache
+        std::vector<uint8_t> _(data); (void)_;
       }
     }
   }
