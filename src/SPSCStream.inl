@@ -1,5 +1,3 @@
-// #include <type_traits>
-
 namespace spmc {
 
 namespace bi = boost::interprocess;
