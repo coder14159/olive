@@ -1,4 +1,4 @@
-#include <type_traits>
+// #include <type_traits>
 
 namespace spmc {
 
@@ -12,7 +12,6 @@ SPSCStream<Allocator>::SPSCStream (const std::string &memoryName,
   m_memory = bi::managed_shared_memory (bi::open_only, memoryName.c_str());
 
   // swap in a valid segment manager
-
   m_allocator =
    std::make_unique<SharedMemory::Allocator> (m_memory.get_segment_manager ());
 
