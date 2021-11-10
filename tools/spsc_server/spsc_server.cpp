@@ -174,11 +174,15 @@ void server (const std::string& name,
       for (size_t i = first; i < first + sinkCount; ++i)
       {
         sinks[MODULUS (i, sinkCount)]->next (message);
+
+        /*
+         * SPSC queues perform better if warmup messages are not sent.
+         * This is in contrast to the SPMC behaviour.
+         */
+        throttle.throttle ();
       }
 
       first = ((first + 1) < sinkCount) ? first + 1 : 0;
-
-      throttle.throttle ();
     }
   }
 
