@@ -75,9 +75,7 @@ cpu = "-" if args.server_cpu is -1 else args.server_cpu
 print ("server_cpu:             " + str (cpu))
 print ("server_message_size:    " + str (args.server_message_size) + " bytes")
 
-# rate = "0" if args.server_rate is "max" else str (args.server_rate)
-rate = utils.throughput_to_pretty (args.server_rate)
-print ("server_rate:            " + rate + " msgs/sec")
+print ("server_rate:            " + utils.throughput_to_pretty (args.server_rate))
 print ("")
 
 client_cpu_list = None if args.client_cpu_list is None else \
