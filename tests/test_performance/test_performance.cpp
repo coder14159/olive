@@ -143,6 +143,7 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
     timer.stop ();
 
     BOOST_TEST_MESSAGE (throughput.to_string () << "\tboost circular buffer" );
+    // BOOST_TEST_MESSAGE (throughput.bytes_per_sec () << "\tboost circular buffer" );
 
     return throughput;
   };
@@ -190,6 +191,7 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
     timer.stop ();
 
     BOOST_TEST_MESSAGE (throughput.to_string () << "\tcustom circular buffer");
+    // BOOST_TEST_MESSAGE (throughput.bytes_per_sec () << "\tcustom circular buffer" );
 
     return throughput;
   };
@@ -267,8 +269,9 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
       auto small_vector_msg_per_sec =
         stress_boost_small_vector (bufferCapacity, messageSize).messages_per_sec ();
       /*
-       * Custom circular buffer is faster than the boost containers
+       * The custom circular buffer is faster than the boost containers
        */
+      BOOST_CHECK (custom_msg_per_sec > 0);
       BOOST_CHECK (boost_msg_per_sec > 0);
       BOOST_CHECK (small_vector_msg_per_sec > 0);
       /*
@@ -1418,3 +1421,140 @@ BOOST_AUTO_TEST_CASE (PerformanceSPSCQueue)
   BOOST_TEST_MESSAGE (" ");
 }
 
+BOOST_AUTO_TEST_CASE (SmallCircularBuffer)
+{
+  auto duration = get_test_duration ();
+
+  constexpr size_t capacity = 10;
+
+  auto stress_boost_circular_buffer = [&duration] () -> Throughput
+  {
+    boost::circular_buffer<int> buffer (capacity);
+
+    Throughput throughput;
+
+    Timer timer;
+
+    for (int i = 0; ; ++i)
+    {
+      buffer.push_back (1);
+      buffer.push_back (2);
+      buffer.push_back (3);
+      buffer.push_back (4);
+
+      buffer.pop_front ();
+      buffer.pop_front ();
+      buffer.pop_front ();
+      buffer.pop_front ();
+
+      throughput.next (sizeof (int), 4);
+
+      if ((i % 1000) == 0 && duration < timer.elapsed ())
+      {
+        break;
+      }
+    }
+    throughput.stop ();
+
+    timer.stop ();
+
+    BOOST_TEST_MESSAGE (throughput.to_string () << "\tboost circular buffer" );
+
+    return throughput;
+  };
+
+  auto stress_local_dynamic_circular_buffer = [&duration] () -> Throughput
+  {
+    /*
+     * Buffer is out-performaned by the boost circular buffer for small sizes
+     * but see test ThroughputCircularBuffers for tests with a larger capacities
+     * in which Buffer is clearly faster.
+     */
+    Buffer<std::allocator<int>> buffer (capacity);
+
+    Throughput throughput;
+
+    Timer timer;
+
+    int out;
+
+    for (int i = 0; ; ++i)
+    {
+      buffer.push (1);
+      buffer.push (2);
+      buffer.push (3);
+      buffer.push (4);
+
+      buffer.pop (out);
+      buffer.pop (out);
+      buffer.pop (out);
+      buffer.pop (out);
+
+      throughput.next (sizeof (int), 4);
+
+      if ((i % 1000) == 0 && duration < timer.elapsed ())
+      {
+        break;
+      }
+    }
+
+    throughput.stop ();
+
+    timer.stop ();
+
+    BOOST_TEST_MESSAGE (throughput.to_string () << "\tlocal circular buffer" );
+
+    return throughput;
+  };
+#if 0
+  /*
+   * Compare sliding window with circular buffer implementations
+   * Not a perfect comparison but a reasonable performance idea
+   */
+  auto stress_local_sliding_window = [&duration] () -> Throughput
+  {
+    SlidingWindow<int, capacity> buffer;
+
+    Throughput throughput;
+
+    Timer timer;
+
+    int out;
+
+    for (int i = 0; ; ++i)
+    {
+      out = buffer.push_back ().add_event ().back ();
+      out = buffer.push_back ().add_event ().back ();
+      out = buffer.push_back ().add_event ().back ();
+      out = buffer.push_back ().add_event ().back ();
+
+      (void)out;
+
+      throughput.next (sizeof (int), 4);
+
+      if ((i % 1000) == 0 && duration < timer.elapsed ())
+      {
+        break;
+      }
+    }
+
+    throughput.stop ();
+
+    timer.stop ();
+
+    BOOST_TEST_MESSAGE (throughput.to_string () << "\tlocal SlidingWindow" );
+
+    return throughput;
+  };
+#endif
+  auto throughput_boost = stress_boost_circular_buffer ();
+  auto throughput_local_circular_buffer = stress_local_dynamic_circular_buffer ();
+  auto throughput_local_sliding_window = stress_local_sliding_window ();
+
+  BOOST_CHECK (throughput_boost.megabytes_per_sec () >
+                  throughput_local_circular_buffer.megabytes_per_sec ());
+
+  BOOST_CHECK (throughput_local_sliding_window.megabytes_per_sec () >
+                  throughput_boost.megabytes_per_sec ());
+
+}
