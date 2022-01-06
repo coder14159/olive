@@ -2,9 +2,6 @@
 
 #include <boost/log/trivial.hpp>
 
-#include <atomic>
-#include <iomanip>
-#include <memory>
 
 namespace spmc {
 
