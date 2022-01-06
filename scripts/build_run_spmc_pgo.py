@@ -88,6 +88,7 @@ print ("client_stats:           " + stats)
 
 print ("")
 
+print ("# Build standard release spmc_client and spmc_server")
 utils.build_executable ("remove_shared_memory",
                         utils.BuildType.RELEASE, args.build_jobs)
 
