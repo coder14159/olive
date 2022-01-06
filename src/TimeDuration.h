@@ -12,7 +12,7 @@
 namespace spmc {
 
 /*
- * Very basic local helper class for time durations
+ * Helper class for time durations
  */
 class TimeDuration : boost::totally_ordered<TimeDuration>
 {
@@ -35,6 +35,21 @@ private:
 
   Nanoseconds m_nanoseconds;
 };
+
+/*
+ * Pretty print nanoseconds
+ */
+std::string nanoseconds_to_pretty (Nanoseconds nanoseconds);
+
+/*
+ * Pretty print a the value of std::chrono::duration
+ */
+template<typename DurationType>
+std::string to_pretty (const DurationType duration)
+{
+  return nanoseconds_to_pretty (
+    std::chrono::duration_cast<Nanoseconds> (duration));
+}
 
 /*
  * Cast TimeDuration to floating point time duration values
