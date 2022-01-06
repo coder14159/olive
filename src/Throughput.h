@@ -80,6 +80,10 @@ public:
    */
   uint32_t megabytes_per_sec () const;
   /*
+   * Return throughput in bytes/sec
+   */
+  uint32_t bytes_per_sec () const;
+  /*
    * Return throughput in message/sec
    */
   uint32_t messages_per_sec () const;

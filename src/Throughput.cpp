@@ -6,13 +6,20 @@
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
 #include <boost/log/trivial.hpp>
+#include <boost/math/special_functions/round.hpp>
 
 #include <iostream>
 #include <iomanip>
 
 namespace fs = boost::filesystem;
+using boost::math::lround;
 
 namespace spmc {
+namespace {
+  constexpr double KB = 1024.;
+  constexpr double MB = 1024. * 1024.;
+  constexpr double GB = 1024. * 1024. *1024.;
+}
 
 std::string
 throughput_bytes_to_pretty (uint64_t bytes, TimeDuration duration)
@@ -24,24 +31,21 @@ throughput_bytes_to_pretty (uint64_t bytes, TimeDuration duration)
 
   double bytes_per_second = bytes / to_seconds (duration);
 
-  constexpr double KB = 1024.;
-  constexpr double MB = 1024. * 1024.;
-  constexpr double GB = 1024. * 1024. *1024.;
 
   if (bytes_per_second > GB)
   {
-    return (boost::format ("%4.1f GB/s") % (bytes_per_second/GB)).str ();
+    return (boost::format ("%4.1f GB/s") % std::lround (bytes_per_second/GB)).str ();
   }
   else if (bytes_per_second > MB)
   {
-    return (boost::format ("%4.0f MB/s") % (bytes_per_second/MB)).str ();
+    return (boost::format ("%4.1f MB/s") % std::lround (bytes_per_second/MB)).str ();
   }
   else if (bytes_per_second > KB)
   {
-    return (boost::format ("%4.0f KB/s") % (bytes_per_second/KB)).str ();
+    return (boost::format ("%4.0f KB/s") % std::lround (bytes_per_second/KB)).str ();
   }
 
-  return (boost::format ("%4.0f bytes/s") % bytes_per_second).str ();
+  return (boost::format ("%4.0f bytes/s") % std::lround (bytes_per_second)).str ();
 }
 
 std::string
@@ -53,23 +57,23 @@ throughput_messages_to_pretty (uint64_t messages, TimeDuration duration)
   }
 
   double messages_per_second =
-    static_cast<double> (messages / to_seconds (duration));
+    std::lround (static_cast<double> (messages) / to_seconds (duration));
 
-  constexpr double K = 1.0e3 - (1.0e3 * 0.001);
-  constexpr double M = 1.0e6 - (1.0e6 * 0.001);
-  constexpr double G = 1.0e9 - (1.0e9 * 0.001);
+  constexpr double K = 1.0e3;
+  constexpr double M = 1.0e6;
+  constexpr double G = 1.0e9;
 
   if (messages_per_second > G)
   {
-    return (boost::format ("%4.1f G msgs/s") % (messages_per_second/G)).str ();
+    return (boost::format ("%4.1f G msgs/s") % std::lround (messages_per_second/G)).str ();
   }
   else if (messages_per_second > M)
   {
-    return (boost::format ("%4.1f M msgs/s") % (messages_per_second/M)).str ();
+    return (boost::format ("%4.1f M msgs/s") % std::lround (messages_per_second/M)).str ();
   }
   else if (messages_per_second > K)
   {
-    return (boost::format ("%4.0f K msgs/s") % (messages_per_second/K)).str ();
+    return (boost::format ("%4.0f K msgs/s") % std::lround (messages_per_second/K)).str ();
   }
 
   return (boost::format ("%4.0f msgs/s") % messages_per_second).str ();
@@ -149,7 +153,7 @@ void Throughput::write_header ()
     return;
   }
 
-  m_file << "avg_message_size,megabytes_per_sec,messages_per_sec\n";
+  m_file << "avg_message_size,bytes_per_sec,messages_per_sec\n";
 }
 
 Throughput &Throughput::write_data ()
@@ -159,13 +163,23 @@ Throughput &Throughput::write_data ()
     return *this;
   }
 
-  size_t avgMessageSize = (m_bytes  / m_messages);
+  size_t avgMessageSize = (m_bytes / m_messages);
 
-  m_file << avgMessageSize       << ","
-         << megabytes_per_sec () << ','
-         << messages_per_sec ()  << '\n';
+  m_file << avgMessageSize      << ","
+         << bytes_per_sec ()    << ','
+         << messages_per_sec () << '\n';
 
   return *this;
+}
+
+uint32_t Throughput::bytes_per_sec () const
+{
+  if (m_bytes == 0)
+  {
+    return 0;
+  }
+
+  return lround (m_bytes / to_seconds (m_timer.elapsed ()));
 }
 
 uint32_t Throughput::megabytes_per_sec () const
@@ -175,23 +189,19 @@ uint32_t Throughput::megabytes_per_sec () const
     return 0;
   }
 
-  double seconds = to_seconds (m_timer.elapsed ());
-
-  return ((static_cast<double> (m_bytes) / (1024. * 1024.)) / seconds);
+  return lround (bytes_per_sec ()/MB);
 }
 
 uint32_t Throughput::messages_per_sec () const
 {
-  if (m_bytes == 0)
+  if (m_messages == 0)
   {
     return 0;
   }
 
   double seconds = to_seconds (m_timer.elapsed ());
 
-  auto throughput = (static_cast<double> (m_messages)/seconds);
-
-  return throughput;
+  return lround (static_cast<double> (m_messages)/seconds);
 }
 
 std::string Throughput::to_string () const
