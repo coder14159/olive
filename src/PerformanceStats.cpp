@@ -62,7 +62,7 @@ void PerformanceStats::start ()
 
     TimePoint lastLog = now;
     /*
-     * Warmup for a few seconds before starting to take latency values
+     * Warmup for a few seconds before starting to record latency values
      */
     bool warmup = true;
 
