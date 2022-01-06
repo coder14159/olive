@@ -143,7 +143,6 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
     timer.stop ();
 
     BOOST_TEST_MESSAGE (throughput.to_string () << "\tboost circular buffer" );
-    // BOOST_TEST_MESSAGE (throughput.bytes_per_sec () << "\tboost circular buffer" );
 
     return throughput;
   };
@@ -191,7 +190,6 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
     timer.stop ();
 
     BOOST_TEST_MESSAGE (throughput.to_string () << "\tcustom circular buffer");
-    // BOOST_TEST_MESSAGE (throughput.bytes_per_sec () << "\tcustom circular buffer" );
 
     return throughput;
   };
