@@ -22,9 +22,7 @@ namespace SharedMemory
 
 /*
  * Memory allocated by the managed_shared_memory class requires additional
- * 272 bytes above any user created memory for book-keeping.
- *
- * Round the number up a bit to be on the safe side.
+ * space above any user created memory for book-keeping.
  */
 const size_t BOOK_KEEPING = 2048;
 
@@ -37,8 +35,8 @@ using Allocator = boost::interprocess::allocator<uint8_t, SegmentManager>;
 /*
  * Single producer / single consumer shared memory queue
  *
- * TODO: wrap in a SPSCQueue object to add addional functionality like, for
- * example add ability to allow message drops.
+ * TODO: wrap in a SPSCQueue class so that add addional functionality can be
+ * implemented. For example the ability to allow message drops.
  */
 using SPSCQueue = boost::lockfree::spsc_queue<uint8_t,
                                               boost::lockfree
