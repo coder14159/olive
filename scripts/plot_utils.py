@@ -46,27 +46,28 @@ def throughput_messages_to_pretty (rate):
   float_rate = float (rate)
 
   if float_rate > G:
-    return str (round (float_rate / G, 1)) + " G msgs/s"
+    return str (round (float_rate / G, 1)) + ' G msgs/s'
   if float_rate > M:
-    return str (round (float_rate / M, 1)) + " M msgs/s"
+    return str (round (float_rate / M, 1)) + ' M msgs/s'
   if float_rate > K:
-    return str (round (float_rate / K)) + " K msgs/s"
+    return str (round (float_rate / K)) + ' K msgs/s'
 
-  return str (round (float_rate)) + " msgs/s"
+  return str (round (float_rate)) + ' msgs/s'
 
 # Return human readable data size string
-def size_to_pretty (bytes, suffix="B"):
+def size_to_pretty (bytes, suffix='B'):
     factor = 1024
-    for unit in ["", "K", "M", "G", "T", "P"]:
+    for unit in ['', 'K', 'M', 'G', 'T', 'P']:
         if bytes < factor:
-            return f"{bytes:.2f}{unit}{suffix}"
+            return f'{bytes:.2f}{unit}{suffix}'
         bytes /= factor
 
-def load_performance_data (args, filename, transpose_data=False):
+def load_performance_data (args, filename):
   legend_texts = []
   legend_prefix_texts = None
   title_text = set ()
   dataframe = None
+  throughputs = {}
   column_count = 0
 
   if args.client_directory_descriptions is not None:
@@ -85,7 +86,7 @@ def load_performance_data (args, filename, transpose_data=False):
       for server_queue_size in args.server_queue_sizes:
 
         if Path (dir).exists () == False:
-            print ('path does not exist: ' + dir)
+            print ('[ERROR] Invalid path: ' + dir)
             continue
 
         for message_size in args.server_message_sizes:
@@ -100,21 +101,27 @@ def load_performance_data (args, filename, transpose_data=False):
             file_path = Path (data_directory) / filename
 
             if file_path.exists () == False:
-              print (str (file_path) + " does not exist")
+              print ('[ERROR] Invalid path: ' + str (file_path))
               continue
 
-            df = None
-            print ('loading: ' + str (file_path))
+            print ('[INFO] loading: ' + str (file_path))
             df = pd.read_csv (file_path)
 
             if 'throughput-interval' in filename:
-              if dataframe is None:
+              if not throughputs:
 
-                dataframe = pd.DataFrame (df['megabytes_per_sec'])
+                throughputs['messages_per_sec'] = pd.DataFrame (
+                    { column_count : df['messages_per_sec'] })
+                throughputs['bytes_per_sec'] = pd.DataFrame (
+                    { column_count : df['bytes_per_sec'] })
+
+                dataframe = throughputs
               else:
                 column_count += 1
-                dataframe = pd.concat ([dataframe, df['megabytes_per_sec']],
-                                        axis=1, ignore_index=True)
+                throughputs['messages_per_sec'][column_count] = df['messages_per_sec']
+                throughputs['bytes_per_sec'][column_count] = df['bytes_per_sec']
+
+                dataframe = throughputs
 
             if 'latency-summary' in filename:
               df = df.transpose ()
@@ -125,6 +132,7 @@ def load_performance_data (args, filename, transpose_data=False):
                 column_count += 1
                 dataframe[column_count] = df
 
+            # Construct line descriptions
             legend_line_label = [legend_prefix + ' ']
 
             rate = (server_rate if server_rate != '0' else 'max')
@@ -160,8 +168,7 @@ def load_performance_data (args, filename, transpose_data=False):
 #
 def get_latency_summary_data (args):
 
-  latency_data = load_performance_data (args,'latency-summary.csv',
-                                        transpose_data=True)
+  latency_data = load_performance_data (args,'latency-summary.csv')
 
   return dict (latency_summaries=latency_data['dataframe'],
                legend_texts=latency_data['legend_texts'],
@@ -171,7 +178,7 @@ def get_throughput_interval_data (args):
 
   throughput_data = load_performance_data (args, 'throughput-interval.csv')
 
-  return dict (throughput_intervals=throughput_data['dataframe'],
+  return dict (throughput_intervals=throughput_data,
                legend_texts=throughput_data['legend_texts'],
                title_texts=throughput_data['title_texts'])
 
@@ -182,7 +189,7 @@ def get_hardware_stats ():
   stats += f'max={psutil.cpu_freq ().max:.0f}Mhz'
 
   svmem = psutil.virtual_memory ()
-  stats += f'|RAM total={size_to_pretty (svmem.total)}'
+  stats += f'\nRAM total={size_to_pretty (svmem.total)}'
   stats += f' free={size_to_pretty (svmem.available)}'
   stats += f' used={size_to_pretty (svmem.used)} ({svmem.percent}%)'
 
