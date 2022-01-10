@@ -7,7 +7,6 @@
 import argparse
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
-import matplotlib.text as text
 import os
 import pandas as pd
 import platform
@@ -66,14 +65,14 @@ if args.client_directory_descriptions is not None and \
 
 max = '0'
 
-print ('server_queue_size:    ' + str (args.server_queue_sizes) + ' bytes')
-print ('server_message_sizes: ' + str (args.server_message_sizes) + ' bytes')
-print ('server_rate:          ' + str (args.server_rates) + ' msgs/second')
-print ('client_count:         ' + str (args.client_counts) +
+print ('[INFO] server_queue_sizes:    ' + str (args.server_queue_sizes) + ' bytes')
+print ('[INFO] server_message_sizes: ' + str (args.server_message_sizes) + ' bytes')
+print ('[INFO] server_rates:          ' + str (args.server_rates) + ' msgs/second')
+print ('[INFO] client_counts:         ' + str (args.client_counts) +
                         (' client' if args.client_counts == 1 else ' clients'))
-print ('Machine')
-print ('core_count: ' + str (psutil.cpu_count (logical=False)))
-print ('virtual_memory: ' + str (psutil.virtual_memory ()))
+print ('[INFO] Machine')
+print ('[INFO] core_count: ' + str (psutil.cpu_count (logical=False)))
+print ('[INFO] virtual_memory: ' + str (psutil.virtual_memory ()))
 
 def sub_title (server_rate, message_size, client_count):
   # A value of zero also denotes max server rate
@@ -113,6 +112,8 @@ def set_tick_sizes (axis):
   for tick in axis.yaxis.get_major_ticks ():
       tick.label.set_fontsize (8)
 
+  axis.tick_params (axis='y', labelsize=8)
+
 def plot_summary_latencies (axis, latency_log_scale):
 
   latency_data = utils.get_latency_summary_data (args)
@@ -127,10 +128,10 @@ def plot_summary_latencies (axis, latency_log_scale):
 
   axis.legend (get_legend_list (latency_data), fontsize=8)
 
-  axis.set_title (' '.join (latency_data['title_texts']), fontsize=9)
+  axis.set_title (' '.join (latency_data['title_texts']), fontsize=8)
 
-  axis.set_xlabel ('Percentiles', fontsize=9)
-  axis.set_ylabel ('Latency (nanoseconds)', fontsize=9)
+  axis.set_xlabel ('Percentiles', fontsize=8)
+  axis.set_ylabel ('Latency (nanoseconds)')
 
 def plot_interval_throughput (axis, y_label, ax=None):
   throughput_data = utils.get_throughput_interval_data (args)
@@ -144,10 +145,9 @@ def plot_interval_throughput (axis, y_label, ax=None):
 
   set_tick_sizes (axis)
 
-  # axis.set_xlabel ('Time (secs)\n\n'
-  #                 + platform.platform (terse=1) + '\n'
-  #                 + utils.get_hardware_stats (), fontsize=9)
-  # axis.set_xlabel ('Time (secs)', fontsize=9)
+  axis.set_xlabel ('Time (secs)\n\n'
+                  + platform.platform (terse=1) + '\n'
+                  + utils.get_hardware_stats (), fontsize=8)
 
   return plt
 
@@ -165,34 +165,25 @@ if args.show_throughput is True:
   plt_latency.set_xlabel ('Percentiles', fontsize='9')
   plt_latency.set_ylabel ('Latency (nanoseconds)', fontsize='9')
 
-  # Prepare graph of bytes/second on the left
-  plt_throughput_bytes_per_sec = plt.subplot2grid ((10,10), (6,0), colspan=5, rowspan=3)
-  plt_throughput_bytes_per_sec.set_ylabel ('bytes/sec', fontsize='9')
-  plt_throughput_bytes_per_sec.set_xlabel ('Time (secs)', fontsize='9')
-
-  # Prepare graph of messages/second on the right
-  plt_throughput_msgs_per_sec = plt.subplot2grid ((10,10), (6,5), colspan=5, rowspan=3)
-  plt_throughput_msgs_per_sec.set_ylabel ('messages/sec', fontsize='9')
-  plt_throughput_msgs_per_sec.set_xlabel ('Time (secs)', fontsize='9')
-  plt_throughput_msgs_per_sec.yaxis.tick_right ()
-  plt_throughput_msgs_per_sec.yaxis.set_label_position ('right')
-
   # Plot latency distributions
   plot_summary_latencies (plt_latency, latency_log_scale=args.latency_log_scale)
 
-  # Plot throughput bytes/second
-  plot_interval_throughput (plt_throughput_bytes_per_sec, 'bytes_per_sec')
+  # Plot throughput messages/sec
+  lhs_axis = plt.subplot2grid ((10,10), (6,0), colspan=10, rowspan=3)
+  rhs_axis = lhs_axis.twinx ()
 
-  # Plot throughput messages/second
-  plot_interval_throughput (plt_throughput_msgs_per_sec, 'messages_per_sec')
+  lhs_axis.set_ylabel ('messages/sec', fontsize='9')
+  plot_interval_throughput (lhs_axis, 'messages_per_sec')
+
+  # Plot throughput bytes/sec on the other y-axis
+  rhs_axis.set_ylabel ('bytes/sec', fontsize='9')
+  plot_interval_throughput (rhs_axis, 'bytes_per_sec')
+  rhs_axis.tick_params (axis='y', grid_alpha=0)
+
 
 else:
   plot_summary_latencies (axis=None, latency_log_scale=args.latency_log_scale)
 
-plt.suptitle (args.title)
+plt.suptitle (args.title, fontsize=10)
 
-plt.text (0.5, 1.5, utils.get_hardware_stats (), fontsize=7,
-          transform=plt.gcf().transFigure,
-          horizontalalignment='center')
-# plt.tight_layout ()
 plt.show ()
