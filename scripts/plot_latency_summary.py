@@ -5,8 +5,8 @@
 ##########################################
 
 import argparse
+import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
-import numpy as np
 import os
 import pandas as pd
 import platform
@@ -29,7 +29,6 @@ parser = argparse.ArgumentParser (description='Plot performance test results')
 parser.add_argument ('--title', required=False,
                      default='Shared Memory IPC Performance',
                      help='Title of the plot')
-parser.add_argument ('--subtitle', required=False,  help='Subtitle of the plot')
 
 parser.add_argument ('--server_queue_sizes', nargs='+',
                     help='Queue sizes (bytes)')
@@ -49,6 +48,7 @@ parser.add_argument ('--client_counts', nargs='+', type=int,
 
 parser.add_argument ('--latency_log_scale', action='store_true',
                     help='Plot latency on a log scale')
+
 parser.add_argument ('--show_throughput', action='store_true',
                     help='Plot throughput')
 
@@ -65,13 +65,14 @@ if args.client_directory_descriptions is not None and \
 
 max = '0'
 
-print ('server_queue_size:    ' + str (args.server_queue_sizes) + ' bytes')
-print ('server_message_sizes: ' + str (args.server_message_sizes) + ' bytes')
-print ('server_rate:          ' + str (args.server_rates) + ' msgs/second')
-print ('client_count:         ' + str (args.client_counts) +
+print ('[INFO] server_queue_sizes:    ' + str (args.server_queue_sizes) + ' bytes')
+print ('[INFO] server_message_sizes: ' + str (args.server_message_sizes) + ' bytes')
+print ('[INFO] server_rates:          ' + str (args.server_rates) + ' msgs/second')
+print ('[INFO] client_counts:         ' + str (args.client_counts) +
                         (' client' if args.client_counts == 1 else ' clients'))
-print ('Machine specs')
-print ('Cores: ' + str (psutil.cpu_count(logical=False)))
+print ('[INFO] Machine')
+print ('[INFO] core_count: ' + str (psutil.cpu_count (logical=False)))
+print ('[INFO] virtual_memory: ' + str (psutil.virtual_memory ()))
 
 def sub_title (server_rate, message_size, client_count):
   # A value of zero also denotes max server rate
@@ -85,7 +86,7 @@ def latency_dataframe (file_path):
   print (str (file_path))
 
   if file_path.exists () == False:
-      print ('Path does not exist: ' + str (file_path))
+      print ('[ERROR] Invalid path: ' + str (file_path))
       exit (1)
 
   return pd.read_csv (file_path).transpose ()
@@ -111,14 +112,14 @@ def set_tick_sizes (axis):
   for tick in axis.yaxis.get_major_ticks ():
       tick.label.set_fontsize (8)
 
+  axis.tick_params (axis='y', labelsize=8)
+
 def plot_summary_latencies (axis, latency_log_scale):
 
   latency_data = utils.get_latency_summary_data (args)
 
-  legend = show_legend (latency_data['latency_summaries'])
-
   axis = sns.lineplot (ax=axis, data=latency_data['latency_summaries'],
-                       dashes=False, legend=legend)
+                       dashes=False)
 
   if latency_log_scale is True:
     axis.set (yscale='log')
@@ -127,49 +128,62 @@ def plot_summary_latencies (axis, latency_log_scale):
 
   axis.legend (get_legend_list (latency_data), fontsize=8)
 
-  # matplotlib.pyplot experiences problems when resizing the graphs using
-  # matplotlib.pyplot.text with 'tight layout'
-  #
-  # plt.text (x=0.5, y=0.94, s=args.title, fontsize=12, ha='center',
-  #           transform=fig.transFigure)
-  # plt.text (x=0.5, y=0.90, s=' '.join (latency_data['title_texts']), fontsize=9, ha='center',
-  #           transform=fig.transFigure)
+  axis.set_title (' '.join (latency_data['title_texts']), fontsize=8)
 
-  axis.set_title (' '.join (latency_data['title_texts']), fontsize=10)
-  axis.set_xlabel ('Percentiles', fontsize=9)
-  axis.set_ylabel ('Latency (nanoseconds)', fontsize=9)
+  axis.set_xlabel ('Percentiles', fontsize=8)
+  axis.set_ylabel ('Latency (nanoseconds)')
 
-def plot_interval_throughput (axis):
+def plot_interval_throughput (axis, y_label, ax=None):
   throughput_data = utils.get_throughput_interval_data (args)
+  interval_data   = throughput_data['throughput_intervals']
 
-  axis = sns.lineplot (ax=axis, data=throughput_data['throughput_intervals'],
-                       dashes=False)
+  plt = sns.lineplot (ax=axis, data=interval_data['dataframe'][y_label],
+                      dashes=False)
 
-  axis.get_legend ().remove ()
+  if axis.get_legend () is not None:
+    axis.get_legend ().remove ()
 
-  axis.set_xlabel ('Time (seconds)\n\n'
+  set_tick_sizes (axis)
+
+  axis.set_xlabel ('Time (secs)\n\n'
                   + platform.platform (terse=1) + '\n'
-                  + utils.get_hardware_stats (), fontsize=9)
-  axis.set_ylabel ('Throughput (MB/sec)', fontsize=9)
+                  + utils.get_hardware_stats (), fontsize=8)
 
-  return axis
+  return plt
 
 #
 # Plot latency percentiles
 #
-# Throughput over time is plotted if explcitly enabled.
-# This is useful at high throughput values
+# Throughput over time is plotted if explicitly enabled.
 #
 if args.show_throughput is True:
-  fig, axes = plt.subplots (2, 1, gridspec_kw={'height_ratios': [3, 1]})
 
-  plot_summary_latencies (axes[0], args.latency_log_scale)
+  fig = plt.figure ()
 
-  plot_interval_throughput (axes[1])
+  # Prepare latency distribution graph
+  plt_latency = plt.subplot2grid ((10,10), (0,0), colspan=10, rowspan=5)
+  plt_latency.set_xlabel ('Percentiles', fontsize='9')
+  plt_latency.set_ylabel ('Latency (nanoseconds)', fontsize='9')
+
+  # Plot latency distributions
+  plot_summary_latencies (plt_latency, latency_log_scale=args.latency_log_scale)
+
+  # Plot throughput messages/sec
+  lhs_axis = plt.subplot2grid ((10,10), (6,0), colspan=10, rowspan=3)
+  rhs_axis = lhs_axis.twinx ()
+
+  lhs_axis.set_ylabel ('messages/sec', fontsize='9')
+  plot_interval_throughput (lhs_axis, 'messages_per_sec')
+
+  # Plot throughput bytes/sec on the other y-axis
+  rhs_axis.set_ylabel ('bytes/sec', fontsize='9')
+  plot_interval_throughput (rhs_axis, 'bytes_per_sec')
+  rhs_axis.tick_params (axis='y', grid_alpha=0)
+
 
 else:
   plot_summary_latencies (axis=None, latency_log_scale=args.latency_log_scale)
 
-plt.suptitle (args.title)
+plt.suptitle (args.title, fontsize=10)
 
 plt.show ()
