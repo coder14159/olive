@@ -26,13 +26,13 @@ namespace spmc {
 
 
 #define ASSERT_SS(condition, message) do \
-{                                         \
-  if (!(condition))                       \
-  {                                       \
-    std::ostringstream ss;                \
-    ss << message;                        \
-    throw std::logic_error (ss.str ());   \
-  }                                       \
+{                                        \
+  if (!(condition))                      \
+  {                                      \
+    std::ostringstream ss;               \
+    ss << message;                       \
+    throw std::logic_error (ss.str ());  \
+  }                                      \
 } while(0)
 
 #else
