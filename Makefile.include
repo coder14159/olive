@@ -12,6 +12,8 @@ CXXFLAGS  += -DENABLE_ASSERTS=1
 CXXFLAGS  += -DSPMC_MODULUS=1
 CXXFLAGS  += -march=native
 CXXFLAGS  += -fext-numeric-literals
+CXXFLAGS  += -Wl,--no-undefined
+
 # Workaround for "redeclaration of <...> may not have default arguments"
 CXXFLAGS     += -fpermissive
 
