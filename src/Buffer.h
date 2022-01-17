@@ -2,6 +2,7 @@
 #define IPC_BUFFER_H
 
 #include "detail/SharedMemory.h"
+#include "detail/Utils.h"
 
 #include <cstdint>
 #include <cstddef>

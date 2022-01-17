@@ -140,10 +140,8 @@ bool Buffer<Allocator>::push (const uint8_t* data, size_t size)
     std::memcpy (buffer, data + spaceToEnd, size - spaceToEnd);
   }
 
-  /*
-   * Check: might be faster to avoid the % operation in the calculation below
-   */
-  m_back  = (m_back + size) % m_capacity;
+  m_back  = MODULUS((m_back + size), m_capacity);
+
   m_size += size;
 
   return true;
@@ -183,7 +181,8 @@ bool Buffer<Allocator>::push_from_spsc_queue (T &queue, size_t size)
     queue.pop (buffer, size - spaceToEnd);
   }
 
-  m_back  = (m_back + size) % m_capacity;
+  m_back  = MODULUS((m_back + size), m_capacity);
+
   m_size += size;
 
   return true;
@@ -279,7 +278,8 @@ bool Buffer<Allocator>::pop (uint8_t* data, size_t size)
     std::memcpy (data + spaceToEnd, buffer, size - spaceToEnd);
   }
 
-  m_front = (m_front + size) % m_capacity;
+  m_front  = MODULUS((m_front + size), m_capacity);
+
   m_size -= size;
 
   return true;
