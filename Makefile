@@ -44,6 +44,8 @@ LIB_SRC_CPP_FILES += src/PerformanceStats.h
 LIB_SRC_CPP_FILES += src/PerformanceStats.inl
 LIB_SRC_CPP_FILES += src/SignalCatcher.cpp
 LIB_SRC_CPP_FILES += src/SignalCatcher.h
+# LIB_SRC_CPP_FILES += src/SlidingWindow.h
+# LIB_SRC_CPP_FILES += src/SlidingWindow.inl
 LIB_SRC_CPP_FILES += src/SPMCQueue.h
 LIB_SRC_CPP_FILES += src/SPMCQueue.inl
 LIB_SRC_CPP_FILES += src/SPMCSink.h
@@ -103,7 +105,7 @@ THIRD_PARTY_LIBS += $(LIB_BOOST_THREAD)
 $(LIB_DIR)/.obj/%.o: %.h
 $(LIB_DIR)/.obj/%.o: %.inl
 $(LIB_DIR)/.obj/%.o: %.cpp
-	$(COMPILER) $(CXXFLAGS) $(CXXFLAGS_LIB)  -c $< -o $@ $(THIRD_PARTY_LIBS)
+	$(COMPILER) $(CXXFLAGS) $(CXXFLAGS_LIB) $(THIRD_PARTY_LIBS) -c $< -o $@
 
 # Create an archive file from the source files
 $(LIB_FILE_PATH): $(LIB_OBJ_FILES)
@@ -130,48 +132,48 @@ $(BIN_DIR):
 # Build tools
 spmc_client: $(BIN_DIR)/spmc_client
 $(BIN_DIR)/spmc_client: Makefile tools/spmc_client/spmc_client.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_DIR) tools/spmc_client/spmc_client.cpp -o $@ -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_DIR) tools/spmc_client/spmc_client.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM) -o $@
 
 spmc_server: $(BIN_DIR)/spmc_server
 $(BIN_DIR)/spmc_server: Makefile tools/spmc_server/spmc_server.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_DIR) tools/spmc_server/spmc_server.cpp -o $@ -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_DIR) tools/spmc_server/spmc_server.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) -o $@
 
 spmc: spmc_client spmc_server
 
 spsc_client: $(BIN_DIR)/spsc_client
 $(BIN_DIR)/spsc_client: Makefile tools/spsc_client/spsc_client.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_DIR) tools/spsc_client/spsc_client.cpp -o $@ -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_DIR) tools/spsc_client/spsc_client.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM) -o $@
 
 spsc_server: $(BIN_DIR)/spsc_server
 $(BIN_DIR)/spsc_server: Makefile tools/spsc_server/spsc_server.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_DIR) tools/spsc_server/spsc_server.cpp -o $@ -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_DIR) tools/spsc_server/spsc_server.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) -o $@
 
 spsc: spsc_client spsc_server
 
 $(BIN_DIR)/remove_shared_memory: Makefile tools/remove_shared_memory/remove_shared_memory.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_DIR) tools/remove_shared_memory/remove_shared_memory.cpp -o $@ $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_DIR) tools/remove_shared_memory/remove_shared_memory.cpp $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) -o $@
 
 remove_shared_memory: $(BIN_DIR)/remove_shared_memory
 
 ping_pong: $(BIN_DIR)/ping_pong
 $(BIN_DIR)/ping_pong: Makefile tools/ping_pong/ping_pong.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_DIR) tools/ping_pong/ping_pong.cpp -o $@ -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_FILESYSTEM)
+	$(COMPILER) $(CXXFLAGS) -L$(BOOST_LIB_DIR) -I$(CXXOPTS_DIR) tools/ping_pong/ping_pong.cpp -L$(LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_FILESYSTEM) -o $@
 
 test_allocator: $(BIN_DIR)/test_allocator
 $(BIN_DIR)/test_allocator: Makefile tests/test_allocator/test_allocator.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) tests/test_allocator/test_allocator.cpp -o $@ -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_THREAD) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
+	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) tests/test_allocator/test_allocator.cpp -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_THREAD) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM) -o $@
 
 test_performance: $(BIN_DIR)/test_performance
 $(BIN_DIR)/test_performance: Makefile tests/test_performance/test_performance.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) tests/test_performance/test_performance.cpp -o $@ -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_THREAD) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM)
+	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) tests/test_performance/test_performance.cpp -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_THREAD) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM) -o $@
 
 test_spmcqueue: $(BIN_DIR)/test_spmcqueue
 $(BIN_DIR)/test_spmcqueue: Makefile tests/test_spmcqueue/test_spmcqueue.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) tests/test_spmcqueue/test_spmcqueue.cpp -o $@ -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_THREAD) $(LIB_BOOST_FILESYSTEM)
+	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) tests/test_spmcqueue/test_spmcqueue.cpp -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_THREAD) $(LIB_BOOST_FILESYSTEM) -o $@
 
 test_stats: $(BIN_DIR)/test_stats
 $(BIN_DIR)/test_stats: Makefile tests/test_stats/test_stats.cpp $(LIB_FILE_PATH) $(LIB_SRC_CPP_FILES) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) tests/test_stats/test_stats.cpp -o $@ -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_THREAD) $(LIB_BOOST_FILESYSTEM)
+	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) -L$(BOOST_LIB_DIR) tests/test_stats/test_stats.cpp -lspmc $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_THREAD) $(LIB_BOOST_FILESYSTEM) -o $@
 
 tests: $(BIN_DIR)/test_allocator \
        $(BIN_DIR)/test_performance \
