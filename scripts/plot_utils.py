@@ -6,6 +6,22 @@ import platform
 import psutil
 import queue
 
+def sub_title (server_rate, message_size, client_count):
+  # An integer of zero denotes maximum server rate
+  server_rate = (server_rate if server_rate != 'max' else '0')
+
+  return 'message_rate='  + throughput_messages_to_pretty (server_rate) \
+       + ' message_size=' + str (message_size) + ' bytes' \
+       + ' client_count=' + str (client_count)
+
+def set_tick_sizes (axis):
+  for tick in axis.xaxis.get_major_ticks ():
+      tick.label.set_fontsize (8)
+  for tick in axis.yaxis.get_major_ticks ():
+      tick.label.set_fontsize (8)
+
+  axis.tick_params (axis='y', labelsize=8)
+
 #
 # Update the CPU bind list to use -1 for clients which do not bind to a cpu
 #
