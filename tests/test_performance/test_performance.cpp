@@ -10,6 +10,7 @@
 #include "TimeDuration.h"
 #include "Timer.h"
 #include "detail/SharedMemory.h"
+#include "detail/Utils.h"
 
 #include <boost/circular_buffer.hpp>
 #include <boost/container/small_vector.hpp>
@@ -96,6 +97,10 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
     return;
   }
 
+  /*
+   * The small_vector implementation has faster throughput but the use of static
+   * memory size is less flexible in the shared memory use case
+   */
   auto duration = get_test_duration ();
 
   auto stress_boost_circular_buffer = [&duration] (
@@ -1118,6 +1123,28 @@ BOOST_AUTO_TEST_CASE (Modulus)
   std::thread ([&] () {
 
     Timer timer;
+    for (int64_t i = 0; i < cycles; ++i)
+    {
+      modulus = MODULUS_POWER_OF_2(i, size);
+      dummy += modulus;
+    }
+
+    auto elapsed = timer.elapsed ();
+
+    auto per_call = (static_cast<double>(elapsed.nanoseconds ().count ())
+                      / static_cast<double>(cycles));
+
+    BOOST_TEST_MESSAGE (per_call << " ns\tmodulus (divisor power of 2 only)");
+
+    dummy = modulus;
+  }).join ();
+
+  modulus = 0;
+  dummy = 0;
+
+  std::thread ([&] () {
+
+    Timer timer;
 
     for (int64_t i = 0; i < cycles; ++i)
     {
@@ -1504,55 +1531,9 @@ BOOST_AUTO_TEST_CASE (SmallCircularBuffer)
 
     return throughput;
   };
-#if 0
-  /*
-   * Compare sliding window with circular buffer implementations
-   * Not a perfect comparison but a reasonable performance idea
-   */
-  auto stress_local_sliding_window = [&duration] () -> Throughput
-  {
-    SlidingWindow<int, capacity> buffer;
-
-    Throughput throughput;
-
-    Timer timer;
-
-    int out;
-
-    for (int i = 0; ; ++i)
-    {
-      out = buffer.push_back ().add_event ().back ();
-      out = buffer.push_back ().add_event ().back ();
-      out = buffer.push_back ().add_event ().back ();
-      out = buffer.push_back ().add_event ().back ();
-
-      (void)out;
-
-      throughput.next (sizeof (int), 4);
-
-      if ((i % 1000) == 0 && duration < timer.elapsed ())
-      {
-        break;
-      }
-    }
-
-    throughput.stop ();
-
-    timer.stop ();
-
-    BOOST_TEST_MESSAGE (throughput.to_string () << "\tlocal SlidingWindow" );
-
-    return throughput;
-  };
-#endif
   auto throughput_boost = stress_boost_circular_buffer ();
   auto throughput_local_circular_buffer = stress_local_dynamic_circular_buffer ();
-  auto throughput_local_sliding_window = stress_local_sliding_window ();
 
   BOOST_CHECK (throughput_boost.megabytes_per_sec () >
                   throughput_local_circular_buffer.megabytes_per_sec ());
-
-  BOOST_CHECK (throughput_local_sliding_window.megabytes_per_sec () >
-                  throughput_boost.megabytes_per_sec ());
-
 }
