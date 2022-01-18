@@ -278,7 +278,7 @@ bool Buffer<Allocator>::pop (uint8_t* data, size_t size)
     std::memcpy (data + spaceToEnd, buffer, size - spaceToEnd);
   }
 
-  m_back  = (m_back + size) % m_capacity;
+  m_front = (m_front + size) % m_capacity;
 
   m_size -= size;
 
