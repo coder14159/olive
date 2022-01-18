@@ -74,14 +74,6 @@ print ('[INFO] Machine')
 print ('[INFO] core_count: ' + str (psutil.cpu_count (logical=False)))
 print ('[INFO] virtual_memory: ' + str (psutil.virtual_memory ()))
 
-def sub_title (server_rate, message_size, client_count):
-  # A value of zero also denotes max server rate
-  server_rate = (server_rate if server_rate != 'max' else max)
-
-  return 'message_rate='  + utils.throughput_messages_to_pretty (server_rate) \
-       + ' message_size=' + str (message_size) + ' bytes' \
-       + ' client_count=' + str (client_count)
-
 def latency_dataframe (file_path):
   print (str (file_path))
 
@@ -106,14 +98,6 @@ def show_legend (data):
 
   return False
 
-def set_tick_sizes (axis):
-  for tick in axis.xaxis.get_major_ticks ():
-      tick.label.set_fontsize (8)
-  for tick in axis.yaxis.get_major_ticks ():
-      tick.label.set_fontsize (8)
-
-  axis.tick_params (axis='y', labelsize=8)
-
 def plot_summary_latencies (axis, latency_log_scale):
 
   latency_data = utils.get_latency_summary_data (args)
@@ -124,7 +108,7 @@ def plot_summary_latencies (axis, latency_log_scale):
   if latency_log_scale is True:
     axis.set (yscale='log')
 
-  set_tick_sizes (axis)
+  utils.set_tick_sizes (axis)
 
   axis.legend (get_legend_list (latency_data), fontsize=8)
 
@@ -143,7 +127,7 @@ def plot_interval_throughput (axis, y_label, ax=None):
   if axis.get_legend () is not None:
     axis.get_legend ().remove ()
 
-  set_tick_sizes (axis)
+  utils.set_tick_sizes (axis)
 
   axis.set_xlabel ('Time (secs)\n\n'
                   + platform.platform (terse=1) + '\n'
