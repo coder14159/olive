@@ -179,10 +179,11 @@ void server (const std::string& name,
          * SPSC queues perform better if warmup messages are not sent.
          * This is in contrast to the SPMC behaviour.
          */
-        throttle.throttle ();
       }
 
       first = ((first + 1) < sinkCount) ? first + 1 : 0;
+
+      throttle.throttle ();
     }
   }
 
