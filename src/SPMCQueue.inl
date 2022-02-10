@@ -157,24 +157,24 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   detail::ConsumerState &consumer)
 {
   /*
-    * If all available data in a consumer has been consumed, request more
-    */
+   * If all available data in a consumer has been consumed, request more
+   */
   if (consumer.data_range ().empty ())
   {
     auto &backPressure = m_queue->back_pressure ();
 
     backPressure.update_consumer_state (consumer);
     /*
-      * Get the size of data available in the queue for a consumer
-      */
+     * Get the size of data available in the queue for a consumer
+     */
     size_t read_available = backPressure.read_available (consumer);
     /*
-      * Update the consumable range if new data is available
-      */
+     * Update the consumable range if new data is available
+     */
     consumer.data_range ().read_available (read_available);
     /*
-      * Return false if no new data is available
-      */
+     * Return false if no new data is available
+     */
     if (read_available == 0)
     {
       return false;
@@ -212,32 +212,32 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   detail::ConsumerState &consumer)
 {
   /*
-    * If all available data in a consumer has been consumed, request more
-    */
+   * If all available data in a consumer has been consumed, request more
+   */
   if (consumer.data_range ().empty ())
   {
     auto &backPressure = m_queue->back_pressure ();
 
     backPressure.update_consumer_state (consumer);
     /*
-      * Get the size of data available in the queue for a consumer
-      */
+     * Get the size of data available in the queue for a consumer
+     */
     size_t read_available = backPressure.read_available (consumer);
     /*
-      * Update the consumer range with current data is availability
-      */
+     * Update the consumer range with current data is availability
+     */
     consumer.data_range ().read_available (read_available);
     /*
-      * Return if no new data is available
-      */
+     * Return if no new data is available
+     */
     if (read_available == 0)
     {
       return false;
     }
   }
   /*
-    * Test caching all available consumer data
-    */
+   * Test caching all available consumer data
+   */
   if (m_queue->pop (pod, consumer))
   {
     consumer.data_range ().consumed (sizeof (POD));
