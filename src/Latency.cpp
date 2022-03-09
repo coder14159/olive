@@ -20,26 +20,19 @@ namespace {
 
 std::map<float, Latency::Quantile> empty_quantiles ()
 {
-  std::map<float, Latency::Quantile> quantiles;
+  std::map<float, Latency::Quantile> quantile_values;
 
-  quantiles[1]     = Latency::Quantile (ba::quantile_probability = 0.01);
-  quantiles[5]     = Latency::Quantile (ba::quantile_probability = 0.05);
-  quantiles[25]    = Latency::Quantile (ba::quantile_probability = 0.25);
-  quantiles[50]    = Latency::Quantile (ba::quantile_probability = 0.50);
-  quantiles[75]    = Latency::Quantile (ba::quantile_probability = 0.70);
-  quantiles[80]    = Latency::Quantile (ba::quantile_probability = 0.80);
-  quantiles[90]    = Latency::Quantile (ba::quantile_probability = 0.90);
-  quantiles[95]    = Latency::Quantile (ba::quantile_probability = 0.95);
-  quantiles[99]    = Latency::Quantile (ba::quantile_probability = 0.99);
-  quantiles[99.5]  = Latency::Quantile (ba::quantile_probability = 0.995);
-  quantiles[99.6]  = Latency::Quantile (ba::quantile_probability = 0.996);
-  quantiles[99.7]  = Latency::Quantile (ba::quantile_probability = 0.997);
-  quantiles[99.8]  = Latency::Quantile (ba::quantile_probability = 0.998);
-  quantiles[99.9]  = Latency::Quantile (ba::quantile_probability = 0.999);
-  quantiles[99.95] = Latency::Quantile (ba::quantile_probability = 0.9995);
-  quantiles[99.99] = Latency::Quantile (ba::quantile_probability = 0.9999);
+  std::vector<float> quantiles = {
+    1, 10, 25, 50, 75, 80, 90, 95, 99,
+    99.5, 99.6, 99.7, 99.8, 99.9, 99.95, 99.99
+  };
 
-  return quantiles;
+  std::for_each (quantiles.begin (), quantiles.end (),
+                 [&quantile_values] (float q) {
+    quantile_values[q] = Latency::Quantile (ba::quantile_probability = q/100.);
+  });
+
+  return quantile_values;
 }
 
 } // namespace {
