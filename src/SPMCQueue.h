@@ -101,10 +101,7 @@ public:
   void resize_cache (size_t size);
 
   /*
-   * Push a data into the queue.
-   *
-   * Types currently supported are POD and type with methds data () and size ()
-   * eg std::vector.
+   * Push data of type POD into the queue.
    *
    * Useful if the header type has no associated data. An example would be when
    * sending warmup messages.
@@ -122,7 +119,7 @@ public:
   bool push (const Header &header, const Data &data);
 
   /*
-   * Push data into the queue, always succeeds unless there are slow consumers
+   * Push data into the queue. Always succeeds unless there are slow consumers
    * configured to be non-dropping.
    *
    * The queue should be greater than or equal to data size + header size.
