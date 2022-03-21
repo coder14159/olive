@@ -12,13 +12,13 @@ namespace {
  * The type must have data which is contiguous in memory
  */
 template<typename T>
-inline constexpr size_t get_size (const std::vector<T> &v)
+inline size_t get_size (const std::vector<T> &v)
 {
   return v.size ();
 }
 
 template<typename T>
-inline constexpr size_t get_size (const T &pod)
+constexpr size_t get_size (const T &pod)
 {
   /*
    * If this assert fires a get_size function needs to be created for the type
