@@ -102,7 +102,7 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::read_available (
 
 template <typename Allocator, uint8_t MaxNoDropConsumers>
 template <typename T>
-size_t SPMCQueue<Allocator, MaxNoDropConsumers>::push_variadic_item (
+constexpr size_t SPMCQueue<Allocator, MaxNoDropConsumers>::push_variadic_item (
   const T &pod,
   size_t offset)
 {
