@@ -120,7 +120,7 @@ private:
    * a release_space call afterwards.
    */
   template <typename T>
-  size_t push_variadic_item (const T &pod, size_t offset = 0);
+  constexpr size_t push_variadic_item (const T &pod, size_t offset = 0);
 
   /*
    * Push data from a vector to the queue
