@@ -80,21 +80,21 @@ def size_to_pretty (bytes, suffix='B'):
     bytes /= factor
 
 # Return legend text
-# def get_legend_list (data):
-#   legend_list = []
+def get_legend_list (data):
+  legend_list = []
 
-#   if len (data['legend_texts']) > 0:
+  if len (data['legend_texts']) > 0:
 
-#     for texts in data['legend_texts']:
+    for texts in data['legend_texts']:
 
-#       legend_data = texts[0].split (' ')
-#       for index in range (1, len (legend_data)):
-#         legend_list.append (legend_data[0] + " " + legend_data[index])
-#       # print (legend_list)
+      legend_data = texts[0].split (' ')
+      for index in range (1, len (legend_data)):
+        legend_list.append (legend_data[0] + " " + legend_data[index])
+      # print (legend_list)
 
-#   print (legend_list)
+  # print (legend_list)
 
-#  return legend_list
+  return legend_list
 
 def load_performance_data (args, filename):
   legend_texts = []
