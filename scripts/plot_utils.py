@@ -72,19 +72,41 @@ def throughput_messages_to_pretty (rate):
 
 # Return human readable data size string
 def size_to_pretty (bytes, suffix='B'):
-    factor = 1024
-    for unit in ['', 'K', 'M', 'G', 'T', 'P']:
-        if bytes < factor:
-            return f'{bytes:.2f}{unit}{suffix}'
-        bytes /= factor
+  factor = 1024
+
+  for unit in ['', 'K', 'M', 'G', 'T', 'P']:
+    if bytes < factor:
+      return f'{bytes:.2f}{unit}{suffix}'
+    bytes /= factor
+
+# Return legend text
+def get_legend_list (data):
+  legend_list = []
+
+  if len (data['legend_texts']) > 0:
+
+    for texts in data['legend_texts']:
+
+      legend_data = texts[0].split (' ')
+      for index in range (1, len (legend_data)):
+        legend_list.append (legend_data[0] + " " + legend_data[index])
+      # print (legend_list)
+
+  # print (legend_list)
+
+  return legend_list
 
 def load_performance_data (args, filename):
   legend_texts = []
   legend_prefix_texts = None
   title_text = set ()
   dataframe = None
+
   throughputs = {}
-  column_count = 0
+  throughput_column_count = 0
+
+  latencies = {}
+  latency_column_count = 0
 
   if args.client_directory_descriptions is not None:
     legend_prefix_texts = queue.Queue ()
@@ -120,63 +142,108 @@ def load_performance_data (args, filename):
               print ('[ERROR] Invalid path: ' + str (file_path))
               continue
 
-            print ('[INFO] loading: ' + str (file_path))
+            print ('[INFO] Loading: ' + str (file_path))
             df = pd.read_csv (file_path)
 
-            if 'throughput-interval' in filename:
-              if not throughputs:
+            if 'latency-interval' in filename:
+              # TODO simplify use of throughput_column_count
+              if not latencies:
+                latencies['latencies'] = pd.DataFrame ()
 
+                for percentile in args.client_latency_percentiles:
+                  latencies['latencies'] \
+                           [latency_column_count] = df[str (percentile)]
+
+                  legend_prefix += ' ' + str (percentile) + '%'
+
+                  latency_column_count += 1
+
+                dataframe = latencies
+              else:
+                for percentile in args.client_latency_percentiles:
+                  latencies['latencies'] \
+                           [latency_column_count] = df[str (percentile)]
+
+                  latency_column_count += 1
+
+                  dataframe = latencies
+
+                  legend_line_label = [legend_prefix + ':' + str (percentile)]
+
+              print (dataframe)
+
+            if 'throughput-interval' in filename:
+              # TODO simplify use of throughput_column_count
+              if not throughputs:
                 throughputs['messages_per_sec'] = pd.DataFrame (
-                    { column_count : df['messages_per_sec'] })
+                    { throughput_column_count : df['messages_per_sec'] })
                 throughputs['bytes_per_sec'] = pd.DataFrame (
-                    { column_count : df['bytes_per_sec'] })
+                    { throughput_column_count : df['bytes_per_sec'] })
 
                 dataframe = throughputs
               else:
-                column_count += 1
-                throughputs['messages_per_sec'][column_count] = df['messages_per_sec']
-                throughputs['bytes_per_sec'][column_count] = df['bytes_per_sec']
+                throughput_column_count += 1
+                throughputs['messages_per_sec'] \
+                           [throughput_column_count] = df['messages_per_sec']
+                throughputs['bytes_per_sec'] \
+                           [throughput_column_count] = df['bytes_per_sec']
 
                 dataframe = throughputs
 
             if 'latency-summary' in filename:
+
               df = df.transpose ()
 
               if dataframe is None:
                 dataframe = df
               else:
-                column_count += 1
-                dataframe[column_count] = df
+                throughput_column_count += 1
+                dataframe[throughput_column_count] = df
+              print (dataframe)
 
             # Construct line descriptions
-            legend_line_label = [legend_prefix + ' ']
-
-            rate = (server_rate if server_rate != '0' else 'max')
-
-            if len (args.server_rates) > 1:
-              legend_line_label.append ('rate:' + str (rate))
-            else:
-              title_text.add ('rate:' + str (rate))
-
-            if len (args.server_message_sizes) > 1:
-              legend_line_label.append ('message_size:' + str (message_size))
-            else:
-              title_text.add ('msg_size:' + str (message_size))
-
-            if len (args.server_queue_sizes) > 1:
-              legend_line_label.append ('queue_size:' + str (server_queue_size))
-            else:
-              title_text.add ('queue_size:' + str (server_queue_size))
-
-            if len (args.client_counts) > 1:
-              legend_line_label.append ('clients:' + str (client_count))
-            else:
-              title_text.add ('clients:' + str (client_count))
-
-            legend_texts.append (legend_line_label)
+            plot_texts = get_plot_texts (args,
+                            legend_texts, legend_prefix,
+                            message_size, server_rate, server_queue_size,
+                            client_count)
 
   return dict (dataframe=dataframe,
-               legend_texts=legend_texts,
+               legend_texts=plot_texts['legend_texts'],
+               title_texts=plot_texts['title_texts'])
+
+def get_plot_texts (args, legend_texts, legend_prefix, message_size, server_rate,
+                    server_queue_size, client_count):
+  # Construct line descriptions
+  legend_prefix_texts = None
+  title_text = set ()
+
+  legend_line_label = [legend_prefix]
+
+  rate = (server_rate if server_rate != '0' else 'max')
+
+  if len (args.server_rates) > 1:
+    legend_line_label.append ('rate:' + str (rate))
+  else:
+    title_text.add ('rate:' + str (rate))
+
+  if len (args.server_message_sizes) > 1:
+    legend_line_label.append ('message_size:' + str (message_size))
+  else:
+    title_text.add ('message_size:' + str (message_size))
+
+  if len (args.server_queue_sizes) > 1:
+    legend_line_label.append ('queue_size:' + str (server_queue_size))
+  else:
+    title_text.add ('queue_size:' + str (server_queue_size))
+
+  if len (args.client_counts) > 1:
+    legend_line_label.append ('clients:' + str (client_count))
+  else:
+    title_text.add ('clients:' + str (client_count))
+
+  legend_texts.append (legend_line_label)
+
+  return dict (legend_texts=legend_texts,
                title_texts=title_text)
 
 #
@@ -187,6 +254,14 @@ def get_latency_summary_data (args):
   latency_data = load_performance_data (args,'latency-summary.csv')
 
   return dict (latency_summaries=latency_data['dataframe'],
+               legend_texts=latency_data['legend_texts'],
+               title_texts=latency_data['title_texts'])
+
+def get_latency_interval_data (args):
+
+  latency_data = load_performance_data (args,'latency-interval.csv')
+
+  return dict (latency_intervals=latency_data['dataframe'],
                legend_texts=latency_data['legend_texts'],
                title_texts=latency_data['title_texts'])
 
@@ -210,4 +285,3 @@ def get_hardware_stats ():
   stats += f' used={size_to_pretty (svmem.used)} ({svmem.percent}%)'
 
   return stats
-

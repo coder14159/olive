@@ -74,6 +74,8 @@ print ('[INFO] Machine')
 print ('[INFO] core_count: ' + str (psutil.cpu_count (logical=False)))
 print ('[INFO] virtual_memory: ' + str (psutil.virtual_memory ()))
 
+print ('[INFO] ' + platform.platform (terse=1))
+
 def latency_dataframe (file_path):
   print (str (file_path))
 
@@ -118,6 +120,8 @@ def plot_summary_latencies (axis, latency_log_scale):
   axis.set_ylabel ('Latency (nanoseconds)')
 
 def plot_interval_throughput (axis, y_label, ax=None):
+  print ('[INFO] Plot: ' + y_label)
+
   throughput_data = utils.get_throughput_interval_data (args)
   interval_data   = throughput_data['throughput_intervals']
 
