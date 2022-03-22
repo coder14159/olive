@@ -120,7 +120,6 @@ int main(int argc, char* argv[]) try
   using Queue  = SPMCQueue<SharedMemory::Allocator>;
   using Stream = SPMCStream<Queue>;
 
-  // TODO: Generate the queue name from within Stream ctor..
   Stream stream (name, name + ":queue");
 
   std::atomic<bool> stop = { false };
@@ -150,11 +149,11 @@ int main(int argc, char* argv[]) try
 
   bind_to_cpu (cpu);
 
-  Header header;
   uint64_t testSeqNum = 0;
-
-  std::vector<uint8_t> data;
   std::vector<uint8_t> expected;
+
+  Header header;
+  std::vector<uint8_t> data;
 
   while (!stop.load (std::memory_order_relaxed))
   {
