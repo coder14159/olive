@@ -65,10 +65,10 @@ if args.client_directory_descriptions is not None and \
 
 max = '0'
 
-print ('[INFO] server_queue_sizes:    ' + str (args.server_queue_sizes) + ' bytes')
+print ('[INFO] server_queue_sizes:   ' + str (args.server_queue_sizes) + ' bytes')
 print ('[INFO] server_message_sizes: ' + str (args.server_message_sizes) + ' bytes')
-print ('[INFO] server_rates:          ' + str (args.server_rates) + ' msgs/second')
-print ('[INFO] client_counts:         ' + str (args.client_counts) +
+print ('[INFO] server_rates:         ' + str (args.server_rates) + ' msgs/second')
+print ('[INFO] client_counts:        ' + str (args.client_counts) +
                         (' client' if args.client_counts == 1 else ' clients'))
 print ('[INFO] Machine')
 print ('[INFO] core_count: ' + str (psutil.cpu_count (logical=False)))

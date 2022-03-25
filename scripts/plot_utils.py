@@ -6,6 +6,28 @@ import platform
 import psutil
 import queue
 
+import logging
+from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+log_levels = {
+    'critical': CRITICAL,
+    'error':    ERROR,
+    'warn':     WARNING,
+    'warning':  WARNING,
+    'info':     INFO,
+    'debug':    DEBUG
+}
+
+#
+# Initialise the logging
+#
+def init_logger (logger, level_str):
+  logging.basicConfig (level=log_levels.get (level_str.lower ()),
+    format='%(asctime)s %(levelname)8s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S')
+
+  return logging
+
 def sub_title (server_rate, message_size, client_count):
   # An integer of zero denotes maximum server rate
   server_rate = (server_rate if server_rate != 'max' else '0')
@@ -76,7 +98,7 @@ def size_to_pretty (bytes, suffix='B'):
 
   for unit in ['', 'K', 'M', 'G', 'T', 'P']:
     if bytes < factor:
-      return f'{bytes:.2f}{unit}{suffix}'
+      return f'{bytes:.2f} {unit}{suffix}'
     bytes /= factor
 
 # Return legend text
@@ -90,9 +112,6 @@ def get_legend_list (data):
       legend_data = texts[0].split (' ')
       for index in range (1, len (legend_data)):
         legend_list.append (legend_data[0] + " " + legend_data[index])
-      # print (legend_list)
-
-  # print (legend_list)
 
   return legend_list
 
@@ -124,7 +143,7 @@ def load_performance_data (args, filename):
       for server_queue_size in args.server_queue_sizes:
 
         if Path (dir).exists () == False:
-            print ('[ERROR] Invalid path: ' + dir)
+            logging.error ('Invalid path: ' + dir)
             continue
 
         for message_size in args.server_message_sizes:
@@ -139,10 +158,10 @@ def load_performance_data (args, filename):
             file_path = Path (data_directory) / filename
 
             if file_path.exists () == False:
-              print ('[ERROR] Invalid path: ' + str (file_path))
+              logging.error ('Invalid path: ' + str (file_path))
               continue
 
-            print ('[INFO] Loading: ' + str (file_path))
+            logging.info ('Loading: ' + str (file_path))
             df = pd.read_csv (file_path)
 
             if 'latency-interval' in filename:
@@ -170,7 +189,7 @@ def load_performance_data (args, filename):
 
                   legend_line_label = [legend_prefix + ':' + str (percentile)]
 
-              print (dataframe)
+              logging.debug (dataframe)
 
             if 'throughput-interval' in filename:
               # TODO simplify use of throughput_column_count
@@ -199,7 +218,7 @@ def load_performance_data (args, filename):
               else:
                 throughput_column_count += 1
                 dataframe[throughput_column_count] = df
-              print (dataframe)
+              logging.debug (dataframe)
 
             # Construct line descriptions
             plot_texts = get_plot_texts (args,
