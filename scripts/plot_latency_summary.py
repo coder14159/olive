@@ -14,6 +14,9 @@ import seaborn as sns
 
 from pathlib import Path
 
+import logging
+from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
+
 import plot_utils as utils
 
 import psutil
@@ -30,51 +33,61 @@ parser.add_argument ('--title', required=False,
                      default='Shared Memory IPC Performance',
                      help='Title of the plot')
 
-parser.add_argument ('--server_queue_sizes', nargs='+',
+parser.add_argument ('--server_queue_sizes', nargs='+', required=True,
                     help='Queue sizes (bytes)')
-parser.add_argument ('--server_message_sizes', nargs='+',
+parser.add_argument ('--server_message_sizes', nargs='+', required=True,
                     help='Message size (bytes)')
-parser.add_argument ('--server_rates', default='max', nargs='+',
+parser.add_argument ('--server_rates', default='max', nargs='+', required=True,
                     help='Target messages per second. Use \'max\' '
                     '(or \'0\') for maximum throughput')
 
-parser.add_argument ('--client_directories', nargs='+',
+parser.add_argument ('--client_directories', nargs='+', required=True,
                     help='Base directories under which the stats data is stored')
-parser.add_argument ('--client_directory_descriptions', nargs='+',
+parser.add_argument ('--client_directory_descriptions', nargs='+', required=True,
                     help='Give each directory a legend name. These should be in'
                     ' the same order as client_directories')
-parser.add_argument ('--client_counts', nargs='+', type=int,
+parser.add_argument ('--client_counts', nargs='+', required=True,
                     help='Number of consumer clients')
 
 parser.add_argument ('--latency_log_scale', action='store_true',
                     help='Plot latency on a log scale')
 
-parser.add_argument ('--show_throughput', action='store_true',
+parser.add_argument ('--show_throughput', default=False, action='store_true',
                     help='Plot throughput')
+
+parser.add_argument ("--log_level", required=False, default="INFO",
+                    choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                    help="Logging level")
+
 
 args = parser.parse_args ()
 
-if not args.client_directories:
-  print ('client_directories argument is not set')
-  exit (1)
-
-if args.client_directory_descriptions is not None and \
-   len (args.client_directory_descriptions) != len (args.client_directories):
+if len (args.client_directory_descriptions) != len (args.client_directories):
   print ('client_directory_descriptions count should equal client_directories count')
   exit (1)
 
+# Ignore font logging
+class LocalLogger(logging.Logger):
+
+  def __init__(self, name):
+    logging.Logger.__init__(self, name)
+    self.addFilter(self.MyFilter())
+
+  class MyFilter(logging.Filter):
+    def filter(self, record):
+      if record.name != 'findfont':
+        return False
+      return True
+
+logging.setLoggerClass(LocalLogger)
+
 max = '0'
 
-print ('[INFO] server_queue_sizes:   ' + str (args.server_queue_sizes) + ' bytes')
-print ('[INFO] server_message_sizes: ' + str (args.server_message_sizes) + ' bytes')
-print ('[INFO] server_rates:         ' + str (args.server_rates) + ' msgs/second')
-print ('[INFO] client_counts:        ' + str (args.client_counts) +
-                        (' client' if args.client_counts == 1 else ' clients'))
-print ('[INFO] Machine')
-print ('[INFO] core_count: ' + str (psutil.cpu_count (logical=False)))
-print ('[INFO] virtual_memory: ' + str (psutil.virtual_memory ()))
+logger = utils.init_logger (logging, args.log_level)
 
-print ('[INFO] ' + platform.platform (terse=1))
+utils.log_machine_specs (logger)
+
+utils.log_run_args (logger, args)
 
 def latency_dataframe (file_path):
   print (str (file_path))
@@ -100,7 +113,7 @@ def show_legend (data):
 
   return False
 
-def plot_summary_latencies (axis, latency_log_scale):
+def plot_summary_latencies (axis, latency_log_scale, show_platform=False):
 
   latency_data = utils.get_latency_summary_data (args)
 
@@ -116,10 +129,15 @@ def plot_summary_latencies (axis, latency_log_scale):
 
   axis.set_title (' '.join (latency_data['title_texts']), fontsize=8)
 
-  axis.set_xlabel ('Percentiles', fontsize=8)
+  xlabel = 'Percentiles'
+
+  if show_platform is True:
+    xlabel += platform.platform (terse=1) + '\n' + utils.get_hardware_specs ()
+
+  axis.set_xlabel (xlabel, fontsize=8)
   axis.set_ylabel ('Latency (nanoseconds)')
 
-def plot_interval_throughput (axis, y_label, ax=None):
+def plot_interval_throughput (axis, y_label, show_platform=False):
   print ('[INFO] Plot: ' + y_label)
 
   throughput_data = utils.get_throughput_interval_data (args)
@@ -133,9 +151,12 @@ def plot_interval_throughput (axis, y_label, ax=None):
 
   utils.set_tick_sizes (axis)
 
-  axis.set_xlabel ('Time (secs)\n\n'
-                  + platform.platform (terse=1) + '\n'
-                  + utils.get_hardware_stats (), fontsize=8)
+  xlabel = 'Time (secs)'
+
+  if show_platform is True:
+    xlabel += platform.platform (terse=1) + '\n' + utils.get_hardware_specs ()
+
+  axis.set_xlabel ('Time (secs)\n\n' + xlabel, fontsize=8)
 
   return plt
 
@@ -165,12 +186,13 @@ if args.show_throughput is True:
 
   # Plot throughput bytes/sec on the other y-axis
   rhs_axis.set_ylabel ('bytes/sec', fontsize='9')
-  plot_interval_throughput (rhs_axis, 'bytes_per_sec')
+  plot_interval_throughput (rhs_axis, 'bytes_per_sec', args.show_throughput)
   rhs_axis.tick_params (axis='y', grid_alpha=0)
 
 
 else:
-  plot_summary_latencies (axis=None, latency_log_scale=args.latency_log_scale)
+  plot_summary_latencies (axis=None, latency_log_scale=args.latency_log_scale,
+                          show_platform=True)
 
 plt.suptitle (args.title, fontsize=10)
 

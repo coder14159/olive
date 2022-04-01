@@ -171,7 +171,7 @@ def load_performance_data (args, filename):
 
                 for percentile in args.client_latency_percentiles:
                   latencies['latencies'] \
-                           [latency_column_count] = df[str (percentile)]
+                           [latency_column_count] = df[str (percentile)].astype (int)
 
                   legend_prefix += ' ' + str (percentile) + '%'
 
@@ -181,7 +181,7 @@ def load_performance_data (args, filename):
               else:
                 for percentile in args.client_latency_percentiles:
                   latencies['latencies'] \
-                           [latency_column_count] = df[str (percentile)]
+                           [latency_column_count] = df[str (percentile)].astype (int)
 
                   latency_column_count += 1
 
@@ -292,7 +292,27 @@ def get_throughput_interval_data (args):
                legend_texts=throughput_data['legend_texts'],
                title_texts=throughput_data['title_texts'])
 
-def get_hardware_stats ():
+def log_machine_specs (logger):
+  vm = psutil.virtual_memory ()
+
+  logger.info ("=====Host Machine=====")
+  logger.info ("cpu_count:            " + str (psutil.cpu_count (logical=False)))
+  logger.info ("cpu_frequency_max     " + str (int (psutil.cpu_freq ().max)) + " MHz")
+  logger.info ("memory_total:         " + str (size_to_pretty (vm.total)))
+  logger.info ("memory_available:     " + str (size_to_pretty (vm.available)))
+
+def log_run_args (logger, args):
+
+  def join_list (list, sep=','):
+    return str (sep.join (list))
+
+  logger.info ("=====Parameters=======")
+  logger.info ("server_queue_sizes:   " + join_list (args.server_queue_sizes) + " bytes")
+  logger.info ("server_message_sizes: " + join_list (args.server_message_sizes) + " bytes")
+  logger.info ("server_rates:         " + join_list (args.server_rates) + " msgs/second")
+  logger.info ("client_counts:        " + join_list (args.client_counts))
+
+def get_hardware_specs ():
 
   stats = f'Processor core_count={psutil.cpu_count (logical=False)} '
   stats += f'core_frequency min={psutil.cpu_freq ().min:.0f}Mhz '
