@@ -131,9 +131,6 @@ def plot_summary_latencies (axis, latency_log_scale, show_platform=False):
 
   xlabel = 'Percentiles'
 
-  if show_platform is True:
-    xlabel += platform.platform (terse=1) + '\n' + utils.get_hardware_specs ()
-
   axis.set_xlabel (xlabel, fontsize=8)
   axis.set_ylabel ('Latency (nanoseconds)')
 
@@ -154,9 +151,9 @@ def plot_interval_throughput (axis, y_label, show_platform=False):
   xlabel = 'Time (secs)'
 
   if show_platform is True:
-    xlabel += platform.platform (terse=1) + '\n' + utils.get_hardware_specs ()
+    xlabel += '\n\n' + platform.platform (terse=1) + '\n' + utils.get_hardware_specs ()
 
-  axis.set_xlabel ('Time (secs)\n\n' + xlabel, fontsize=8)
+  axis.set_xlabel (xlabel, fontsize=8)
 
   return plt
 
@@ -182,13 +179,12 @@ if args.show_throughput is True:
   rhs_axis = lhs_axis.twinx ()
 
   lhs_axis.set_ylabel ('messages/sec', fontsize='9')
-  plot_interval_throughput (lhs_axis, 'messages_per_sec')
+  plot_interval_throughput (lhs_axis, 'messages_per_sec', show_platform=True)
 
   # Plot throughput bytes/sec on the other y-axis
   rhs_axis.set_ylabel ('bytes/sec', fontsize='9')
-  plot_interval_throughput (rhs_axis, 'bytes_per_sec', args.show_throughput)
+  plot_interval_throughput (rhs_axis, 'bytes_per_sec')
   rhs_axis.tick_params (axis='y', grid_alpha=0)
-
 
 else:
   plot_summary_latencies (axis=None, latency_log_scale=args.latency_log_scale,
