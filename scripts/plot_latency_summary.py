@@ -131,11 +131,13 @@ def plot_summary_latencies (axis, latency_log_scale, show_platform=False):
 
   xlabel = 'Percentiles'
 
+  if show_platform is True:
+    xlabel += '\n\n' + platform.platform (terse=1) + '\n' + utils.get_hardware_specs ()
+
   axis.set_xlabel (xlabel, fontsize=8)
   axis.set_ylabel ('Latency (nanoseconds)')
 
 def plot_interval_throughput (axis, y_label, show_platform=False):
-  print ('[INFO] Plot: ' + y_label)
 
   throughput_data = utils.get_throughput_interval_data (args)
   interval_data   = throughput_data['throughput_intervals']
@@ -187,7 +189,9 @@ if args.show_throughput is True:
   rhs_axis.tick_params (axis='y', grid_alpha=0)
 
 else:
-  plot_summary_latencies (axis=None, latency_log_scale=args.latency_log_scale,
+  plt_latency = plt.subplot2grid ((10,10), (0,0), colspan=10, rowspan=9)
+
+  plot_summary_latencies (plt_latency, latency_log_scale=args.latency_log_scale,
                           show_platform=True)
 
 plt.suptitle (args.title, fontsize=10)
