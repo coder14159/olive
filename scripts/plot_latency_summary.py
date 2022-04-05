@@ -30,7 +30,7 @@ exe_dir = os.path.join (base_dir, 'build', platform.processor (), 'bin')
 parser = argparse.ArgumentParser (description='Plot performance test results')
 
 parser.add_argument ('--title', required=False,
-                     default='Shared Memory IPC Performance',
+                     default='Shared Memory IPC Performance Summary',
                      help='Title of the plot')
 
 parser.add_argument ('--server_queue_sizes', nargs='+', required=True,
@@ -89,24 +89,6 @@ utils.log_machine_specs (logger)
 
 utils.log_run_args (logger, args)
 
-def latency_dataframe (file_path):
-  print (str (file_path))
-
-  if file_path.exists () == False:
-      print ('[ERROR] Invalid path: ' + str (file_path))
-      exit (1)
-
-  return pd.read_csv (file_path).transpose ()
-
-def get_legend_list (data):
-  legend_list = []
-
-  if len (data['legend_texts']) > 1:
-    for s in data['legend_texts']:
-      legend_list.append (' '.join (s))
-
-  return legend_list
-
 def show_legend (data):
   if len (data) > 1:
     return True
@@ -125,7 +107,7 @@ def plot_summary_latencies (axis, latency_log_scale, show_platform=False):
 
   utils.set_tick_sizes (axis)
 
-  axis.legend (get_legend_list (latency_data), fontsize=8)
+  axis.legend (utils.get_legend_list (latency_data), fontsize=8)
 
   axis.set_title (' '.join (latency_data['title_texts']), fontsize=8)
 

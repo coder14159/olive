@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import pandas as pd
+import numpy as np
 import platform
 import psutil
 import queue
@@ -103,21 +104,12 @@ def size_to_pretty (bytes, suffix='B'):
 
 # Return legend text
 def get_legend_list (data):
-  legend_list = []
-
-  if len (data['legend_texts']) > 0:
-
-    for texts in data['legend_texts']:
-
-      legend_data = texts[0].split (' ')
-      for index in range (1, len (legend_data)):
-        legend_list.append (legend_data[0] + " " + legend_data[index])
-
-  return legend_list
+  return data['legend_texts']
 
 def load_performance_data (args, filename):
   legend_texts = []
   legend_prefix_texts = None
+  plot_texts = dict ()
   title_text = set ()
   dataframe = None
 
@@ -173,7 +165,8 @@ def load_performance_data (args, filename):
                   latencies['latencies'] \
                            [latency_column_count] = df[str (percentile)].astype (int)
 
-                  legend_prefix += ' ' + str (percentile) + '%'
+                  legend_texts.append (legend_prefix + ':' +
+                                       str (percentile) + '%')
 
                   latency_column_count += 1
 
@@ -183,13 +176,12 @@ def load_performance_data (args, filename):
                   latencies['latencies'] \
                            [latency_column_count] = df[str (percentile)].astype (int)
 
+                  legend_texts.append (legend_prefix + ':'
+                                        + str (percentile) + '%')
+
                   latency_column_count += 1
 
-                  dataframe = latencies
-
-                  legend_line_label = [legend_prefix + ':' + str (percentile)]
-
-              logging.debug (dataframe)
+                dataframe = latencies
 
             if 'throughput-interval' in filename:
               # TODO simplify use of throughput_column_count
@@ -214,53 +206,63 @@ def load_performance_data (args, filename):
               df = df.transpose ()
 
               if dataframe is None:
-                dataframe = df
+                dataframe = df.astype (int)
               else:
                 throughput_column_count += 1
-                dataframe[throughput_column_count] = df
+                dataframe[throughput_column_count] = df.astype (int)
+
               logging.debug (dataframe)
 
+              legend_texts.append (legend_prefix)
+
             # Construct line descriptions
-            plot_texts = get_plot_texts (args,
-                            legend_texts, legend_prefix,
+            texts = get_plot_texts (args, legend_texts,
                             message_size, server_rate, server_queue_size,
                             client_count)
+
+            if not plot_texts:
+              plot_texts['legend_texts'] = texts['legend_texts']
+              plot_texts['title_texts'] = texts['title_texts']
+            else:
+              plot_texts['legend_texts'].extend (texts['legend_texts'])
+              plot_texts['title_texts'] = texts['title_texts']
+
+            texts = []
+            legend_texts = []
 
   return dict (dataframe=dataframe,
                legend_texts=plot_texts['legend_texts'],
                title_texts=plot_texts['title_texts'])
 
-def get_plot_texts (args, legend_texts, legend_prefix, message_size, server_rate,
+def get_plot_texts (args, legend_texts, message_size, server_rate,
                     server_queue_size, client_count):
   # Construct line descriptions
   legend_prefix_texts = None
   title_text = set ()
 
-  legend_line_label = [legend_prefix]
+  legend_line_label = []
 
   rate = (server_rate if server_rate != '0' else 'max')
 
   if len (args.server_rates) > 1:
-    legend_line_label.append ('rate:' + str (rate))
+    legend_texts.append ('rate:' + str (rate))
   else:
     title_text.add ('rate:' + str (rate))
 
   if len (args.server_message_sizes) > 1:
-    legend_line_label.append ('message_size:' + str (message_size))
+    legend_texts.append ('message_size:' + str (message_size))
   else:
     title_text.add ('message_size:' + str (message_size))
 
   if len (args.server_queue_sizes) > 1:
-    legend_line_label.append ('queue_size:' + str (server_queue_size))
+    legend_texts.append ('queue_size:' + str (server_queue_size))
   else:
     title_text.add ('queue_size:' + str (server_queue_size))
 
   if len (args.client_counts) > 1:
-    legend_line_label.append ('clients:' + str (client_count))
+    legend_texts.append ('clients:' + str (client_count))
   else:
     title_text.add ('clients:' + str (client_count))
-
-  legend_texts.append (legend_line_label)
 
   return dict (legend_texts=legend_texts,
                title_texts=title_text)
@@ -301,10 +303,11 @@ def log_machine_specs (logger):
   logger.info ("memory_total:         " + str (size_to_pretty (vm.total)))
   logger.info ("memory_available:     " + str (size_to_pretty (vm.available)))
 
-def log_run_args (logger, args):
 
-  def join_list (list, sep=','):
-    return str (sep.join (list))
+def join_list (list, sep=','):
+  return str (sep.join (list))
+
+def log_run_args (logger, args):
 
   logger.info ("=====Parameters=======")
   logger.info ("server_queue_sizes:   " + join_list (args.server_queue_sizes) + " bytes")
