@@ -29,6 +29,9 @@ def init_logger (logger, level_str):
 
   return logging
 
+#
+# Maybe use this function for more human-friendly plotting values
+#
 # def sub_title (server_rate, message_size, client_count):
 #   # An integer of zero denotes maximum server rate
 #   server_rate = (server_rate if server_rate != 'max' else '0')
