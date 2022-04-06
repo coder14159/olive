@@ -141,6 +141,8 @@ def load_performance_data (args, filename):
         for message_size in args.server_message_sizes:
 
           for client_count in args.client_counts:
+            join_legend_list = False
+
             data_directory = output_directory_path (dir,
                                             server_queue_size,
                                             server_rate,
@@ -157,7 +159,7 @@ def load_performance_data (args, filename):
             df = pd.read_csv (file_path)
 
             if 'latency-interval' in filename:
-              # TODO simplify use of throughput_column_count
+              join_legend_list = True
               if not latencies:
                 latencies['latencies'] = pd.DataFrame ()
 
@@ -211,21 +213,26 @@ def load_performance_data (args, filename):
                 throughput_column_count += 1
                 dataframe[throughput_column_count] = df.astype (int)
 
-              logging.debug (dataframe)
+              logging.info (dataframe)
 
               legend_texts.append (legend_prefix)
+
+              join_legend_list = True
+
 
             # Construct line descriptions
             texts = get_plot_texts (args, legend_texts,
                             message_size, server_rate, server_queue_size,
-                            client_count)
+                            client_count, join_legend_list)
 
-            if not plot_texts:
-              plot_texts['legend_texts'] = texts['legend_texts']
-              plot_texts['title_texts'] = texts['title_texts']
+            if plot_texts:
+              plot_texts['legend_texts'] += texts['legend_texts']
             else:
-              plot_texts['legend_texts'].extend (texts['legend_texts'])
-              plot_texts['title_texts'] = texts['title_texts']
+              plot_texts['legend_texts'] = texts['legend_texts']
+
+            plot_texts['title_texts'] = texts['title_texts']
+
+            print (plot_texts['legend_texts'])
 
             texts = []
             legend_texts = []
@@ -235,12 +242,10 @@ def load_performance_data (args, filename):
                title_texts=plot_texts['title_texts'])
 
 def get_plot_texts (args, legend_texts, message_size, server_rate,
-                    server_queue_size, client_count):
+                    server_queue_size, client_count,
+                    join_legend_list=False):
   # Construct line descriptions
-  legend_prefix_texts = None
   title_text = set ()
-
-  legend_line_label = []
 
   rate = (server_rate if server_rate != '0' else 'max')
 
@@ -263,6 +268,9 @@ def get_plot_texts (args, legend_texts, message_size, server_rate,
     legend_texts.append ('clients:' + str (client_count))
   else:
     title_text.add ('clients:' + str (client_count))
+
+  if join_legend_list is True:
+    legend_texts = [join_list (legend_texts, ' ')]
 
   return dict (legend_texts=legend_texts,
                title_texts=title_text)
