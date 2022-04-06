@@ -29,13 +29,13 @@ def init_logger (logger, level_str):
 
   return logging
 
-def sub_title (server_rate, message_size, client_count):
-  # An integer of zero denotes maximum server rate
-  server_rate = (server_rate if server_rate != 'max' else '0')
+# def sub_title (server_rate, message_size, client_count):
+#   # An integer of zero denotes maximum server rate
+#   server_rate = (server_rate if server_rate != 'max' else '0')
 
-  return 'message_rate='  + throughput_messages_to_pretty (server_rate) \
-       + ' message_size=' + str (message_size) + ' bytes' \
-       + ' client_count=' + str (client_count)
+#   return 'message_rate='  + throughput_messages_to_pretty (server_rate) \
+#        + ' message_size=' + str (message_size) + ' bytes' \
+#        + ' client_count=' + str (client_count)
 
 def set_tick_sizes (axis):
   for tick in axis.xaxis.get_major_ticks ():
@@ -106,6 +106,7 @@ def size_to_pretty (bytes, suffix='B'):
 def get_legend_list (data):
   return data['legend_texts']
 
+# Load performance data from CSV files and generate data for plotting
 def load_performance_data (args, filename):
   legend_texts = []
   legend_prefix_texts = None
@@ -186,7 +187,6 @@ def load_performance_data (args, filename):
                 dataframe = latencies
 
             if 'throughput-interval' in filename:
-              # TODO simplify use of throughput_column_count
               if not throughputs:
                 throughputs['messages_per_sec'] = pd.DataFrame (
                     { throughput_column_count : df['messages_per_sec'] })
@@ -204,6 +204,7 @@ def load_performance_data (args, filename):
                 dataframe = throughputs
 
             if 'latency-summary' in filename:
+              join_legend_list = True
 
               df = df.transpose ()
 
@@ -217,9 +218,6 @@ def load_performance_data (args, filename):
 
               legend_texts.append (legend_prefix)
 
-              join_legend_list = True
-
-
             # Construct line descriptions
             texts = get_plot_texts (args, legend_texts,
                             message_size, server_rate, server_queue_size,
@@ -231,8 +229,6 @@ def load_performance_data (args, filename):
               plot_texts['legend_texts'] = texts['legend_texts']
 
             plot_texts['title_texts'] = texts['title_texts']
-
-            print (plot_texts['legend_texts'])
 
             texts = []
             legend_texts = []
