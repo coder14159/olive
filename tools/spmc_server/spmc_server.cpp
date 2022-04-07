@@ -2,7 +2,7 @@
 #include "Logger.h"
 #include "SignalCatcher.h"
 #include "SPMCQueue.h"
-#include "SPMCSink.h"
+#include "SPMCSource.h"
 #include "Throttle.h"
 #include "detail/CXXOptsHelper.h"
 #include "detail/Utils.h"
@@ -63,16 +63,16 @@ void server (const std::string& name,
    * Create enough shared memory for a single queue which is shared by all the
    * clients.
    */
-  using Queue = SPMCQueue<SharedMemory::Allocator>;
-  using Sink  = SPMCSink<Queue>;
+  using Queue  = SPMCQueue<SharedMemory::Allocator>;
+  using Source = SPMCSource<Queue>;
 
-  Sink sink (name, name + ":queue", queueSize);
+  Source source (name, name + ":queue", queueSize);
 
   std::atomic<bool> stop = { false };
   /*
    * Handle signals
    */
-  SignalCatcher s ({SIGINT, SIGTERM}, [&sink, &stop] (int) {
+  SignalCatcher s ({SIGINT, SIGTERM}, [&source, &stop] (int) {
 
     if (!stop)
     {
@@ -80,7 +80,7 @@ void server (const std::string& name,
 
       stop = true;
 
-      sink.stop ();
+      source.stop ();
     }
   });
 
@@ -95,7 +95,7 @@ void server (const std::string& name,
   {
     while (SPMC_EXPECT_TRUE (!stop.load (std::memory_order_relaxed)))
     {
-      sink.next (message);
+      source.next (message);
     }
   }
   else
@@ -108,12 +108,12 @@ void server (const std::string& name,
 
     while (SPMC_EXPECT_TRUE (!stop.load (std::memory_order_relaxed)))
     {
-      sink.next (message);
+      source.next (message);
       /*
        * Throttle also periodically sends a WARMUP_MESSAGE_TYPE message to keep
        * the cache warm.
        */
-      throttle.throttle<Sink> (sink);
+      throttle.throttle<Source> (source);
     }
   }
 }

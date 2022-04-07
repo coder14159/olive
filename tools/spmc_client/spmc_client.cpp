@@ -3,7 +3,7 @@
 #include "Logger.h"
 #include "PerformanceStats.h"
 #include "SignalCatcher.h"
-#include "SPMCStream.h"
+#include "SPMCSink.h"
 #include "detail/CXXOptsHelper.h"
 #include "detail/SharedMemory.h"
 #include "detail/Utils.h"
@@ -118,15 +118,15 @@ int main(int argc, char* argv[]) try
   }
 
   using Queue  = SPMCQueue<SharedMemory::Allocator>;
-  using Stream = SPMCStream<Queue>;
+  using Sink = SPMCSink<Queue>;
 
-  Stream stream (name, name + ":queue");
+  Sink sink (name, name + ":queue");
 
   std::atomic<bool> stop = { false };
   /*
    * Handle signals
    */
-  SignalCatcher s ({SIGINT, SIGTERM}, [&stream, &stop] (int) {
+  SignalCatcher s ({SIGINT, SIGTERM}, [&sink, &stop] (int) {
 
     if (!stop)
     {
@@ -134,7 +134,7 @@ int main(int argc, char* argv[]) try
 
       stop = true;
 
-      stream.stop ();
+      sink.stop ();
     }
   });
 
@@ -157,7 +157,7 @@ int main(int argc, char* argv[]) try
 
   while (!stop.load (std::memory_order_relaxed))
   {
-    if (stream.next (header, data))
+    if (sink.next (header, data))
     {
       stats.update (sizeof (Header) + header.size, header.seqNum,
                     timepoint_from_nanoseconds_since_epoch (header.timestamp));
@@ -209,7 +209,7 @@ int main(int argc, char* argv[]) try
   stats.stop ();
   stats.print_summary ();
 
-  BOOST_LOG_TRIVIAL (info) << "Exit SPMCStream";
+  BOOST_LOG_TRIVIAL (info) << "Exit SPMCSink";
 
   return EXIT_SUCCESS;
 }

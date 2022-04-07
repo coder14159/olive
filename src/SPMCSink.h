@@ -10,9 +10,14 @@
 namespace spmc {
 
 /*
- * A single producer/ multiple consumer data sink.
+ * A single producer/ multiple consumer data stream.
  *
- * Use SPMCSink to put data into the shared memory queue.
+ * Stream shared memory data from a single producer using a shared memory queue
+ * capable of supporting multiple consumers.
+ *
+ * If the SPMCSink is constructed to allow dropping of messages then it will
+ * not exert back-pressure on the server.
+ *
  */
 template <typename QueueType>
 class SPMCSink
@@ -23,64 +28,52 @@ private:
 
 public:
   /*
-   * Create a sink object for use in a single process by multiple threads
+   * Initialise a stream consuming from named shared memory
    */
-  SPMCSink (size_t capacity);
+  SPMCSink (const std::string &memoryName, const std::string &queueName);
 
   /*
-   * Create a sink object in shared memory for use by multiple processes
+   * Initialise a stream consuming from memory shared between threads in a
+   * single process.
    */
-  SPMCSink (const std::string &memoryName,
-            const std::string &queueName,
-            size_t             capacity);
+  SPMCSink (QueueType &queue);
+
+  ~SPMCSink ();
 
   /*
-   * Stop sink sending data
+   * Stop retrieving data from share memory
    */
   void stop ();
 
   /*
-   * Serialise data to the queue
-   * Blocks until successful
+   * Retrieve the next packet of data, non-blocking
    */
-  void next (const std::vector<uint8_t> &data);
+  template<typename Vector>
+  bool next (Header &header, Vector &data);
 
   /*
-   * Serialise POD data to the queue
-   * Blocks until successful
+   * Retrieve the next packet of data, non-blocking
    */
-  template<typename POD>
-  void next (const POD &data);
+  template<typename Vector>
+  bool next_non_blocking (Header &header, Vector &data);
 
+private:
   /*
-   * Send a header message to the queue intended to keep queue warm in the cache
+   * Pull data from the shared queue.
+   *
+   * A placeholder function for backoff strategy implementations
    */
-  void next_keep_warm ();
-
-  /*
-   * Reference to the queue to be shared with SPMCStream objects for
-   * inter-thread communication
-   */
-   QueueType& queue () { return m_queue; }
+  bool receive (Header &header, std::vector<uint8_t> &data);
 
 private:
 
-  alignas (CACHE_LINE_SIZE)
-  QueueType m_queue;
-
-  alignas (CACHE_LINE_SIZE)
   bool m_stop = { false };
 
-  uint64_t m_sequenceNumber = 0;
+  detail::ConsumerState m_consumer;
 
-  alignas (CACHE_LINE_SIZE)
-  const Header m_warmupHdr = {
-      HEADER_VERSION,
-      WARMUP_MESSAGE_TYPE,
-      0,
-      0,
-      DEFAULT_TIMESTAMP
-  };
+  std::unique_ptr<QueueType> m_queuePtr;
+
+  QueueType &m_queue;
 };
 
 /*

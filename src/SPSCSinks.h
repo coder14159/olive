@@ -10,7 +10,7 @@
 namespace spmc {
 
 /*
- * Use SPSCSinks to manage pussing data into multiple SPSC queues for shared
+ * Use SPSCSinks to manage pushing data into multiple SPSC queues for shared
  * memory interprocess communication.
  *
  * TODO: complete and create tests for this prototype
