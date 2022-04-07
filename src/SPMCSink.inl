@@ -1,71 +1,67 @@
-#include "Chrono.h"
+#include "detail/Utils.h"
+
+#include <boost/log/trivial.hpp>
+
 
 namespace spmc {
 
-template <class Queuetype>
-SPMCSink<Queuetype>::SPMCSink (size_t capacity)
-: m_queue (capacity)
-{ }
-
-template <class Queuetype>
-SPMCSink<Queuetype>::SPMCSink (const std::string &memoryName,
-                               const std::string &queueName,
-                               size_t             capacity)
-: m_queue (memoryName, queueName, capacity)
+template <typename QueueType>
+SPMCSink<QueueType>::SPMCSink (const std::string &memoryName,
+                        const std::string &queueName)
+: m_queuePtr (std::make_unique<QueueType> (memoryName, queueName)),
+  m_queue (*m_queuePtr)
 {
-  BOOST_LOG_TRIVIAL(info) << "Found or created queue named '"
-    << queueName << "' with capacity of " << capacity << " bytes";
+  m_queue.register_consumer (m_consumer);
 }
 
-template <class Queuetype>
-void SPMCSink<Queuetype>::stop ()
+template <typename QueueType>
+SPMCSink<QueueType>::SPMCSink (QueueType &queue)
+: m_queue (queue)
+{
+  m_queue.register_consumer (m_consumer);
+}
+
+template <typename QueueType>
+SPMCSink<QueueType>::~SPMCSink ()
+{
+  stop ();
+
+  m_queue.unregister_consumer (m_consumer);
+}
+
+template <typename QueueType>
+void SPMCSink<QueueType>::stop ()
 {
   m_stop = true;
 }
 
-template <class Queuetype>
-void SPMCSink<Queuetype>::next (const std::vector<uint8_t> &data)
+template <typename QueueType>
+template<typename Vector>
+bool SPMCSink<QueueType>::next (Header &header, Vector &data)
 {
-  Header header;
-  header.size      = data.size ();
-  header.seqNum    = ++m_sequenceNumber;
-  header.timestamp = nanoseconds_since_epoch (Clock::now ());
-
-  while (!m_stop && !m_queue.push (header, data))
+  while (!m_stop)
   {
-    /*
-     * Re-generate the timestamp if the queue is full so that only internal
-     * latency is measured
-     */
-    header.timestamp = nanoseconds_since_epoch (Clock::now ());
-  }
-}
-
-template <class Queuetype>
-template<typename POD>
-void SPMCSink<Queuetype>::next (const POD &data)
-{
-  Header header;
-  header.size      = sizeof (POD);
-  header.seqNum    = ++m_sequenceNumber;
-  header.timestamp = nanoseconds_since_epoch (Clock::now ());
-
-  while (!m_stop && !m_queue.push (header, data))
-  {
-    /*
-     * Re-generate the timestamp if the queue is full so that only internal
-     * latency is measured
-     */
-    header.timestamp = nanoseconds_since_epoch (Clock::now ());
+    if (m_queue.pop (header, data, m_consumer))
+    {
+      return true;
+    }
   }
 
+  return false;
 }
 
-template <class Queuetype>
-void SPMCSink<Queuetype>::next_keep_warm ()
+template <typename QueueType>
+template<typename Vector>
+bool SPMCSink<QueueType>::next_non_blocking (Header &header, Vector &data)
 {
-  m_queue.push (m_warmupHdr);
+  return (m_queue.pop (header, data));
 }
 
-} // namespace spmc
+// TODO receive policies (eg backoff/yield)
+template <typename QueueType>
+bool SPMCSink<QueueType>::receive (Header &header, std::vector<uint8_t> &data)
+{
+  return (SPMC_EXPECT_TRUE (m_queue.pop (header, data)));
+}
 
+}

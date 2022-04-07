@@ -4,8 +4,8 @@
 #include "CpuBind.h"
 #include "Logger.h"
 #include "PerformanceStats.h"
+#include "SPMCSource.h"
 #include "SPMCSink.h"
-#include "SPMCStream.h"
 #include "Throttle.h"
 #include "TimeDuration.h"
 #include "Timer.h"
@@ -380,18 +380,18 @@ float latency_percentile_usecs (const PerformanceStats &stats, float percentile)
 }
 
 template <class PayloadType>
-void sink_stream_multi_thread (
+void source_sink_multi_thread (
     size_t            capacity,
     PerformanceStats &stats,
     uint32_t          rate)
 {
-  BOOST_TEST_MESSAGE ("sink_stream_multi_thread 1 sink and 2 streams");
+  BOOST_TEST_MESSAGE ("source_sink_multi_thread 1 source and 2 sinks");
 
   std::atomic<bool> stop = { false };
 
-  SPMCSinkThread sink (capacity);
-  SPMCStreamThread stream1 (sink.queue ());
-  SPMCStreamThread stream2 (sink.queue ());
+  SPMCSourceThread source (capacity);
+  SPMCSinkThread sink1 (source.queue ());
+  SPMCSinkThread sink2 (source.queue ());
 
   auto consumer1 = std::thread ([&] () {
     bind_to_cpu (2);
@@ -407,7 +407,7 @@ void sink_stream_multi_thread (
 
       while (!stop)
       {
-        if (stream1.next (header, data))
+        if (sink1.next (header, data))
         {
           stats.update (sizeof (Header) + data.size (), header.seqNum,
                         TimePoint (Nanoseconds (header.timestamp)));
@@ -431,7 +431,7 @@ void sink_stream_multi_thread (
 
       while (!stop)
       {
-        stream2.next (header, data);
+        sink2.next (header, data);
       }
     }
     catch(const std::exception& e)
@@ -445,7 +445,7 @@ void sink_stream_multi_thread (
     std::this_thread::sleep_for (1us);
   }
 
-  auto producer = std::thread ([&stop, &sink, &rate] () {
+  auto producer = std::thread ([&stop, &source, &rate] () {
     try
     {
       Throttle throttle (rate);
@@ -469,7 +469,7 @@ void sink_stream_multi_thread (
 
       while (!stop)
       {
-        sink.next (payload);
+        source.next (payload);
 
         throttle.throttle ();
       }
@@ -484,10 +484,10 @@ void sink_stream_multi_thread (
 
   stats.stop ();
 
-  sink.stop ();
+  source.stop ();
 
-  stream1.stop ();
-  stream2.stop ();
+  sink1.stop ();
+  sink2.stop ();
 
   stop = true;
 
@@ -497,7 +497,7 @@ void sink_stream_multi_thread (
   producer.join ();
 }
 
-BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiThreadVectorPayload)
+BOOST_AUTO_TEST_CASE (ThroughputSourceSinkMultiThreadVectorPayload)
 {
   if (getenv ("NOTIMING") != nullptr)
   {
@@ -518,7 +518,7 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiThreadVectorPayload)
 
   PerformanceStats stats;
 
-  sink_stream_multi_thread<std::vector<uint8_t>> (capacity, stats, rate);
+  source_sink_multi_thread<std::vector<uint8_t>> (capacity, stats, rate);
 
   auto &throughput = stats.throughput ().summary ();
 
@@ -530,7 +530,7 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiThreadVectorPayload)
 
 }
 
-BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiThreadVectorPayload)
+BOOST_AUTO_TEST_CASE (LatencySourceSinkMultiThreadVectorPayload)
 {
   if (getenv ("NOTIMING") != nullptr)
   {
@@ -551,7 +551,7 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiThreadVectorPayload)
 
   PerformanceStats stats;
 
-  sink_stream_multi_thread<std::vector<uint8_t>> (capacity, stats, rate);
+  source_sink_multi_thread<std::vector<uint8_t>> (capacity, stats, rate);
 
   auto &throughput = stats.throughput ().summary ();
 
@@ -571,7 +571,7 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiThreadVectorPayload)
   }
 }
 
-BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiThreadPODPayload)
+BOOST_AUTO_TEST_CASE (ThroughputSourceSinkMultiThreadPODPayload)
 {
   if (getenv ("NOTIMING") != nullptr)
   {
@@ -585,7 +585,7 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiThreadPODPayload)
 
   PerformanceStats stats;
 
-  sink_stream_multi_thread<char[PAYLOAD_SIZE]> (capacity, stats, rate);
+  source_sink_multi_thread<char[PAYLOAD_SIZE]> (capacity, stats, rate);
 
   auto &throughput = stats.throughput ().summary ();
 
@@ -596,7 +596,7 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiThreadPODPayload)
   BOOST_CHECK (throughput.megabytes_per_sec () > 100);
 }
 
-BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiThreadPODPayload)
+BOOST_AUTO_TEST_CASE (LatencySourceSinkMultiThreadPODPayload)
 {
   if (getenv ("NOTIMING") != nullptr)
   {
@@ -610,7 +610,7 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiThreadPODPayload)
 
   PerformanceStats stats;
 
-  sink_stream_multi_thread<char[PAYLOAD_SIZE]> (capacity, stats, rate);
+  source_sink_multi_thread<char[PAYLOAD_SIZE]> (capacity, stats, rate);
 
   auto &throughput = stats.throughput ().summary ();
 
@@ -629,7 +629,7 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiThreadPODPayload)
   }
 }
 
-void sink_stream_multi_process (
+void source_sink_multi_process (
     size_t            capacity,
     PerformanceStats &stats,
     uint32_t          rate)
@@ -637,7 +637,7 @@ void sink_stream_multi_process (
   using namespace boost;
   using namespace boost::interprocess;
 
-  std::string name = "SinkStreamSharedMemory:Perf";
+  std::string name = "SourceSinkSharedMemory:Perf";
 
   struct RemoveSharedMemory
   {
@@ -657,7 +657,7 @@ void sink_stream_multi_process (
   managed_shared_memory (open_or_create, name.c_str(),
                          capacity + SharedMemory::BOOK_KEEPING);
 
-  SPMCSinkProcess sink (name, name + ":queue", capacity);
+  SPMCSourceProcess source (name, name + ":queue", capacity);
 
   auto producer = std::thread ([&] () {
 
@@ -669,22 +669,22 @@ void sink_stream_multi_process (
 
     while (!stop)
     {
-      sink.next (message);
+      source.next (message);
 
       throttle.throttle ();
     }
   });
 
-  SPMCStreamProcess stream (name, name + ":queue");
+  SPMCSinkProcess sink (name, name + ":queue");
 
-  auto consumer = std::thread ([&stream, &stats] () {
+  auto consumer = std::thread ([&sink, &stats] () {
     Header header;
 
     std::vector<uint8_t> message (PAYLOAD_SIZE, 0);
 
     while (true)
     {
-      if (stream.next (header, message))
+      if (sink.next (header, message))
       {
         stats.update (header.size+sizeof (Header), header.seqNum,
                       TimePoint (Nanoseconds (header.timestamp)));
@@ -698,8 +698,8 @@ void sink_stream_multi_process (
 
   std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
 
-  stream.stop ();
   sink.stop ();
+  source.stop ();
 
   stop = true;
 
@@ -707,7 +707,7 @@ void sink_stream_multi_process (
   consumer.join ();
 }
 
-BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiProcess)
+BOOST_AUTO_TEST_CASE (ThroughputSourceSinkMultiProcess)
 {
   if (getenv ("NOTIMING") != nullptr)
   {
@@ -720,7 +720,7 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiProcess)
   size_t capacity = 2048000;
   uint32_t rate   = 0;
 
-  sink_stream_multi_process (capacity, stats, rate);
+  source_sink_multi_process (capacity, stats, rate);
 
   auto &throughput = stats.throughput ().summary ();
 
@@ -729,7 +729,7 @@ BOOST_AUTO_TEST_CASE (ThroughputSinkStreamMultiProcess)
   BOOST_CHECK (throughput.messages_per_sec () > 1000);
 }
 
-BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiProcess)
+BOOST_AUTO_TEST_CASE (LatencySourceSinkMultiProcess)
 {
   if (getenv ("NOTIMING") != nullptr)
   {
@@ -743,7 +743,7 @@ BOOST_AUTO_TEST_CASE (LatencySinkStreamMultiProcess)
   size_t capacity = 20480;
   uint32_t rate   = 1e6;
 
-  sink_stream_multi_process (capacity, stats, rate);
+  source_sink_multi_process (capacity, stats, rate);
 
   auto &throughput = stats.throughput ().summary ();
 

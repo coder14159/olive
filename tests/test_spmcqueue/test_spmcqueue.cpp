@@ -4,8 +4,8 @@
 #include "Logger.h"
 #include "PerformanceStats.h"
 #include "SPMCQueue.h"
+#include "SPMCSource.h"
 #include "SPMCSink.h"
-#include "SPMCStream.h"
 #include "Throttle.h"
 #include "detail/SharedMemory.h"
 
@@ -896,7 +896,7 @@ public:
 
       try
       {
-        SPMCStream<Queue> stream (queue);
+        SPMCSink<Queue> sink (queue);
         std::vector<uint8_t> data (dataSize);
 
         auto &throughput =  m_stats.throughput ().summary ();
@@ -906,7 +906,7 @@ public:
 
         while (!m_stop)
         {
-          if (stream.next (header, data))
+          if (sink.next (header, data))
           {
             throughput.next (sizeof (header) + data.size (), header.seqNum);
 
@@ -939,7 +939,7 @@ public:
 
 private:
 
-  std::unique_ptr<SPMCStream<Queue>> m_stream;
+  std::unique_ptr<SPMCSink<Queue>> m_sink;
 
   std::atomic<bool> m_stop = { false };
 
@@ -1113,14 +1113,14 @@ BOOST_AUTO_TEST_CASE (RestartServer)
   }
 }
 
-BOOST_AUTO_TEST_CASE (SinkStreamInSharedMemory)
+BOOST_AUTO_TEST_CASE (SourceSinkInSharedMemory)
 {
   using namespace boost;
   using namespace boost::interprocess;
 
   ScopedLogLevel log (error);
 
-  std::string name = "SinkStreamInSharedMemory:Test";
+  std::string name = "SourceSinkInSharedMemory:Test";
   /*
    * RAII class to cleanup shared memory
    */
@@ -1145,11 +1145,11 @@ BOOST_AUTO_TEST_CASE (SinkStreamInSharedMemory)
   managed_shared_memory memory (open_or_create, name.c_str(),
                          capacity + SharedMemory::BOOK_KEEPING);
 
-  SPMCSinkProcess sink (name, name + ":queue", capacity);
+  SPMCSourceProcess source (name, name + ":queue", capacity);
 
   std::atomic<bool> stop = { false };
 
-  auto producer = std::thread ([&stop, &sink, &messageSize] () {
+  auto producer = std::thread ([&stop, &source, &messageSize] () {
 
     std::vector<uint8_t> message (messageSize, 0);
 
@@ -1157,15 +1157,15 @@ BOOST_AUTO_TEST_CASE (SinkStreamInSharedMemory)
 
     while (!stop)
     {
-      sink.next (message);
+      source.next (message);
     }
   });
 
-  SPMCStreamProcess stream (name, name + ":queue");
+  SPMCSinkProcess sink (name, name + ":queue");
 
   PerformanceStats stats;
 
-  auto consumer = std::thread ([&stop, &stream, &stats, &messageSize] () {
+  auto consumer = std::thread ([&stop, &sink, &stats, &messageSize] () {
 
     // consume messages from the shared memory queue
     std::vector<uint8_t> message  (messageSize, 0);
@@ -1178,7 +1178,7 @@ BOOST_AUTO_TEST_CASE (SinkStreamInSharedMemory)
 
     while (!stop)
     {
-      if (stream.next (header, message))
+      if (sink.next (header, message))
       {
         if (count == 0)
         {
@@ -1202,7 +1202,7 @@ BOOST_AUTO_TEST_CASE (SinkStreamInSharedMemory)
 
   std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
 
-  stream.stop ();
+  source.stop ();
   sink.stop ();
 
   stop = true;
