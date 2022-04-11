@@ -1,5 +1,5 @@
-#ifndef IPC_TIME_DURATION_H
-#define IPC_TIME_DURATION_H
+#ifndef OLIVE_TIME_DURATION_H
+#define OLIVE_TIME_DURATION_H
 
 #include "Chrono.h"
 
@@ -9,7 +9,7 @@
 
 #include <boost/operators.hpp>
 
-namespace spmc {
+namespace olive {
 
 /*
  * Helper class for time durations
@@ -78,8 +78,8 @@ double to_nanoseconds (TimeDuration duration)
   return static_cast<int64_t> (duration.nanoseconds ().count ());
 }
 
-} // namespace spmc
+} // namespace olive
 
 #include "TimeDuration.inl"
 
-#endif // IPC_TIME_DURATION_H
+#endif // OLIVE_TIME_DURATION_H

@@ -1,4 +1,4 @@
-namespace spmc {
+namespace olive {
 
 /*
  * Helper class to make cxxopts syntax a little more succinct
@@ -113,4 +113,4 @@ void CxxOptsHelper::check_exists (const std::string &name) const
   }
 }
 
-} // namespace spmc
+} // namespace olive

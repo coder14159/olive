@@ -12,7 +12,7 @@
 
 namespace fs = boost::filesystem;
 
-namespace spmc {
+namespace olive {
 
 inline
 void Throughput::reset ()
@@ -36,4 +36,4 @@ void Throughput::next (uint64_t bytes, uint64_t messages)
   m_bytes += bytes;
 }
 
-} // namespace spmc
+} // namespace olive

@@ -3,7 +3,7 @@
  * Add additional get_size () functions, similar to the vector specialisation,
  * to support other types.
  */
-namespace spmc {
+namespace olive {
 
 namespace {
 
@@ -37,4 +37,4 @@ size_t get_size (const Head& head, const Tail&...tail)
   return get_size (head) + get_size (tail...);
 }
 
-} // namespace spmc
+} // namespace olive

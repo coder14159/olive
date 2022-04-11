@@ -1,5 +1,5 @@
-#ifndef IPC_LATENCY_STATS_H
-#define IPC_LATENCY_STATS_H
+#ifndef OLIVE_LATENCY_STATS_H
+#define OLIVE_LATENCY_STATS_H
 
 #include "Latency.h"
 
@@ -10,7 +10,7 @@
 #include <string>
 #include <thread>
 
-namespace spmc {
+namespace olive {
 
 /*
  * Helper class for interval and summary latency logging
@@ -49,7 +49,7 @@ private:
 
 };
 
-} // namespace spmc
+} // namespace olive
 
 #include "LatencyStats.inl"
 

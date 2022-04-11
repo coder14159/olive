@@ -3,7 +3,7 @@
 #include <boost/log/trivial.hpp>
 
 
-namespace spmc {
+namespace olive {
 
 template <typename QueueType>
 SPMCSink<QueueType>::SPMCSink (const std::string &memoryName,

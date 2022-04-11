@@ -7,7 +7,7 @@
 
 namespace bi = boost::interprocess;
 
-namespace spmc {
+namespace olive {
 
 SPSCSinks::SPSCSinks (const std::string &memoryName)
 : m_name (objectName),

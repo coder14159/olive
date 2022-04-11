@@ -1,11 +1,11 @@
-#ifndef IPC_LOGGER_H
-#define IPC_LOGGER_H
+#ifndef OLIVE_LOGGER_H
+#define OLIVE_LOGGER_H
 
 #include <boost/log/trivial.hpp>
 
 #include <vector>
 
-namespace spmc {
+namespace olive {
 
 boost::log::trivial::severity_level get_log_level ();
 
@@ -57,7 +57,7 @@ public:
   boost::log::trivial::severity_level m_level;
 };
 
-} // namespace spmc
+} // namespace olive
 
-#endif // IPC_LOGGER_H
+#endif // OLIVE_LOGGER_H
 

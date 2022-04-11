@@ -14,7 +14,7 @@
 #include <csignal>
 #include <numeric>
 
-using namespace spmc;
+using namespace olive;
 namespace bi = boost::interprocess;
 
 CxxOptsHelper parse (int argc, char* argv[])

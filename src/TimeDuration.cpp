@@ -6,7 +6,7 @@
 
 #include <boost/format.hpp>
 
-namespace spmc {
+namespace olive {
 
 std::string nanoseconds_to_pretty (Nanoseconds::rep count)
 {
@@ -58,4 +58,4 @@ std::string TimeDuration::pretty () const
   return nanoseconds_to_pretty (m_nanoseconds);
 }
 
-} // namespace spmc
+} // namespace olive

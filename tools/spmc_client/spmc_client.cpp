@@ -12,7 +12,7 @@
 #include <exception>
 #include <set>
 
-using namespace spmc;
+using namespace olive;
 
 namespace bi = boost::interprocess;
 

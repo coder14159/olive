@@ -1,12 +1,12 @@
-#ifndef IPC_ASSERT_H
-#define IPC_ASSERT_H
+#ifndef OLIVE_ASSERT_H
+#define OLIVE_ASSERT_H
 
 #include <exception>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
 
-namespace spmc {
+namespace olive {
 
 /*
  * Asserts can be disabled at compile time
@@ -65,6 +65,6 @@ namespace spmc {
 } while(0)
 
 
-} // namespace spmc
+} // namespace olive
 
-#endif // IPC_ASSERT_H
+#endif // OLIVE_ASSERT_H

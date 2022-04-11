@@ -16,7 +16,7 @@
 using namespace std::chrono_literals;
 using namespace std::chrono;
 
-using namespace spmc;
+using namespace olive;
 
 void interthread_atomic_ping_pong (Seconds timeout)
 {

@@ -1,6 +1,6 @@
 #include "SignalCatcher.h"
 
-namespace spmc {
+namespace olive {
 namespace {
 
 std::function<void (int)> shutdown_handler;
@@ -22,4 +22,4 @@ SignalCatcher::SignalCatcher (
   }
 }
 
-} // namespace spmc {
+} // namespace olive {

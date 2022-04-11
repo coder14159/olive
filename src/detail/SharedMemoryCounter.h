@@ -1,5 +1,5 @@
-#ifndef IPC_DETAIL_SHARED_MEMORY_COUNTER_H
-#define IPC_DETAIL_SHARED_MEMORY_COUNTER_H
+#ifndef OLIVE_DETAIL_SHARED_MEMORY_COUNTER_H
+#define OLIVE_DETAIL_SHARED_MEMORY_COUNTER_H
 
 #include "detail/SharedMemory.h"
 
@@ -8,7 +8,7 @@
 #include <atomic>
 #include <string>
 
-namespace spmc {
+namespace olive {
 
 /*
  * A shared memory counter.
@@ -48,4 +48,4 @@ private:
 
 }
 
-#endif // IPC_DETAIL_SHARED_MEMORY_COUNTER_H
+#endif // OLIVE_DETAIL_SHARED_MEMORY_COUNTER_H

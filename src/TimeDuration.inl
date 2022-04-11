@@ -5,11 +5,11 @@
 
 #include <boost/format.hpp>
 
-namespace spmc {
+namespace olive {
 
 template<typename DurationType>
 TimeDuration::TimeDuration (const DurationType duration)
 : m_nanoseconds (std::chrono::duration_cast<Nanoseconds> (duration))
 { }
 
-} // namespace spmc
+} // namespace olive

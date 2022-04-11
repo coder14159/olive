@@ -4,7 +4,7 @@
 
 namespace fs = boost::filesystem;
 
-namespace spmc {
+namespace olive {
 
 ThroughputStats::ThroughputStats ()
 { }
@@ -27,4 +27,4 @@ bool ThroughputStats::is_running () const
   return (!m_interval.is_stopped () && !m_summary.is_stopped ());
 }
 
-} // namespace spmc
+} // namespace olive

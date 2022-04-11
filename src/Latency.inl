@@ -11,7 +11,7 @@
 namespace ba = boost::accumulators;
 namespace fs = boost::filesystem;
 
-namespace spmc {
+namespace olive {
 
 inline
 void Latency::reset ()
@@ -40,4 +40,4 @@ void Latency::next (Nanoseconds nanoseconds)
   m_max = std::max (m_max, nanoseconds);
 }
 
-} // namespace spmc
+} // namespace olive

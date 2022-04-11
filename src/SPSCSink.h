@@ -1,4 +1,4 @@
-#ifndef IPC_SPSC_SINK_H
+#ifndef OLIVE_SPSC_SINK_H
 
 #include "Assert.h"
 #include "Chrono.h"
@@ -11,7 +11,7 @@
 #include <thread>
 #include <vector>
 
-namespace spmc {
+namespace olive {
 
 /*
  * Use SPSCSink to put data into the shared memory queue.
@@ -82,8 +82,8 @@ private:
 using SPSCSinkProcess = SPSCSink<SharedMemory::Allocator>;
 using SPSCSinkThread  = SPSCSink<std::allocator<uint8_t>>;
 
-} // spmc
+} // olive
 
 #include "SPSCSink.inl"
 
-#endif // IPC_SPSC_SINK_H
+#endif // OLIVE_SPSC_SINK_H

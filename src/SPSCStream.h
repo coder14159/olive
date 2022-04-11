@@ -1,4 +1,4 @@
-#ifndef IPC_SPSC_STREAM_H
+#ifndef OLIVE_SPSC_STREAM_H
 
 #include "Assert.h"
 #include "Buffer.h"
@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-namespace spmc {
+namespace olive {
 
 /*
  * Stream shared memory data from a single producer / single consumer queue
@@ -88,8 +88,8 @@ private:
 using SPSCStreamProcess = SPSCStream<SharedMemory::Allocator>;
 using SPSCStreamThread  = SPSCStream<std::allocator<uint8_t>>;
 
-} // namespace spmc
+} // namespace olive
 
 #include "SPSCStream.inl"
 
-#endif // IPC_SPSC_STREAM_H
+#endif // OLIVE_SPSC_STREAM_H

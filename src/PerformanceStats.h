@@ -1,5 +1,5 @@
-#ifndef IPC_PERFORMANCE_STATS_H
-#define IPC_PERFORMANCE_STATS_H
+#ifndef OLIVE_PERFORMANCE_STATS_H
+#define OLIVE_PERFORMANCE_STATS_H
 
 #include "LatencyStats.h"
 #include "ThroughputStats.h"
@@ -9,7 +9,7 @@
 
 #include <thread>
 
-namespace spmc {
+namespace olive {
 
 class PerformanceStats
 {
@@ -91,7 +91,7 @@ private:
 
 };
 
-} // namespace spmc {
+} // namespace olive {
 
 #include "PerformanceStats.inl"
 

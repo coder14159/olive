@@ -1,11 +1,11 @@
-#ifndef IPC_DETAIL_SIGNAL_CATCHER_H
-#define IPC_DETAIL_SIGNAL_CATCHER_H
+#ifndef OLIVE_DETAIL_SIGNAL_CATCHER_H
+#define OLIVE_DETAIL_SIGNAL_CATCHER_H
 
 #include <csignal>
 #include <functional>
 #include <vector>
 
-namespace spmc {
+namespace olive {
 
 /*
  * A signal catcher which accepts a function object or lambda with capture
@@ -23,6 +23,6 @@ private:
 
 };
 
-} // namespace spmc {
+} // namespace olive {
 
-#endif // IPC_DETAIL_SIGNAL_CATCHER_H
+#endif // OLIVE_DETAIL_SIGNAL_CATCHER_H

@@ -1,5 +1,5 @@
-#ifndef IPC_CXX_OPTS_HELPER
-#define IPC_CXX_OPTS_HELPER
+#ifndef OLIVE_CXX_OPTS_HELPER
+#define OLIVE_CXX_OPTS_HELPER
 
 #include <cxxopts.hpp>
 
@@ -11,7 +11,7 @@
 #include <string>
 
 
-namespace spmc {
+namespace olive {
 
 /*
  * Helper class to make cxxopts syntax a little more succinct
@@ -86,4 +86,4 @@ private:
 
 #include "CXXOptsHelper.inl"
 
-#endif // IPC_CXX_OPTS_HELPER
+#endif // OLIVE_CXX_OPTS_HELPER

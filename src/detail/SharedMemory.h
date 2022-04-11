@@ -1,5 +1,5 @@
-#ifndef IPC_DETAIL_SHARED_MEMORY_H
-#define IPC_DETAIL_SHARED_MEMORY_H
+#ifndef OLIVE_DETAIL_SHARED_MEMORY_H
+#define OLIVE_DETAIL_SHARED_MEMORY_H
 
 #include <boost/algorithm/string.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
@@ -12,7 +12,7 @@
 #include <chrono>
 #include <string>
 
-namespace spmc {
+namespace olive {
 
 /*
  * Constants and types used in shared memory IPC
@@ -133,4 +133,4 @@ using SharedMemoryMutex = boost::interprocess::interprocess_mutex;
 
 }
 
-#endif // IPC_DETAIL_SHARED_MEMORY_H
+#endif // OLIVE_DETAIL_SHARED_MEMORY_H

@@ -13,7 +13,7 @@
 #include <bits/stdc++.h>
 #include <thread>
 
-using namespace spmc;
+using namespace olive;
 
 namespace bi = boost::interprocess;
 

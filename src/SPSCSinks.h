@@ -1,4 +1,4 @@
-#ifndef IPC_SPSC_SINKS_H
+#ifndef OLIVE_SPSC_SINKS_H
 
 #include "SPSCSink.h"
 #include "detail/SharedMemory.h"
@@ -7,7 +7,7 @@
 #include <string>
 #include <thread>
 
-namespace spmc {
+namespace olive {
 
 /*
  * Use SPSCSinks to manage pushing data into multiple SPSC queues for shared
@@ -67,4 +67,4 @@ private:
 
 }
 
-#endif // IPC_SPSC_SINKS_H
+#endif // OLIVE_SPSC_SINKS_H

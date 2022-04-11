@@ -1,5 +1,5 @@
-#ifndef IPC_BUFFER_H
-#define IPC_BUFFER_H
+#ifndef OLIVE_BUFFER_H
+#define OLIVE_BUFFER_H
 
 #include "detail/SharedMemory.h"
 #include "detail/Utils.h"
@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace spmc {
+namespace olive {
 
 /*
  * A fast minimal circular buffer for caching prefetched serialised data from
@@ -159,8 +159,8 @@ private:
   typename Allocator::pointer m_buffer = nullptr;
 };
 
-} // namespace spmc
+} // namespace olive
 
 #include "Buffer.inl"
 
-#endif // IPC_BUFFER_H
+#endif // OLIVE_BUFFER_H

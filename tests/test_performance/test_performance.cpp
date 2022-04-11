@@ -37,7 +37,7 @@ using namespace boost::log::trivial;
 
 namespace ba = boost::accumulators;
 
-using namespace spmc;
+using namespace olive;
 
 const size_t PAYLOAD_SIZE = 32;
 
@@ -511,7 +511,7 @@ BOOST_AUTO_TEST_CASE (ThroughputSourceSinkMultiThreadVectorPayload)
     log_level = getenv ("LOG_LEVEL");
   }
 
-  spmc::ScopedLogLevel log (log_level);
+  ScopedLogLevel log (log_level);
 
   size_t capacity = 20480;
   size_t rate     = 0; // throughput throttling is off
@@ -544,7 +544,7 @@ BOOST_AUTO_TEST_CASE (LatencySourceSinkMultiThreadVectorPayload)
     log_level = getenv ("LOG_LEVEL");
   }
 
-  spmc::ScopedLogLevel log (log_level);
+  ScopedLogLevel log (log_level);
 
   size_t capacity = 20480;
   size_t rate     = 100000;
@@ -578,7 +578,7 @@ BOOST_AUTO_TEST_CASE (ThroughputSourceSinkMultiThreadPODPayload)
     return;
   }
 
-  spmc::ScopedLogLevel log (error);
+  ScopedLogLevel log (error);
 
   size_t capacity = 150;
   size_t rate     = 0;
@@ -603,7 +603,7 @@ BOOST_AUTO_TEST_CASE (LatencySourceSinkMultiThreadPODPayload)
     return;
   }
 
-  spmc::ScopedLogLevel log (error);
+  ScopedLogLevel log (error);
 
   size_t capacity = 20480;
   size_t rate     = 1e6;
@@ -713,7 +713,7 @@ BOOST_AUTO_TEST_CASE (ThroughputSourceSinkMultiProcess)
   {
     return;
   }
-  spmc::ScopedLogLevel log (error);
+  ScopedLogLevel log (error);
 
   PerformanceStats stats;
 
@@ -736,7 +736,7 @@ BOOST_AUTO_TEST_CASE (LatencySourceSinkMultiProcess)
     return;
   }
 
-  spmc::ScopedLogLevel log (error);
+  ScopedLogLevel log (error);
 
   PerformanceStats stats;
 
@@ -1214,7 +1214,7 @@ BOOST_AUTO_TEST_CASE (PerformanceSPMCQueue)
 
   const size_t capacity = 20480;
 
-  using QueueType = spmc::SPMCQueue<std::allocator<uint8_t>>;
+  using QueueType = SPMCQueue<std::allocator<uint8_t>>;
 
   QueueType queue (capacity);
 

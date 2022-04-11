@@ -24,7 +24,7 @@
 #define BOOST_TEST_MODULE SPMCQueueTests
 #include <boost/test/unit_test.hpp>
 
-using namespace spmc;
+using namespace olive;
 using namespace boost::log::trivial;
 using namespace std::literals::chrono_literals;
 

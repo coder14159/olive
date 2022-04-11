@@ -1,5 +1,5 @@
-#ifndef IPC_DETAIL_UTILS_H
-#define IPC_DETAIL_UTILS_H
+#ifndef OLIVE_DETAIL_UTILS_H
+#define OLIVE_DETAIL_UTILS_H
 
 #if defined(__GNUC__)
     #define SPMC_COND_EXPECT(expr,c) (__builtin_expect((expr), c))
@@ -22,4 +22,4 @@
  */
 #define MODULUS_POWER_OF_2(number, divisor) (number & (divisor - 1))
 
-#endif // IPC_DETAIL_UTILS_H
+#endif // OLIVE_DETAIL_UTILS_H

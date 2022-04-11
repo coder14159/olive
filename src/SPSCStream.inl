@@ -1,4 +1,4 @@
-namespace spmc {
+namespace olive {
 
 namespace bi = boost::interprocess;
 
@@ -210,4 +210,4 @@ bool SPSCStream<Allocator>::prefetch_to_cache ()
   return true;
 }
 
-} // namespace spmc {
+} // namespace olive {

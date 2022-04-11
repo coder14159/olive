@@ -19,7 +19,7 @@
 
 using namespace std::chrono_literals;
 
-using namespace spmc;
+using namespace olive;
 namespace bi = boost::interprocess;
 
 namespace {

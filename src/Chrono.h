@@ -1,10 +1,10 @@
-#ifndef IPC_CHRONO_H
-#define IPC_CHRONO_H
+#ifndef OLIVE_CHRONO_H
+#define OLIVE_CHRONO_H
 
 #include <chrono>
 #include <string>
 
-namespace spmc {
+namespace olive {
 
 /*
  * Helper aliases
@@ -23,9 +23,9 @@ int64_t nanoseconds_since_epoch (const TimePoint &time_point);
 
 TimePoint timepoint_from_nanoseconds_since_epoch (int64_t nanoseconds);
 
-} // namespace spmc
+} // namespace olive
 
 #include "Chrono.inl"
 
-#endif // IPC_CHRONO_H
+#endif // OLIVE_CHRONO_H
 
