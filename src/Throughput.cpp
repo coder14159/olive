@@ -14,7 +14,7 @@
 namespace fs = boost::filesystem;
 using boost::math::lround;
 
-namespace spmc {
+namespace olive {
 namespace {
   constexpr double KB = 1024.;
   constexpr double MB = 1024. * 1024.;
@@ -213,4 +213,4 @@ std::string Throughput::to_string () const
   return stats;
 }
 
-} // namespace spmc
+} // namespace olive

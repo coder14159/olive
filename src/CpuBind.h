@@ -1,13 +1,13 @@
-#ifndef IPC_CPU_BIND_H
-#define IPC_CPU_BIND_H
+#ifndef OLIVE_CPU_BIND_H
+#define OLIVE_CPU_BIND_H
 
-namespace spmc {
+namespace olive {
 
 /*
  * Bind the current thread to a cpu
  */
 void bind_to_cpu (int cpu);
 
-} // namespace spmc
+} // namespace olive
 
-#endif // IPC_CPU_BIND_H
+#endif // OLIVE_CPU_BIND_H

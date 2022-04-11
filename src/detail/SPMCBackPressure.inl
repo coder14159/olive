@@ -5,7 +5,7 @@
 
 #include <mutex>
 
-namespace spmc {
+namespace olive {
 namespace detail {
 
 template<class Mutex, uint8_t MaxNoDropConsumers>
@@ -254,4 +254,4 @@ void SPMCBackPressure<Mutex, MaxNoDropConsumers>::update_consumer_state (
 }
 
 } // namespace detail {
-} // namespace spmc {
+} // namespace olive {

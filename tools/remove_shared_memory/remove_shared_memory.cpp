@@ -7,7 +7,7 @@
 #include <iostream>
 #include <string>
 
-using namespace spmc;
+using namespace olive;
 
 namespace bi = boost::interprocess;
 
@@ -25,7 +25,7 @@ CxxOptsHelper parse (int argc, char* argv[])
     ("names", "Comma separated list of shared memory names to remove",
       cxxopts::value<std::vector<std::string>> (names));
 
-  spmc::CxxOptsHelper options (cxxopts.parse (argc, argv));
+  olive::CxxOptsHelper options (cxxopts.parse (argc, argv));
 
   options.positional ("names", names);
 

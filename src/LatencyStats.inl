@@ -1,5 +1,5 @@
 
-namespace spmc {
+namespace olive {
 
 inline
 bool LatencyStats::is_stopped () const
@@ -7,4 +7,4 @@ bool LatencyStats::is_stopped () const
   return (m_interval.is_stopped () && m_summary.is_stopped ());
 }
 
-} // namespace spmc
+} // namespace olive

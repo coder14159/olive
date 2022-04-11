@@ -1,6 +1,6 @@
 #include "Chrono.h"
 
-namespace spmc {
+namespace olive {
 
 template <class Queuetype>
 SPMCSource<Queuetype>::SPMCSource (size_t capacity)
@@ -67,5 +67,5 @@ void SPMCSource<Queuetype>::next_keep_warm ()
   m_queue.push (m_warmupHdr);
 }
 
-} // namespace spmc
+} // namespace olive
 

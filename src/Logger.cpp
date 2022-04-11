@@ -7,7 +7,7 @@
 
 #include <iostream>
 
-namespace spmc {
+namespace olive {
 
 namespace {
   static boost::log::trivial::severity_level LOG_LEVEL = boost::log::trivial::info;
@@ -50,4 +50,4 @@ void set_log_level (const std::string &level)
   }
 }
 
-} // namespace spmc
+} // namespace olive

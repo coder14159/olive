@@ -1,5 +1,5 @@
-#ifndef IPC_SPMC_QUEUE_H
-#define IPC_SPMC_QUEUE_H
+#ifndef OLIVE_SPMC_QUEUE_H
+#define OLIVE_SPMC_QUEUE_H
 
 #include "detail/SharedMemory.h"
 #include "detail/SPMCQueue.h"
@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace spmc {
+namespace olive {
 
 /*
  * Single producer / multiple consumer queue which wraps the functionality of
@@ -158,8 +158,8 @@ private:
   QueuePtr m_queue;
 };
 
-} // namespace spmc {
+} // namespace olive {
 
 #include "SPMCQueue.inl"
 
-#endif // IPC_SPMC_QUEUE_H
+#endif // OLIVE_SPMC_QUEUE_H

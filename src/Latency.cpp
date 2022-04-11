@@ -14,7 +14,7 @@
 namespace ba = boost::accumulators;
 namespace fs = boost::filesystem;
 
-namespace spmc {
+namespace olive {
 
 namespace {
 
@@ -178,4 +178,4 @@ std::vector<std::string> Latency::to_strings () const
   return stats;
 }
 
-} // namespace spmc
+} // namespace olive

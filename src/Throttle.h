@@ -1,11 +1,11 @@
-#ifndef IPC_THROTTLE_H
-#define IPC_THROTTLE_H
+#ifndef OLIVE_THROTTLE_H
+#define OLIVE_THROTTLE_H
 
 #include "Chrono.h"
 
 #include <thread>
 
-namespace spmc {
+namespace olive {
 
 class Throttle
 {
@@ -42,7 +42,7 @@ private:
   TimePoint m_startTime;
 };
 
-} // namespace spmc
+} // namespace olive
 
 #include "Throttle.inl"
 

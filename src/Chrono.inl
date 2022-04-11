@@ -1,6 +1,6 @@
 #include <boost/format.hpp>
 
-namespace spmc {
+namespace olive {
 
 inline
 int64_t nanoseconds_since_epoch (const TimePoint &time_point)
@@ -15,4 +15,4 @@ TimePoint timepoint_from_nanoseconds_since_epoch (int64_t nanoseconds)
   return TimePoint (Nanoseconds (nanoseconds));
 }
 
-} // namespace spmc
+} // namespace olive

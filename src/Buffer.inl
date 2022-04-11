@@ -2,7 +2,7 @@
 
 #include <boost/log/trivial.hpp>
 
-namespace spmc {
+namespace olive {
 
 template <class Allocator>
 Buffer<Allocator>::Buffer (size_t capacity)
@@ -308,4 +308,4 @@ void Buffer<Allocator>::print_debug ()
 
 }
 
-} // namespace spmc
+} // namespace olive

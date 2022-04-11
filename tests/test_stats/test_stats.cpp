@@ -9,13 +9,13 @@
 #define BOOST_TEST_MODULE StatsTests
 #include <boost/test/unit_test.hpp>
 
-using namespace spmc;
+using namespace olive;
 
 using namespace boost::log::trivial;
 
 BOOST_AUTO_TEST_CASE(ThroughputStatsUpdates)
 {
-  spmc::ScopedLogLevel log (warning);
+  olive::ScopedLogLevel log (warning);
 
   size_t payload_size = 10240;
 
@@ -39,7 +39,7 @@ BOOST_AUTO_TEST_CASE(ThroughputStatsUpdates)
 
 BOOST_AUTO_TEST_CASE (LatencyStatsUpdateIsFast)
 {
-  spmc::ScopedLogLevel log (warning);
+  olive::ScopedLogLevel log (warning);
 
   namespace fs = boost::filesystem;
 

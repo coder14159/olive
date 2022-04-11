@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace spmc {
+namespace olive {
 namespace detail {
 
 template <typename Allocator, uint8_t MaxNoDropConsumers>
@@ -266,4 +266,4 @@ size_t SPMCQueue<Allocator, MaxNoDropConsumers>::copy_from_queue (
 }
 
 } // namespace detail {
-} // namespace spmc {
+} // namespace olive {

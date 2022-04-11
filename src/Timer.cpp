@@ -1,6 +1,6 @@
 #include "Timer.h"
 
-namespace spmc {
+namespace olive {
 
 const TimePoint INVALID_TIME_POINT (Nanoseconds (0));
 
@@ -44,4 +44,4 @@ TimeDuration Timer::elapsed () const
 }
 
 
-} // namespace spmc
+} // namespace olive

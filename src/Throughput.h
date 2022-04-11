@@ -1,5 +1,5 @@
-#ifndef IPC_THROUGHPUT_H
-#define IPC_THROUGHPUT_H
+#ifndef OLIVE_THROUGHPUT_H
+#define OLIVE_THROUGHPUT_H
 
 #include "Chrono.h"
 #include "Timer.h"
@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace spmc {
+namespace olive {
 
 /*
  * Create a pretty format string for bytes throughput
@@ -116,4 +116,4 @@ private:
 
 #include "Throughput.inl"
 
-#endif // IPC_THROUGHPUT_H
+#endif // OLIVE_THROUGHPUT_H

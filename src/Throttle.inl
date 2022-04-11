@@ -1,6 +1,6 @@
 #include "detail/SharedMemory.h"
 
-namespace spmc {
+namespace olive {
 
 Throttle::Throttle (uint32_t rate)
   : m_rate (rate), m_startTime (Clock::now ())
@@ -91,4 +91,4 @@ void Throttle::throttle (Sink &sink)
 }
 
 
-} // namespace spmc
+} // namespace olive

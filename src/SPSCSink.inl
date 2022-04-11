@@ -1,4 +1,4 @@
-namespace spmc {
+namespace olive {
 
 namespace bi = ::boost::interprocess;
 
@@ -74,4 +74,4 @@ void SPSCSink<Allocator>::next_keep_warm ()
   m_queueRef.push (reinterpret_cast <uint8_t*> (&m_warmupHdr), sizeof (Header));
 }
 
-} // spmc
+} // namespace olive

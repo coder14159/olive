@@ -4,7 +4,7 @@
 
 #include <pthread.h>
 
-namespace spmc {
+namespace olive {
 
 void bind_to_cpu (int cpu)
 {
@@ -32,4 +32,4 @@ void bind_to_cpu (int cpu)
   }
 }
 
-} // namespace spmc
+} // namespace olive

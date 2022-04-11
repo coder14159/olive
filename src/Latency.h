@@ -1,5 +1,5 @@
-#ifndef IPC_LATENCY_H
-#define IPC_LATENCY_H
+#ifndef OLIVE_LATENCY_H
+#define OLIVE_LATENCY_H
 
 #include "Chrono.h"
 
@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-namespace spmc {
+namespace olive {
 
 std::string nanoseconds_to_pretty (int64_t nanoseconds);
 
@@ -127,7 +127,7 @@ private:
   Nanoseconds               m_max  = Nanoseconds::min ();
 };
 
-} // namespace spmc
+} // namespace olive
 
 #include "Latency.inl"
 

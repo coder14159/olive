@@ -1,9 +1,9 @@
-#ifndef IPC_THROUGHPUT_STATS_H
-#define IPC_THROUGHPUT_STATS_H
+#ifndef OLIVE_THROUGHPUT_STATS_H
+#define OLIVE_THROUGHPUT_STATS_H
 
 #include "Throughput.h"
 
-namespace spmc {
+namespace olive {
 
 /*
  * Helper class for throughput interval and summary logging
@@ -40,4 +40,4 @@ private:
 
 }
 
-#endif // IPC_THROUGHPUT_STATS_H
+#endif // OLIVE_THROUGHPUT_STATS_H

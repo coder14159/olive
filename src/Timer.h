@@ -1,10 +1,10 @@
-#ifndef IPC_TIMER_H
-#define IPC_TIMER_H
+#ifndef OLIVE_TIMER_H
+#define OLIVE_TIMER_H
 
 #include "Chrono.h"
 #include "TimeDuration.h"
 
-namespace spmc {
+namespace olive {
 
 /*
  * A stopwatch timer class
@@ -31,7 +31,7 @@ private:
     TimePoint m_end;
 };
 
-} // namespace spmc
+} // namespace olive
 
-#endif // IPC_TIMER_H
+#endif // OLIVE_TIMER_H
 

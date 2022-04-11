@@ -11,7 +11,7 @@
 
 using namespace std::chrono_literals;
 
-namespace spmc {
+namespace olive {
 
 inline
 void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
@@ -45,4 +45,4 @@ void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
   m_seqNum = seqNum;
 }
 
-} // namespace spmc {
+} // namespace olive {

@@ -1,5 +1,5 @@
-#ifndef IPC_DETAIL_SPMC_QUEUE_H
-#define IPC_DETAIL_SPMC_QUEUE_H
+#ifndef OLIVE_DETAIL_SPMC_QUEUE_H
+#define OLIVE_DETAIL_SPMC_QUEUE_H
 
 #include "Logger.h"
 #include "detail/SharedMemory.h"
@@ -13,7 +13,7 @@
 #include <type_traits>
 #include <vector>
 
-namespace spmc {
+namespace olive {
 
 /*
  * Use this enum to when pushing data to the shared queue.
@@ -243,8 +243,8 @@ private:
 };
 
 } // namespace detail {
-} // namespace spmc {
+} // namespace olive {
 
 #include "detail/SPMCQueue.inl"
 
-#endif // IPC_DETAIL_SPMC_QUEUE_H
+#endif // OLIVE_DETAIL_SPMC_QUEUE_H

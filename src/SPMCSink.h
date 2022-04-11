@@ -1,4 +1,4 @@
-#ifndef IPC_SPMC_SINK_H
+#ifndef OLIVE_SPMC_SINK_H
 
 #include "SPMCQueue.h"
 #include "detail/SharedMemory.h"
@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace spmc {
+namespace olive {
 
 /*
  * A single producer/ multiple consumer data stream.
@@ -86,4 +86,4 @@ using SPMCSinkThread  = SPMCSink<SPMCQueue<std::allocator<uint8_t>>>;
 
 #include "SPMCSink.inl"
 
-#endif // IPC_SPMC_SINK_H
+#endif // OLIVE_SPMC_SINK_H

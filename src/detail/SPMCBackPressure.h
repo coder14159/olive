@@ -1,12 +1,12 @@
-#ifndef IPC_DETAIL_SPMC_BACK_PRESSURE_H
-#define IPC_DETAIL_SPMC_BACK_PRESSURE_H
+#ifndef OLIVE_DETAIL_SPMC_BACK_PRESSURE_H
+#define OLIVE_DETAIL_SPMC_BACK_PRESSURE_H
 
 #include "detail/SharedMemory.h"
 
 #include <array>
 #include <atomic>
 
-namespace spmc {
+namespace olive {
 namespace detail {
 /*
  * Class to track how much data has been consumed by a consumer process
@@ -242,8 +242,8 @@ private:
 };
 
 } // namespace detail {
-} // namespace spmc {
+} // namespace olive {
 
 #include "detail/SPMCBackPressure.inl"
 
-#endif // IPC_DETAIL_SPMC_BACK_PRESSURE_H
+#endif // OLIVE_DETAIL_SPMC_BACK_PRESSURE_H

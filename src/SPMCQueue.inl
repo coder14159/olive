@@ -5,7 +5,7 @@
 
 #include <cmath>
 
-namespace spmc {
+namespace olive {
 
 template <class Allocator, uint8_t MaxNoDropConsumers>
 SPMCQueue<Allocator, MaxNoDropConsumers>::SPMCQueue (size_t capacity)
@@ -248,4 +248,4 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   return false;
 }
 
-} // namespace spmc {
+} // namespace olive {

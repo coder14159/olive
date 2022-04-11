@@ -7,7 +7,7 @@ using namespace std::chrono_literals;
 
 namespace fs = boost::filesystem;
 
-namespace spmc {
+namespace olive {
 
 LatencyStats::LatencyStats ()
 { }
@@ -28,4 +28,4 @@ void LatencyStats::stop ()
   m_interval.stop ();
 }
 
-} // namespace spmc
+} // namespace olive

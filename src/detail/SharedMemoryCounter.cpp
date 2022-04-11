@@ -7,7 +7,7 @@
 
 namespace bi = boost::interprocess;
 
-namespace spmc {
+namespace olive {
 
 SharedMemoryCounter::SharedMemoryCounter (
   const std::string &objectName,

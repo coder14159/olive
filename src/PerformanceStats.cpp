@@ -6,7 +6,7 @@
 
 using namespace std::chrono_literals;
 
-namespace spmc {
+namespace olive {
 
 PerformanceStats::PerformanceStats (TimeDuration warmup)
 : m_sampled (Clock::now ())
@@ -168,4 +168,4 @@ void PerformanceStats::log_interval_stats ()
   }
 }
 
-} // namespace spmc {
+} // namespace olive {
