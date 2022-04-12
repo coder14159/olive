@@ -1,89 +1,95 @@
-#ifndef OLIVE_SPSC_SINK_H
+#ifndef OLIVE_SPSC_STREAM_H
 
 #include "Assert.h"
-#include "Chrono.h"
+#include "Buffer.h"
+#include "Logger.h"
 #include "detail/SharedMemory.h"
 
 #include <boost/interprocess/managed_shared_memory.hpp>
+#include <boost/log/trivial.hpp>
 
 #include <atomic>
+#include <iomanip>
+#include <memory>
 #include <string>
-#include <thread>
 #include <vector>
 
 namespace olive {
 
 /*
- * Use SPSCSink to put data into the shared memory queue.
+ * Stream shared memory data from a single producer / single consumer queue
  */
-template <class Allocator>
-class SPSCSink
+template <typename Allocator>
+class SPSCStream
 {
 private:
-  SPSCSink (const SPSCSink &) = delete;
-  SPSCSink & operator= (const SPSCSink &) = delete;
+  SPSCStream (const SPSCStream &) = delete;
+  SPSCStream & operator= (const SPSCStream &) = delete;
+
 public:
-  /*
-   * Create a sink object for use in a single process by multiple threads
-   */
-  SPSCSink (size_t capacity);
+  SPSCStream (const std::string &memoryName, size_t prefetchSize = 0);
 
+  ~SPSCStream ();
   /*
-   * Create a sink object in shared memory for use by multiple processes
+   * Retrieve the next packet of data.
    */
-  SPSCSink (const std::string &memoryName,
-            const std::string &objectName,
-            size_t             capacity);
-
-  /*
-   * Send a data packet to a shared memory queue
-   * Blocks until successful
-   */
-  void next (const std::vector<uint8_t> &data);
-  /*
-   * Send a null message to keep the cache warm
-   */
-  void next_keep_warm ();
+  bool next (Header &header, std::vector<uint8_t> &data);
 
   void stop ();
 
-  std::string name () const { return m_name; }
+private:
+
+  template<typename POD>
+  bool pop (POD &data);
+
+  /*
+   * Pop data off the queue to the location pointed to by data
+   */
+  bool pop (uint8_t* to, size_t size);
+
+  bool prefetch_to_cache ();
+
+  bool check_cache_size (size_t size);
+
+  /*
+   * Pop header and data from the cache
+   */
+  template<class Header, class Data>
+  bool pop_from_cache (Header &header, Data &data);
+
+  size_t copy_from_queue (uint8_t* to, size_t size);
 
 private:
-  std::string m_name;
+
+  bool m_stop = { false };
+
+  using QueueType = SharedMemory::SPSCQueue;
+
+  /*
+   * TODO:
+   * Currently inter-process communication only. Extend to be compatible with
+   * inter-thread communication.
+   */
+  alignas (CACHE_LINE_SIZE)
+  QueueType *m_queuePtr = { nullptr };
+
+  Buffer<std::allocator<uint8_t>> m_cache;
+
+  alignas (CACHE_LINE_SIZE)
+  std::unique_ptr<SharedMemory::Allocator> m_allocator;
 
   boost::interprocess::managed_shared_memory m_memory;
 
-  SharedMemory::Allocator m_allocator;
-
-  alignas (CACHE_LINE_SIZE)
-  bool m_stop = { false };
-
-  uint64_t m_sequenceNumber = 0;
-
-  alignas (CACHE_LINE_SIZE)
-  Header m_warmupHdr = {
-      HEADER_VERSION,
-      WARMUP_MESSAGE_TYPE,
-      0,
-      0,
-      DEFAULT_TIMESTAMP
-  };
-
-  std::vector<uint8_t> m_buffer;
-
-  SharedMemory::SPSCQueue *m_queue = { nullptr };
-  SharedMemory::SPSCQueue &m_queueRef;
 };
 
 /*
  * Helper types
  */
-using SPSCSinkProcess = SPSCSink<SharedMemory::Allocator>;
-using SPSCSinkThread  = SPSCSink<std::allocator<uint8_t>>;
+using SPSCStreamProcess = SPSCStream<SharedMemory::Allocator>;
+using SPSCStreamThread  = SPSCStream<std::allocator<uint8_t>>;
 
-} // olive
+} // namespace olive
 
-#include "SPSCSink.inl"
+#include "SPSCStream.inl"
 
-#endif // OLIVE_SPSC_SINK_H
+#endif // OLIVE_SPSC_STREAM_H
