@@ -3,7 +3,7 @@
 #include "Logger.h"
 #include "PerformanceStats.h"
 #include "SignalCatcher.h"
-#include "SPSCStream.h"
+#include "SPSCSink.h"
 #include "detail/CXXOptsHelper.h"
 #include "detail/SharedMemory.h"
 #include "detail/Utils.h"
@@ -94,14 +94,14 @@ int main(int argc, char* argv[]) try
     BOOST_LOG_TRIVIAL (info) <<  "Use prefetch cache size: " << prefetchSize;
   }
 
-  SPSCStreamProcess stream (name, prefetchSize);
+  SPSCSinkProcess sink (name, prefetchSize);
 
   std::atomic<bool> stop = { false };
 
   /*
    * Handle signals
    */
-  SignalCatcher s ({SIGINT, SIGTERM}, [&stream, &stop] (int) {
+  SignalCatcher s ({SIGINT, SIGTERM}, [&sink, &stop] (int) {
 
     if (!stop)
     {
@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) try
 
       stop = true;
 
-      stream.stop ();
+      sink.stop ();
     }
   });
 
@@ -132,7 +132,7 @@ int main(int argc, char* argv[]) try
 
   while (SPMC_EXPECT_FALSE (!stop.load (std::memory_order_relaxed)))
   {
-    if (stream.next (header, data))
+    if (sink.next (header, data))
     {
       stats.update (sizeof (Header) + header.size, header.seqNum,
                     timepoint_from_nanoseconds_since_epoch (header.timestamp));
@@ -187,7 +187,7 @@ int main(int argc, char* argv[]) try
   stats.stop ();
   stats.print_summary ();
 
-  BOOST_LOG_TRIVIAL (info) << "Exit SPSCstream";
+  BOOST_LOG_TRIVIAL (info) << "Exit SPSCSink";
 
   return EXIT_SUCCESS;
 }

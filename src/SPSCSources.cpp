@@ -1,5 +1,5 @@
 #include "Logger.h"
-#include "SPSCSink.h"
+#include "SPSCSources.h"
 
 #include "detail/SharedMemory.h"
 
@@ -9,7 +9,7 @@ namespace bi = boost::interprocess;
 
 namespace olive {
 
-SPSCSinks::SPSCSinks (const std::string &memoryName)
+SPSCSources::SPSCSources (const std::string &memoryName)
 : m_name (objectName),
   m_memory (bi::managed_shared_memory (bi::create_only, memoryName.c_str())),
   m_allocator (m_memory.get_segment_manager ())
@@ -49,20 +49,20 @@ SPSCSinks::SPSCSinks (const std::string &memoryName)
   });
 }
 
-SPSCSinks::~SPSCSinks ()
+SPSCSources::~SPSCSources ()
 {
   stop ();
 }
 
 
-void SPSCSinks::stop ()
+void SPSCSources::stop ()
 {
   m_stop = true;
 
   m_thread.join ();
 }
 
-void SPSCSinks::next (const std::vector<uint8_t> &data)
+void SPSCSources::next (const std::vector<uint8_t> &data)
 {
   bool success = false;
 
@@ -83,7 +83,7 @@ void SPSCSinks::next (const std::vector<uint8_t> &data)
   }
 }
 
-bool SPSCSinks::send (const uint8_t *data, size_t size)
+bool SPSCSources::send (const uint8_t *data, size_t size)
 {
   bool ret = false;
 
@@ -106,4 +106,4 @@ bool SPSCSinks::send (const uint8_t *data, size_t size)
   return ret;
 }
 
-}
+} // OLIVE_SPSC_SOURCES_H

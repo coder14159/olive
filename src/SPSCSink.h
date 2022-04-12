@@ -1,4 +1,5 @@
-#ifndef OLIVE_SPSC_STREAM_H
+#ifndef OLIVE_SPSC_SINK_H
+#define OLIVE_SPSC_SINK_H
 
 #include "Assert.h"
 #include "Buffer.h"
@@ -20,16 +21,16 @@ namespace olive {
  * Stream shared memory data from a single producer / single consumer queue
  */
 template <typename Allocator>
-class SPSCStream
+class SPSCSink
 {
 private:
-  SPSCStream (const SPSCStream &) = delete;
-  SPSCStream & operator= (const SPSCStream &) = delete;
+  SPSCSink (const SPSCSink &) = delete;
+  SPSCSink & operator= (const SPSCSink &) = delete;
 
 public:
-  SPSCStream (const std::string &memoryName, size_t prefetchSize = 0);
+  SPSCSink (const std::string &memoryName, size_t prefetchSize = 0);
 
-  ~SPSCStream ();
+  ~SPSCSink ();
   /*
    * Retrieve the next packet of data.
    */
@@ -85,11 +86,11 @@ private:
 /*
  * Helper types
  */
-using SPSCStreamProcess = SPSCStream<SharedMemory::Allocator>;
-using SPSCStreamThread  = SPSCStream<std::allocator<uint8_t>>;
+using SPSCSinkProcess = SPSCSink<SharedMemory::Allocator>;
+using SPSCSinkThread  = SPSCSink<std::allocator<uint8_t>>;
 
 } // namespace olive
 
-#include "SPSCStream.inl"
+#include "SPSCSink.inl"
 
-#endif // OLIVE_SPSC_STREAM_H
+#endif // OLIVE_SPSC_SINK_H

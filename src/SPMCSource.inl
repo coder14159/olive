@@ -9,8 +9,8 @@ SPMCSource<Queuetype>::SPMCSource (size_t capacity)
 
 template <class Queuetype>
 SPMCSource<Queuetype>::SPMCSource (const std::string &memoryName,
-                               const std::string &queueName,
-                               size_t             capacity)
+                                   const std::string &queueName,
+                                   size_t             capacity)
 : m_queue (memoryName, queueName, capacity)
 {
   BOOST_LOG_TRIVIAL(info) << "Found or created queue named '"

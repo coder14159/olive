@@ -1,7 +1,7 @@
 #include "CpuBind.h"
 #include "Logger.h"
 #include "SignalCatcher.h"
-#include "SPSCSink.h"
+#include "SPSCSource.h"
 #include "Throttle.h"
 #include "detail/CXXOptsHelper.h"
 #include "detail/SharedMemory.h"
@@ -73,33 +73,33 @@ void server (const std::string& name,
 
   clientCount.set (numClients);
 
-  // TODO a single multi sink could encapsulate sending to all streams
+  // TODO a single multi source could encapsulate sending to all streams
 
-  // initialise the sinks for sending
-  std::vector<std::unique_ptr<SPSCSinkProcess>> sinks;
+  // initialise the sources for sending
+  std::vector<std::unique_ptr<SPSCSourceProcess>> sources;
 
   for (int i = 1; i <= numClients; ++i)
   {
-    std::string objectName = name + ":sink:" + std::to_string (i);
+    std::string objectName = name + ":source:" + std::to_string (i);
 
-    auto sink = std::make_unique<SPSCSinkProcess> (name, objectName, queueSize);
+    auto source = std::make_unique<SPSCSourceProcess> (name, objectName, queueSize);
 
-    sinks.push_back (std::move (sink));
+    sources.push_back (std::move (source));
   }
 
   std::atomic<bool> stop = { false };
 
-  SignalCatcher s({ SIGINT, SIGTERM }, [&sinks, &stop] (int) {
+  SignalCatcher s({ SIGINT, SIGTERM }, [&sources, &stop] (int) {
 
     stop = true;
 
     BOOST_LOG_TRIVIAL (debug) << "Stop spsc_server";
 
-    for (auto &sink : sinks)
+    for (auto &source : sources)
     {
-      BOOST_LOG_TRIVIAL (info) << "Stop " << sink->name ();
+      BOOST_LOG_TRIVIAL (info) << "Stop " << source->name ();
 
-      sink->stop ();
+      source->stop ();
     }
   });
 
@@ -140,7 +140,7 @@ void server (const std::string& name,
   std::iota (std::begin (message), std::end (message), 1);
 
   size_t first = 0;
-  size_t sinkCount = sinks.size ();
+  size_t sourceCount = sources.size ();
 
   /*
    * For fair data distribution of message latencies rotate the ordering the
@@ -150,12 +150,12 @@ void server (const std::string& name,
   {
     while (!stop.load (std::memory_order_relaxed))
     {
-      for (size_t i = first; i < first + sinkCount; ++i)
+      for (size_t i = first; i < first + sourceCount; ++i)
       {
-        sinks[MODULUS (i, sinkCount)]->next (message);
+        sources[MODULUS (i, sourceCount)]->next (message);
       }
 
-      first = ((first + 1) < sinkCount) ? first + 1 : 0;
+      first = ((first + 1) < sourceCount) ? first + 1 : 0;
     }
   }
   else
@@ -171,9 +171,9 @@ void server (const std::string& name,
 
     while (!stop.load (std::memory_order_relaxed))
     {
-      for (size_t i = first; i < first + sinkCount; ++i)
+      for (size_t i = first; i < first + sourceCount; ++i)
       {
-        sinks[MODULUS (i, sinkCount)]->next (message);
+        sources[MODULUS (i, sourceCount)]->next (message);
 
         /*
          * SPSC queues perform better if warmup messages are not sent.
@@ -181,7 +181,7 @@ void server (const std::string& name,
          */
       }
 
-      first = ((first + 1) < sinkCount) ? first + 1 : 0;
+      first = ((first + 1) < sourceCount) ? first + 1 : 0;
 
       throttle.throttle ();
     }

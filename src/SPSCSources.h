@@ -1,6 +1,7 @@
-#ifndef OLIVE_SPSC_SINKS_H
+#ifndef OLIVE_SPSC_SOURCES_H
+#define OLIVE_SPSC_SOURCES_H
 
-#include "SPSCSink.h"
+#include "SPSCSource.h"
 #include "detail/SharedMemory.h"
 
 #include <atomic>
@@ -10,17 +11,17 @@
 namespace olive {
 
 /*
- * Use SPSCSinks to manage pushing data into multiple SPSC queues for shared
+ * Use SPSCSources to manage pushing data into multiple SPSC queues for shared
  * memory interprocess communication.
  *
  * TODO: complete and create tests for this prototype
  */
-class SPSCSinks
+class SPSCSources
 {
 public:
-  SPSCSinks (const std::string &memoryName, size_t queueSize);
+  SPSCSources (const std::string &memoryName, size_t queueSize);
 
-  ~SPSCSinks ();
+  ~SPSCSources ();
 
   /*
    * Stop servicing the internal queues in preparation for shutdown
@@ -55,7 +56,7 @@ private:
 
   std::thread m_thread;
 
-  std::vector<std::unique_ptr<SPSCSink>> m_sinks;
+  std::vector<std::unique_ptr<SPSCSource> m_sources;
 
   std::atomic<bool> m_stop = { false };
 
@@ -67,4 +68,4 @@ private:
 
 }
 
-#endif // OLIVE_SPSC_SINKS_H
+#endif // OLIVE_SPSC_SOURCES_H

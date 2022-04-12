@@ -1,4 +1,5 @@
-#ifndef OLIVE_SPSC_SINK_H
+#ifndef OLIVE_SPSC_SOURCE_H
+#define OLIVE_SPSC_SOURCE_H
 
 #include "Assert.h"
 #include "Chrono.h"
@@ -14,26 +15,26 @@
 namespace olive {
 
 /*
- * Use SPSCSink to put data into the shared memory queue.
+ * Use SPSCSource to put data into the shared memory queue.
  */
 template <class Allocator>
-class SPSCSink
+class SPSCSource
 {
 private:
-  SPSCSink (const SPSCSink &) = delete;
-  SPSCSink & operator= (const SPSCSink &) = delete;
+  SPSCSource (const SPSCSource &) = delete;
+  SPSCSource & operator= (const SPSCSource &) = delete;
 public:
   /*
    * Create a sink object for use in a single process by multiple threads
    */
-  SPSCSink (size_t capacity);
+  SPSCSource (size_t capacity);
 
   /*
    * Create a sink object in shared memory for use by multiple processes
    */
-  SPSCSink (const std::string &memoryName,
-            const std::string &objectName,
-            size_t             capacity);
+  SPSCSource (const std::string &memoryName,
+              const std::string &objectName,
+              size_t             capacity);
 
   /*
    * Send a data packet to a shared memory queue
@@ -79,11 +80,11 @@ private:
 /*
  * Helper types
  */
-using SPSCSinkProcess = SPSCSink<SharedMemory::Allocator>;
-using SPSCSinkThread  = SPSCSink<std::allocator<uint8_t>>;
+using SPSCSourceProcess = SPSCSource<SharedMemory::Allocator>;
+using SPSCSourceThread  = SPSCSource<std::allocator<uint8_t>>;
 
-} // olive
+} // namespace olive
 
-#include "SPSCSink.inl"
+#include "SPSCSource.inl"
 
-#endif // OLIVE_SPSC_SINK_H
+#endif // OLIVE_SPSC_SOURCE_H

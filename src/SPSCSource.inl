@@ -5,9 +5,9 @@ namespace bi = ::boost::interprocess;
 using namespace ::std::literals::chrono_literals;
 
 template <typename Allocator>
-SPSCSink<Allocator>::SPSCSink (const std::string &memoryName,
-                    const std::string &objectName,
-                    size_t             queueSize)
+SPSCSource<Allocator>::SPSCSource (const std::string &memoryName,
+                                   const std::string &objectName,
+                                   size_t             queueSize)
 
 : m_name (objectName)
 , m_memory (bi::managed_shared_memory (bi::open_only, memoryName.c_str()))
@@ -16,8 +16,8 @@ SPSCSink<Allocator>::SPSCSink (const std::string &memoryName,
                                   (objectName.c_str())(queueSize, m_allocator))
 , m_queueRef (*m_queue)
 {
-  // TODO clients could create queue and notify sink/server
-  // TODO maybe support multiple queues in a single sink
+  // TODO clients could create queue and notify source/sink
+  // TODO maybe support multiple queues in a single source
 
   // construct an object within the shared memory
 
@@ -26,13 +26,13 @@ SPSCSink<Allocator>::SPSCSink (const std::string &memoryName,
 }
 
 template <typename Allocator>
-void SPSCSink<Allocator>::stop ()
+void SPSCSource<Allocator>::stop ()
 {
   m_stop = true;
 }
 
 template <typename Allocator>
-void SPSCSink<Allocator>::next (const std::vector<uint8_t> &data)
+void SPSCSource<Allocator>::next (const std::vector<uint8_t> &data)
 {
   Header header;
   header.size   = data.size ();
@@ -69,7 +69,7 @@ void SPSCSink<Allocator>::next (const std::vector<uint8_t> &data)
 }
 
 template <typename Allocator>
-void SPSCSink<Allocator>::next_keep_warm ()
+void SPSCSource<Allocator>::next_keep_warm ()
 {
   m_queueRef.push (reinterpret_cast <uint8_t*> (&m_warmupHdr), sizeof (Header));
 }
