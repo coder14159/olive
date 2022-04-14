@@ -7,13 +7,13 @@ using namespace ::std::literals::chrono_literals;
 template <typename Allocator>
 SPSCSource<Allocator>::SPSCSource (const std::string &memoryName,
                                    const std::string &objectName,
-                                   size_t             queueSize)
+                                   size_t             capacity)
 
 : m_name (objectName)
 , m_memory (bi::managed_shared_memory (bi::open_only, memoryName.c_str()))
 , m_allocator (m_memory.get_segment_manager ())
 , m_queue (m_memory.find_or_construct<SharedMemory::SPSCQueue>
-                                  (objectName.c_str())(queueSize, m_allocator))
+                                  (objectName.c_str())(capacity, m_allocator))
 , m_queueRef (*m_queue)
 {
   // TODO clients could create queue and notify source/sink
@@ -23,6 +23,9 @@ SPSCSource<Allocator>::SPSCSource (const std::string &memoryName,
 
   CHECK_SS (m_queue != nullptr,
             "shared memory object initialisation failed: " << objectName);
+
+  BOOST_LOG_TRIVIAL (info) << "Found or created queue named '"
+    << m_name << "' with capacity of " << capacity << " bytes";
 }
 
 template <typename Allocator>

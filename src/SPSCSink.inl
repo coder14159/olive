@@ -1,12 +1,12 @@
 namespace olive {
 
-namespace bi = boost::interprocess;
-
 template <typename Allocator>
-SPSCStream<Allocator>::SPSCStream (const std::string &memoryName,
-                                   size_t prefetchSize)
+SPSCSink<Allocator>::SPSCSink (const std::string &memoryName,
+                               size_t prefetchSize)
 {
-	// open an existing shared memory segment
+  namespace bi = boost::interprocess;
+
+  // open an existing shared memory segment
   m_memory = bi::managed_shared_memory (bi::open_only, memoryName.c_str());
 
   // swap in a valid segment manager
@@ -31,7 +31,7 @@ SPSCStream<Allocator>::SPSCStream (const std::string &memoryName,
 
   int index = ++(*queueCounter);
 
-  auto queueName = memoryName + ":sink:" + std::to_string (index);
+  auto queueName = memoryName + ":source:" + std::to_string (index);
 
   m_queuePtr = m_memory.find_or_construct<SharedMemory::SPSCQueue> (
                                         queueName.c_str())(1, *m_allocator);
@@ -39,7 +39,7 @@ SPSCStream<Allocator>::SPSCStream (const std::string &memoryName,
   CHECK_SS (m_queuePtr != nullptr,
     "Failed to create shared memory queue: " << queueName);
 
-  BOOST_LOG_TRIVIAL (info) << "SPSCStream constructed " << queueName;
+  BOOST_LOG_TRIVIAL (info) << "SPSCSink constructed " << queueName;
 
   if (prefetchSize > 0)
   {
@@ -55,13 +55,13 @@ SPSCStream<Allocator>::SPSCStream (const std::string &memoryName,
 }
 
 template <typename Allocator>
-SPSCStream<Allocator>::~SPSCStream ()
+SPSCSink<Allocator>::~SPSCSink ()
 {
   stop ();
 }
 
 template <typename Allocator>
-void SPSCStream<Allocator>::stop ()
+void SPSCSink<Allocator>::stop ()
 {
   if (!m_stop)
   {
@@ -70,7 +70,7 @@ void SPSCStream<Allocator>::stop ()
 }
 
 template <typename Allocator>
-bool SPSCStream<Allocator>::next (Header &header, std::vector<uint8_t> &data)
+bool SPSCSink<Allocator>::next (Header &header, std::vector<uint8_t> &data)
 {
   while (!m_stop)
   {
@@ -106,13 +106,13 @@ bool SPSCStream<Allocator>::next (Header &header, std::vector<uint8_t> &data)
 
 template <typename Allocator>
 template <typename POD>
-bool SPSCStream<Allocator>::pop (POD &pod)
+bool SPSCSink<Allocator>::pop (POD &pod)
 {
   return pop (reinterpret_cast<uint8_t*> (&pod), sizeof (POD));
 }
 
 template <typename Allocator>
-bool SPSCStream<Allocator>::pop (uint8_t *to, size_t size)
+bool SPSCSink<Allocator>::pop (uint8_t *to, size_t size)
 {
   auto &queue = *m_queuePtr;
 
@@ -132,7 +132,7 @@ bool SPSCStream<Allocator>::pop (uint8_t *to, size_t size)
 
 template <typename Allocator>
 template<class Header, class Data>
-bool SPSCStream<Allocator>::pop_from_cache (Header &header, Data &data)
+bool SPSCSink<Allocator>::pop_from_cache (Header &header, Data &data)
 {
   auto &queue = *m_queuePtr;
 
@@ -192,7 +192,7 @@ bool SPSCStream<Allocator>::pop_from_cache (Header &header, Data &data)
 }
 
 template <typename Allocator>
-bool SPSCStream<Allocator>::prefetch_to_cache ()
+bool SPSCSink<Allocator>::prefetch_to_cache ()
 {
   auto &queue = *m_queuePtr;
 
