@@ -1,8 +1,8 @@
 namespace olive {
 
-namespace bi = ::boost::interprocess;
+namespace bi = boost::interprocess;
 
-using namespace ::std::literals::chrono_literals;
+using namespace std::literals::chrono_literals;
 
 template <typename Allocator>
 SPSCSource<Allocator>::SPSCSource (const std::string &memoryName,
