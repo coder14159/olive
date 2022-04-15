@@ -17,13 +17,26 @@ namespace olive {
 class TimeDuration : boost::totally_ordered<TimeDuration>
 {
 public:
+  /*
+   * Default initialisation is zero time duration
+   */
   TimeDuration ();
 
+  /*
+   * Initialise TimeDuration using a DurationType eg. Nanoseconds, Microseconds,
+   * Milliseconds etc
+   */
   template<typename DurationType>
   TimeDuration (const DurationType duration);
 
+  /*
+   * Return the current time duration in Nanoseconds
+   */
   Nanoseconds nanoseconds () const { return m_nanoseconds; }
 
+  /*
+   * Return a printed string of the current TimeDuration
+   */
   std::string pretty () const;
 
   friend bool operator< (const TimeDuration lhs, const TimeDuration rhs)

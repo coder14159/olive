@@ -555,7 +555,8 @@ BOOST_AUTO_TEST_CASE (LatencySourceSinkMultiThreadVectorPayload)
 
   auto &throughput = stats.throughput ().summary ();
 
-  BOOST_CHECK (throughput.messages_per_sec () > (rate * 0.9));
+  BOOST_CHECK (throughput.messages_per_sec () > (rate * 0.8));
+  BOOST_CHECK (throughput.messages_per_sec () < (rate * 1.2));
 
   BOOST_CHECK (throughput.megabytes_per_sec () >
     (rate * PAYLOAD_SIZE * 0.8 / (1024*1024)));

@@ -49,10 +49,6 @@ std::string nanoseconds_to_pretty (Nanoseconds nanoseconds)
   return nanoseconds_to_pretty (nanoseconds.count ());
 }
 
-TimeDuration::TimeDuration ()
-: m_nanoseconds (Nanoseconds::zero ())
-{ }
-
 std::string TimeDuration::pretty () const
 {
   return nanoseconds_to_pretty (m_nanoseconds);
