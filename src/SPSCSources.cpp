@@ -1,20 +1,22 @@
+#include "Assert.h"
 #include "Logger.h"
 #include "SPSCSources.h"
-
 #include "detail/SharedMemory.h"
 
 #include <atomic>
 
-namespace bi = boost::interprocess;
-
 namespace olive {
 
-SPSCSources::SPSCSources (const std::string &memoryName)
-: m_name (objectName),
+namespace bi = boost::interprocess;
+
+// TODO: Further work required...
+
+SPSCSources::SPSCSources (const std::string &memoryName, size_t capacity)
+: m_name (memoryName),
   m_memory (bi::managed_shared_memory (bi::create_only, memoryName.c_str())),
   m_allocator (m_memory.get_segment_manager ())
 {
-  ipc::logger ().info () << "created shared memory: " << memoryName;
+  BOOST_LOG_TRIVIAL (info) << "created shared memory: " << memoryName;
 
   auto requestQueueName = memoryName + ":requests";
 
@@ -28,7 +30,7 @@ SPSCSources::SPSCSources (const std::string &memoryName)
   CHECK_SS (m_queue != nullptr,
              "shared memory object initialisation failed: " << objectName);
 
-  ipc::logger ().info () << "constructed " << objectName;
+  BOOST_LOG_TRIVIAL (info) << "constructed " << objectName;
 
   m_thread = std::thread ([this] () {
 

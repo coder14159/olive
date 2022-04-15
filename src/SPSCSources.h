@@ -19,7 +19,7 @@ namespace olive {
 class SPSCSources
 {
 public:
-  SPSCSources (const std::string &memoryName, size_t queueSize);
+  SPSCSources (const std::string &memoryName, size_t capacity);
 
   ~SPSCSources ();
 
