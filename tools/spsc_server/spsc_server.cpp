@@ -80,7 +80,7 @@ void server (const std::string& name,
 
   for (int i = 1; i <= numClients; ++i)
   {
-    std::string objectName = name + ":source:" + std::to_string (i);
+    auto objectName = name + ":source:" + std::to_string (i);
 
     auto source = std::make_unique<SPSCSourceProcess> (name, objectName, queueSize);
 
