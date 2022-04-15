@@ -1,20 +1,22 @@
+#include "Assert.h"
 #include "Logger.h"
-#include "SPSCSink.h"
-
+#include "SPSCSources.h"
 #include "detail/SharedMemory.h"
 
 #include <atomic>
 
-namespace bi = boost::interprocess;
-
 namespace olive {
 
-SPSCSinks::SPSCSinks (const std::string &memoryName)
-: m_name (objectName),
+namespace bi = boost::interprocess;
+
+// TODO: Further work required...
+
+SPSCSources::SPSCSources (const std::string &memoryName, size_t capacity)
+: m_name (memoryName),
   m_memory (bi::managed_shared_memory (bi::create_only, memoryName.c_str())),
   m_allocator (m_memory.get_segment_manager ())
 {
-  ipc::logger ().info () << "created shared memory: " << memoryName;
+  BOOST_LOG_TRIVIAL (info) << "created shared memory: " << memoryName;
 
   auto requestQueueName = memoryName + ":requests";
 
@@ -28,7 +30,7 @@ SPSCSinks::SPSCSinks (const std::string &memoryName)
   CHECK_SS (m_queue != nullptr,
              "shared memory object initialisation failed: " << objectName);
 
-  ipc::logger ().info () << "constructed " << objectName;
+  BOOST_LOG_TRIVIAL (info) << "constructed " << objectName;
 
   m_thread = std::thread ([this] () {
 
@@ -49,20 +51,20 @@ SPSCSinks::SPSCSinks (const std::string &memoryName)
   });
 }
 
-SPSCSinks::~SPSCSinks ()
+SPSCSources::~SPSCSources ()
 {
   stop ();
 }
 
 
-void SPSCSinks::stop ()
+void SPSCSources::stop ()
 {
   m_stop = true;
 
   m_thread.join ();
 }
 
-void SPSCSinks::next (const std::vector<uint8_t> &data)
+void SPSCSources::next (const std::vector<uint8_t> &data)
 {
   bool success = false;
 
@@ -83,7 +85,7 @@ void SPSCSinks::next (const std::vector<uint8_t> &data)
   }
 }
 
-bool SPSCSinks::send (const uint8_t *data, size_t size)
+bool SPSCSources::send (const uint8_t *data, size_t size)
 {
   bool ret = false;
 
@@ -106,4 +108,4 @@ bool SPSCSinks::send (const uint8_t *data, size_t size)
   return ret;
 }
 
-}
+} // OLIVE_SPSC_SOURCES_H
