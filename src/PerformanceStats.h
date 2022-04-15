@@ -11,13 +11,25 @@
 
 namespace olive {
 
+/*
+ * PerformanceStats is used to generate throughput and sampled
+ * latency performance statistics.
+ *
+ * Data is output to std::cout and optionally to files
+ */
 class PerformanceStats
 {
 public:
-  PerformanceStats (TimeDuration warmup = Seconds (0));
+  /*
+   * Log performance statistics to screen
+   */
+  PerformanceStats (TimeDuration warmup = Nanoseconds (0));
 
+  /*
+   * Log performance statistics to screen and file
+   */
   PerformanceStats (const std::string &path,
-                    TimeDuration warmup = Seconds (0));
+                    TimeDuration warmup = Nanoseconds (0));
 
   ~PerformanceStats ();
   /*
