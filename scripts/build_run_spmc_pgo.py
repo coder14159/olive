@@ -56,7 +56,7 @@ parser.add_argument ("--client_cpu_list", nargs='+', type=int, default=[],
 
 args = parser.parse_args ()
 
-if len (args.client_stats) is 1 and args.client_stats[0] == 'interval':
+if len (args.client_stats) == 1 and args.client_stats[0] == 'interval':
   sys.exit ('Error: Argument --client_stats option requires "latency and/or" ' +
             'throughput" to be included')
 
@@ -71,7 +71,7 @@ print ("server_queue_size:      " + args.server_queue_size + " bytes")
 print ("base_dir:               " + str (utils.base_path ()))
 print ("")
 
-cpu = "-" if args.server_cpu is -1 else args.server_cpu
+cpu = "-" if args.server_cpu == -1 else args.server_cpu
 print ("server_cpu:             " + str (cpu))
 print ("server_message_size:    " + str (args.server_message_size) + " bytes")
 
