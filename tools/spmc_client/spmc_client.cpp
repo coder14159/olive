@@ -112,11 +112,6 @@ int main(int argc, char* argv[]) try
   BOOST_LOG_TRIVIAL (info) << "Start spmc_client";
   BOOST_LOG_TRIVIAL (info) << "Consume from shared memory named: " << name;
 
-  if (cpu != -1)
-  {
-    BOOST_LOG_TRIVIAL (info) << "Bind to CPU: " << cpu;
-  }
-
   using Queue  = SPMCQueue<SharedMemory::Allocator>;
   using Sink = SPMCSink<Queue>;
 

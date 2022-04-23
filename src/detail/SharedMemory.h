@@ -44,7 +44,7 @@ using SPSCQueue = boost::lockfree::spsc_queue<uint8_t,
 
 using Counter = std::atomic<int>;
 
-}
+} // namespace SharedMemory
 
 /*
  * A message header for streaming shared memory data
@@ -131,6 +131,6 @@ static constexpr size_t CACHE_LINE_SIZE = BOOST_LOCKFREE_CACHELINE_BYTES;
 
 using SharedMemoryMutex = boost::interprocess::interprocess_mutex;
 
-}
+} // namespace olive
 
 #endif // OLIVE_DETAIL_SHARED_MEMORY_H
