@@ -45,15 +45,17 @@ int main(int argc, char* argv[]) try
 {
   for (auto name : parse (argc, argv).values ("names"))
   {
-    std::cout << "Shared memory '" << name << "' " ;
+    std::string log = "Shared memory '" + name + "' ";
     if (bi::shared_memory_object::remove (name.c_str ()))
     {
-      std::cout << "removed" << std::endl;
+      log += "removed";
     }
     else
     {
-      std::cout << "not removed" << std::endl;
+      log += "not removed";
     }
+
+    BOOST_LOG_TRIVIAL (info) << log;
   }
 
   return EXIT_SUCCESS;
