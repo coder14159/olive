@@ -8,18 +8,12 @@ INCLUDE_DIRS	+= -I$(ROOT_DIR)src
 
 CXXFLAGS		+= $(INCLUDE_DIRS)
 
-# Link third party libraries
+# Link boost libraries
 LIB_BOOST_LOG        := -lboost_log
 LIB_BOOST_FILESYSTEM := -lboost_filesystem
 LIB_BOOST_SYSTEM     := -lboost_system
 LIB_BOOST_THREAD     := -lboost_thread
 LIB_BOOST_UNIT_TEST  := -lboost_unit_test_framework
-
-ifdef VTUNE
-  LIB_VTUNE_NOTIFY     := -littnotify
-  LIB_VTUNE_COLLECTOR  := -littnotify_collector
-  THIRD_PARTY_LIBS     += $(LIB_VTUNE_COLLECTOR)
-endif
 
 # SPMC library target
 LIB_FILE_NAME = libspmc.a

@@ -9,7 +9,6 @@ CXXFLAGS  += -std=c++17
 CXXFLAGS  += -lrt -lpthread
 CXXFLAGS  += -DBOOST_LOG_DYN_LINK
 CXXFLAGS  += -DENABLE_ASSERTS=1
-CXXFLAGS  += -DSPMC_MODULUS=1
 CXXFLAGS  += -march=native
 CXXFLAGS  += -fext-numeric-literals
 CXXFLAGS  += -Wl,--no-undefined
@@ -32,6 +31,11 @@ endif
 
 PROCESSOR  := $(shell uname -m)
 BASE_DIR   := $(CURDIR)
+
+BIN_DIR := build/$(PROCESSOR)$(BUILD_SUFFIX)/bin
+LIB_DIR := build/$(PROCESSOR)$(BUILD_SUFFIX)/lib
+
+ROOT_DIR := $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
 
 ################################################################################
 # Performance Guided Optimisation
@@ -65,8 +69,7 @@ ifdef PGO_PROFILE
   BUILD_SUFFIX += .pgo_profile
 endif
 
-# Use PGO profile data files to build pgo executable files using the generated
-# profile data files
+# Use PGO profile data files to build PGO executables
 ifdef PGO_RELEASE
   CXXFLAGS     += -fprofile-use
   CXXFLAGS     += -fprofile-correction
@@ -74,11 +77,6 @@ ifdef PGO_RELEASE
   CXXFLAGS     += -Wno-missing-profile
   BUILD_SUFFIX += .pgo_release
 endif
-
-################################################################################
-
-BIN_DIR    := build/$(PROCESSOR)$(BUILD_SUFFIX)/bin
-LIB_DIR    := build/$(PROCESSOR)$(BUILD_SUFFIX)/lib
 
 ################################################################################
 # Third party libraries
@@ -94,6 +92,7 @@ CXXFLAGS          += -Wl,-rpath=$(BOOST_LIB_DIR)
 CXXOPTS_DIR := thirdparty/cxxopts-2.2.0
 
 # Intel VTune
+# Sample build: $ make VTUNE=1 spmc -j2
 ifdef VTUNE
   CXXFLAGS  += -DVTUNE=1
 
@@ -103,7 +102,13 @@ ifdef VTUNE
   CXXFLAGS  += -Wl,-rpath=$(VTUNE_DIR)/sdk/lib64
   CXXFLAGS  += -L$(VTUNE_DIR)/lib64/runtime
 
+  BUILD_SUFFIX += .vtune
+
+  LIB_VTUNE_NOTIFY    := -littnotify
+  LIB_VTUNE_COLLECTOR := -littnotify_collector
+
   THIRD_PARTY_LIBS += $(LIB_VTUNE_NOTIFY)
+  THIRD_PARTY_LIBS += $(LIB_VTUNE_COLLECTOR)
 endif
 
 # Valgrind
@@ -112,5 +117,3 @@ ifdef VALGRIND
   VALGRIND_HEADER_DIR := $(VALGRIND_BASE_DIR)/include
   CXXFLAGS            += -I$(VALGRIND_HEADER_DIR)
 endif
-
-ROOT_DIR := $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
