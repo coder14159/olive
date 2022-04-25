@@ -32,9 +32,6 @@ endif
 PROCESSOR  := $(shell uname -m)
 BASE_DIR   := $(CURDIR)
 
-BIN_DIR := build/$(PROCESSOR)$(BUILD_SUFFIX)/bin
-LIB_DIR := build/$(PROCESSOR)$(BUILD_SUFFIX)/lib
-
 ROOT_DIR := $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
 
 ################################################################################
@@ -77,6 +74,9 @@ ifdef PGO_RELEASE
   CXXFLAGS     += -Wno-missing-profile
   BUILD_SUFFIX += .pgo_release
 endif
+
+BIN_DIR := build/$(PROCESSOR)$(BUILD_SUFFIX)/bin
+LIB_DIR := build/$(PROCESSOR)$(BUILD_SUFFIX)/lib
 
 ################################################################################
 # Third party libraries
