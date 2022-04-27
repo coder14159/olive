@@ -1,10 +1,10 @@
 #include "Chrono.h"
 #include "CpuBind.h"
 #include "Latency.h"
-#include "Logger.h"
 #include "SignalCatcher.h"
 #include "Timer.h"
 #include "Throttle.h"
+#include "Throughput.h"
 
 #include "detail/CXXOptsHelper.h"
 
@@ -18,7 +18,7 @@ using namespace std::chrono;
 
 using namespace olive;
 
-void interthread_atomic_ping_pong (Seconds timeout)
+void thread_ping_pong (Seconds timeout)
 {
   std::atomic_bool stop { false };
 
@@ -34,6 +34,7 @@ void interthread_atomic_ping_pong (Seconds timeout)
   std::atomic<int64_t> pong_timestamp { null_timestamp };
 
   Latency latency;
+  Throughput throughput;
 
   Timer timer;
 
@@ -45,29 +46,24 @@ void interthread_atomic_ping_pong (Seconds timeout)
 
     int i = 0;
 
-    while (true)
+    while (!stop.load (std::memory_order_acq_rel))
     {
-      ping_timestamp = nanoseconds_since_epoch (Clock::now ());
+      ping_timestamp.store (
+          nanoseconds_since_epoch (Clock::now ()), std::memory_order_release);
 
-      while (pong_timestamp == null_timestamp)
+      while (pong_timestamp.load (std::memory_order_acquire) == null_timestamp)
       { }
 
       Nanoseconds nanoseconds (pong_timestamp - ping_timestamp);
 
       latency.next (nanoseconds);
+      throughput.next (sizeof (i), 1);
 
       ++i;
 
-      if (stop)
-      {
-        break;
-      }
-
-      ping_timestamp = null_timestamp;
-      pong_timestamp = null_timestamp;
+      ping_timestamp.store (null_timestamp, std::memory_order_release);
+      pong_timestamp.store (null_timestamp, std::memory_order_release);
     }
-
-    std::cout << "count: " << i << std::endl;
   });
   /*
    * Measure the time duration it takes for the pong thread to view the
@@ -77,11 +73,13 @@ void interthread_atomic_ping_pong (Seconds timeout)
 
     bind_to_cpu (2);
 
-    while (!stop)
+    while (!stop.load (std::memory_order_acq_rel))
     {
-      if (pong_timestamp == null_timestamp && ping_timestamp != null_timestamp)
+      if (pong_timestamp.load (std::memory_order_relaxed) == null_timestamp &&
+          ping_timestamp.load (std::memory_order_acquire) != null_timestamp)
       {
-        pong_timestamp = nanoseconds_since_epoch (Clock::now ());
+        pong_timestamp.store (nanoseconds_since_epoch (Clock::now ()),
+                              std::memory_order_release);
       }
     }
   });
@@ -93,15 +91,12 @@ void interthread_atomic_ping_pong (Seconds timeout)
   ping.join ();
   pong.join ();
 
+  std::cout << "Throughput: " << throughput.to_string () << std::endl;
+
   for (auto s : latency.to_strings ())
   {
     std::cout << s << std::endl;
   }
-}
-
-void interprocess_ping_pong ()
-{
-
 }
 
 CxxOptsHelper parse (int argc, char* argv[])
@@ -109,12 +104,9 @@ CxxOptsHelper parse (int argc, char* argv[])
   std::vector<std::string> memory_types = {"interprocess", "inprocess" };
 
   cxxopts::Options cxxopts ("ping_pong",
-    "Measure latency of a shared atomic or full sink/streams");
+    "Measure latency by bouncing a timestamp between two threads");
 
   cxxopts.add_options ()
-    ("h,help", "Measure inter-CPU latency")
-    ("type", "Execute using inprocess threads or processes over shared memory",
-     cxxopts::value<std::string> ())
     ("timeout", "Time to run the test in seconds",
       cxxopts::value<int64_t> ()->default_value ("2"))
     ("loglevel", "Logging level",
@@ -139,20 +131,10 @@ int main(int argc, char* argv[]) try
   auto timeout  = options.value<int64_t> ("timeout", 2);
   auto logLevel = options.value<std::string> ("loglevel",
                   log_levels (), "WARNING");
-  auto type     = options.value<std::string> ("type",
-                  {"threads", "processes"}, "threads");
 
   set_log_level (logLevel);
 
-  if (type == "processes")
-  {
-
-
-  }
-  else
-  {
-    interthread_atomic_ping_pong (Seconds (timeout));
-  }
+  thread_ping_pong (Seconds (timeout));
 
   return EXIT_SUCCESS;
 }
