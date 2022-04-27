@@ -56,7 +56,7 @@ private:
 
   std::thread m_thread;
 
-  std::vector<std::unique_ptr<SPSCSource> m_sources;
+  std::vector<std::unique_ptr<SPSCSourceProcess>> m_sources;
 
   std::atomic<bool> m_stop = { false };
 

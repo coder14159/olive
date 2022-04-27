@@ -10,14 +10,13 @@
 namespace olive {
 
 /*
- * A single producer/ multiple consumer data stream.
+ * A single producer/ multiple consumer data sink.
  *
- * Stream shared memory data from a single producer using a shared memory queue
+ * Consume shared memory data from a single producer using a shared memory queue
  * capable of supporting multiple consumers.
  *
  * If the SPMCSink is constructed to allow dropping of messages then it will
  * not exert back-pressure on the server.
- *
  */
 template <typename QueueType>
 class SPMCSink
@@ -28,12 +27,12 @@ private:
 
 public:
   /*
-   * Initialise a stream consuming from named shared memory
+   * Initialise a sink to consume data from named shared memory
    */
   SPMCSink (const std::string &memoryName, const std::string &queueName);
 
   /*
-   * Initialise a stream consuming from memory shared between threads in a
+   * Initialise a sink consuming from a queue shared between threads in a
    * single process.
    */
   SPMCSink (QueueType &queue);

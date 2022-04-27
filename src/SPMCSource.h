@@ -23,19 +23,19 @@ private:
 
 public:
   /*
-   * Create a sink object for use in a single process by multiple threads
+   * Create a source object for use in a single process by multiple threads
    */
   SPMCSource (size_t capacity);
 
   /*
-   * Create a sink object in shared memory for use by multiple processes
+   * Create a source object in shared memory for use by multiple processes
    */
   SPMCSource (const std::string &memoryName,
               const std::string &queueName,
               size_t             capacity);
 
   /*
-   * Stop sink sending data
+   * Stop source sending data
    */
   void stop ();
 
