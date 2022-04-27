@@ -124,7 +124,7 @@ $(BIN_DIR):
 # Build tools
 spmc_client: $(BIN_DIR)/spmc_client
 $(BIN_DIR)/spmc_client: Makefile tools/spmc_client/spmc_client.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -I$(CXXOPTS_DIR) tools/spmc_client/spmc_client.cpp -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM) -o $@
+	$(COMPILER) $(CXXFLAGS) -I$(CXXOPTS_DIR) tools/spmc_client/spmc_client.cpp -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -lspmc $(LIB_BOOST_FILESYSTEM) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) -o $@
 
 spmc_server: $(BIN_DIR)/spmc_server
 $(BIN_DIR)/spmc_server: Makefile tools/spmc_server/spmc_server.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
@@ -134,7 +134,7 @@ spmc: spmc_client spmc_server
 
 spsc_client: $(BIN_DIR)/spsc_client
 $(BIN_DIR)/spsc_client: Makefile tools/spsc_client/spsc_client.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -I$(CXXOPTS_DIR) tools/spsc_client/spsc_client.cpp -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM) -o $@
+	$(COMPILER) $(CXXFLAGS) -I$(CXXOPTS_DIR) tools/spsc_client/spsc_client.cpp -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -lspmc $(LIB_BOOST_FILESYSTEM) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) -o $@
 
 spsc_server: $(BIN_DIR)/spsc_server
 $(BIN_DIR)/spsc_server: Makefile tools/spsc_server/spsc_server.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
@@ -149,23 +149,23 @@ remove_shared_memory: $(BIN_DIR)/remove_shared_memory
 
 ping_pong: $(BIN_DIR)/ping_pong
 $(BIN_DIR)/ping_pong: Makefile tools/ping_pong/ping_pong.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -I$(CXXOPTS_DIR) tools/ping_pong/ping_pong.cpp -L$(LIB_DIR) -lspmc -L$(BOOST_LIB_DIR) $(LIB_BOOST_LOG) $(LIB_BOOST_FILESYSTEM) -o $@
+	$(COMPILER) $(CXXFLAGS) -I$(CXXOPTS_DIR) tools/ping_pong/ping_pong.cpp -lspmc -L$(LIB_DIR) $(LIB_BOOST_FILESYSTEM) $(LIB_BOOST_LOG) -o $@
 
 test_allocator: $(BIN_DIR)/test_allocator
 $(BIN_DIR)/test_allocator: Makefile tests/test_allocator/test_allocator.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) tests/test_allocator/test_allocator.cpp -lspmc -L$(BOOST_LIB_DIR) $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_THREAD) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM) -o $@
+	$(COMPILER) $(CXXFLAGS) tests/test_allocator/test_allocator.cpp -lspmc -L$(LIB_DIR) $(LIB_BOOST_FILESYSTEM) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_THREAD) $(LIB_BOOST_UNIT_TEST) -o $@
 
 test_performance: $(BIN_DIR)/test_performance
 $(BIN_DIR)/test_performance: Makefile tests/test_performance/test_performance.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) tests/test_performance/test_performance.cpp -lspmc -L$(BOOST_LIB_DIR) $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_THREAD) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_FILESYSTEM) -o $@
+	$(COMPILER) $(CXXFLAGS) tests/test_performance/test_performance.cpp -lspmc -L$(LIB_DIR) $(LIB_BOOST_FILESYSTEM) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_THREAD) $(LIB_BOOST_UNIT_TEST) -o $@
 
 test_spmcqueue: $(BIN_DIR)/test_spmcqueue
 $(BIN_DIR)/test_spmcqueue: Makefile tests/test_spmcqueue/test_spmcqueue.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) tests/test_spmcqueue/test_spmcqueue.cpp -lspmc -L$(BOOST_LIB_DIR) $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_THREAD) $(LIB_BOOST_FILESYSTEM) -o $@
+	$(COMPILER) $(CXXFLAGS) tests/test_spmcqueue/test_spmcqueue.cpp -lspmc -L$(LIB_DIR) $(LIB_BOOST_FILESYSTEM) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_THREAD) $(LIB_BOOST_UNIT_TEST) -o $@
 
 test_stats: $(BIN_DIR)/test_stats
 $(BIN_DIR)/test_stats: Makefile tests/test_stats/test_stats.cpp $(LIB_FILE_PATH) $(LIB_SRC_CPP_FILES) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) tests/test_stats/test_stats.cpp -lspmc -L$(BOOST_LIB_DIR) $(LIB_BOOST_UNIT_TEST) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) $(LIB_BOOST_THREAD) $(LIB_BOOST_FILESYSTEM) -o $@
+	$(COMPILER) $(CXXFLAGS) -L$(LIB_DIR) tests/test_stats/test_stats.cpp -lspmc -L$(LIB_DIR) $(LIB_BOOST_FILESYSTEM) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM)  $(LIB_BOOST_UNIT_TEST) -o $@
 
 tests: $(BIN_DIR)/test_allocator \
        $(BIN_DIR)/test_performance \
