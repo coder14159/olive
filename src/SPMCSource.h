@@ -10,7 +10,7 @@
 namespace olive {
 
 /*
- * A single producer/ multiple consumer data sink.
+ * A single producer, multiple consumer data source.
  *
  * Use SPMCSource to put data into the shared memory queue.
  */
