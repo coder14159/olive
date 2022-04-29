@@ -51,7 +51,6 @@ CxxOptsHelper parse (int argc, char* argv[])
   cxxopts.add_options ()
     ("h,help", "Performance test consuming of shared memory messages")
     ("name", "Shared memory name", cxxopts::value<std::string> ())
-    ("allow_drops", "Allow message drops")
     ("cpu", "Bind main thread to a cpu processor integer, "
             "use -1 for no binding",
       cxxopts::value<int> ()->default_value ("-1"))
