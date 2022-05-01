@@ -58,7 +58,6 @@ void SPMCSource<Queuetype>::next (const POD &data)
      */
     header.timestamp = nanoseconds_since_epoch (Clock::now ());
   }
-
 }
 
 template <class Queuetype>

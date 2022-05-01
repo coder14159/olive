@@ -59,7 +59,7 @@ public:
 
   /*
    * Reference to the queue to be shared with SPMCStream objects for
-   * inter-thread communication
+   * inter-thread communication only
    */
    QueueType& queue () { return m_queue; }
 
