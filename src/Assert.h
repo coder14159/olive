@@ -11,8 +11,6 @@ namespace olive {
 /*
  * Asserts can be disabled at compile time
  */
-#define ENABLE_ASSERTS 1
-
 #ifdef ENABLE_ASSERTS
 
 #define ASSERT(condition, message) do  \
@@ -40,8 +38,9 @@ namespace olive {
 #define ASSERT(condition, message) {};
 #define ASSERT_SS(condition, message) {};
 
-#endif
+#endif // ENABLE_ASSERTS
 
+#ifdef ENABLE_CHECKS
 /*
  * Checks are always enabled
  */
@@ -64,6 +63,7 @@ namespace olive {
   }                                     \
 } while(0)
 
+#endif // ENABLE_CHECKS
 
 } // namespace olive
 

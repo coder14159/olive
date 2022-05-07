@@ -8,7 +8,8 @@ CXXFLAGS  += -g -Wall
 CXXFLAGS  += -std=c++17
 CXXFLAGS  += -lrt -lpthread
 CXXFLAGS  += -DBOOST_LOG_DYN_LINK
-CXXFLAGS  += -DENABLE_ASSERTS=1
+CXXFLAGS  += -DENABLE_ASSERTS=0
+CXXFLAGS  += -DENABLE_CHECKS=0
 CXXFLAGS  += -march=native
 CXXFLAGS  += -fext-numeric-literals
 CXXFLAGS  += -Wl,--no-undefined
@@ -96,7 +97,7 @@ CXXOPTS_DIR := thirdparty/cxxopts-2.2.0
 ifdef VTUNE
   CXXFLAGS  += -DVTUNE=1
 
-  VTUNE_DIR := $(VTUNE_INSTALL_DIR)
+  VTUNE_DIR := /run/media/ian/Elements/thirdparty/intel/dev_tools/sw_dev_tools/vtune_profiler_2020.2.0.610396
   CXXFLAGS  += -I$(VTUNE_DIR)/include
   CXXFLAGS  += -L$(VTUNE_DIR)/sdk/lib64
   CXXFLAGS  += -Wl,-rpath=$(VTUNE_DIR)/sdk/lib64
