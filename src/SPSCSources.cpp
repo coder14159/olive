@@ -28,7 +28,7 @@ SPSCSources::SPSCSources (const std::string &memoryName, size_t capacity)
                                     (queueSize, m_allocator);
 
   CHECK_SS (m_queue != nullptr,
-             "shared memory object initialisation failed: " << objectName);
+            "shared memory object initialisation failed: " << objectName);
 
   BOOST_LOG_TRIVIAL (info) << "constructed " << objectName;
 
@@ -40,7 +40,7 @@ SPSCSources::SPSCSources (const std::string &memoryName, size_t capacity)
     {
       if (requests.empty ())
       {
-        sleep_for (Seconds (1));
+        std::this_thread::sleep_for (Seconds (1));
       }
       else
       {
