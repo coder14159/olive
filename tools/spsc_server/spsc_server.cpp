@@ -148,7 +148,7 @@ void server (const std::string& name,
    */
   if (rate == 0)
   {
-    while (!stop.load (std::memory_order_relaxed))
+    while (SPMC_EXPECT_TRUE (!stop.load (std::memory_order_relaxed)))
     {
       for (size_t i = first; i < first + sourceCount; ++i)
       {
