@@ -177,8 +177,7 @@ int main(int argc, char* argv[]) try
         /*
          * Keep the reused data hot in cache for a performance gain
          */
-        std::vector<uint8_t> a (data);
-        (void)a;
+        std::vector<uint8_t> _(data); (void)_;
       }
     }
   }
