@@ -177,15 +177,10 @@ public:
   bool pop (POD &pod, ConsumerState &consumer);
 
   /*
-   * Pop seralised data from the queue
+   * Pop serialised data from the queue
    */
   bool pop (uint8_t *data, size_t size, ConsumerState &consumer);
 
-  /*
-   * Prefetch a chunk of data for caching in a local non-shared circular buffer
-   */
-  template <typename BufferType>
-  bool prefetch_to_cache (BufferType &cache, ConsumerState &consumer);
   /*
    * Return true if the producer has restarted
    */
