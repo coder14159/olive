@@ -157,7 +157,8 @@ bool SPMCQueue<Allocator, MaxNoDropConsumers>::pop (
   detail::ConsumerState &consumer)
 {
   /*
-   * If all available data in a consumer has been consumed, request more
+   * If all available data in a consumer has been consumed, request more data to
+   * be added to the consumer cache
    */
   if (consumer.data_range ().empty ())
   {

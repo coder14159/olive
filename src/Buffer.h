@@ -18,7 +18,7 @@ namespace olive {
  * Data pushed into the buffer is expected to be of a size equal to or smaller
  * than the Buffer size.
  *
- * This buffer is limited for use with POD types.
+ * This buffer is limited for use with POD types or arrays.
  */
 template <class Allocator>
 class Buffer : private Allocator

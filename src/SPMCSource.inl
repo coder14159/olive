@@ -53,8 +53,7 @@ void SPMCSource<Queuetype>::next (const POD &data)
   while (!m_stop && !m_queue.push (header, data))
   {
     /*
-     * Re-generate the timestamp if the queue is full so that only internal
-     * latency is measured
+     * Update the timestamp so that only internal latency is measured
      */
     header.timestamp = nanoseconds_since_epoch (Clock::now ());
   }
