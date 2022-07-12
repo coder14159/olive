@@ -18,6 +18,7 @@
 #include <boost/log/trivial.hpp>
 
 #include <cstdlib>
+#include <deque>
 #include <ext/numeric>
 #include <functional>
 #include <iomanip>
@@ -1197,12 +1198,9 @@ BOOST_AUTO_TEST_CASE (ExpectCondition)
   BOOST_CHECK (SPMC_EXPECT_FALSE (true)  == 1);
   BOOST_CHECK (SPMC_EXPECT_FALSE (false) == 0);
 }
-/*
- * Test the core SPMC queue
- */
-BOOST_AUTO_TEST_CASE (PerformanceSPMCQueue)
+BOOST_AUTO_TEST_CASE (PerformanceSPSCQueue)
 {
-  BOOST_TEST_MESSAGE ("PerformanceSPMCQueue");
+  BOOST_TEST_MESSAGE ("PerformanceSPSCQueue");
 
   std::string log_level = "ERROR";
 
@@ -1215,14 +1213,11 @@ BOOST_AUTO_TEST_CASE (PerformanceSPMCQueue)
 
   const size_t capacity = 20480;
 
-  using QueueType = SPMCQueue<std::allocator<uint8_t>>;
+  using QueueType = boost::lockfree::spsc_queue<int64_t>;
 
   QueueType queue (capacity);
 
-  detail::ConsumerState consumer;
-  queue.register_consumer (consumer);
-
-  bool stop = false;
+  std::atomic_bool stop = false;
 
   Timer timer;
 
@@ -1232,19 +1227,15 @@ BOOST_AUTO_TEST_CASE (PerformanceSPMCQueue)
   int64_t min = Nanoseconds::max ().count ();
   int64_t max = Nanoseconds::min ().count ();
 
-  std::atomic<bool> send { false };
-
   int64_t total_latency = 0;
 
-  auto consumer_thread = std::thread ([&] () {
+  auto consumer = std::thread ([&] () {
 
     int64_t timestamp = 0;
 
     bind_to_cpu (1);
 
     Timer timer;
-
-    send = true;
 
     for (int64_t i = 0; ; ++i)
     {
@@ -1254,7 +1245,7 @@ BOOST_AUTO_TEST_CASE (PerformanceSPMCQueue)
         break;
       }
 
-      if (queue.pop (timestamp, consumer))
+      if (queue.pop (timestamp))
       {
         const int64_t diff = nanoseconds_since_epoch (Clock::now ()) - timestamp;
 
@@ -1266,16 +1257,14 @@ BOOST_AUTO_TEST_CASE (PerformanceSPMCQueue)
         ++messages_consumed;
       }
     }
-
-    send = false;
   });
 
-  while (!consumer_thread.joinable ())
+  while (!consumer.joinable ())
   {
     std::this_thread::sleep_for (1us);
   }
 
-  auto producer_thread = std::thread ([&] () {
+  auto producer = std::thread ([&] () {
 
     bind_to_cpu (2);
 
@@ -1294,8 +1283,8 @@ BOOST_AUTO_TEST_CASE (PerformanceSPMCQueue)
 
   stop = true;
 
-  consumer_thread.join ();
-  producer_thread.join ();
+  producer.join ();
+  consumer.join ();
 
   BOOST_CHECK ((messages_consumed/to_seconds (timer.elapsed ())) > 1000);
 
@@ -1322,9 +1311,9 @@ BOOST_AUTO_TEST_CASE (PerformanceSPMCQueue)
   BOOST_TEST_MESSAGE (" ");
 }
 
-BOOST_AUTO_TEST_CASE (PerformanceSPSCQueue)
+BOOST_AUTO_TEST_CASE (PerformanceSPSCQueueBatchConsume)
 {
-  BOOST_TEST_MESSAGE ("PerformanceSPSCQueue");
+  BOOST_TEST_MESSAGE ("PerformanceSPSCQueueBatchConsume");
 
   std::string log_level = "ERROR";
 
@@ -1337,11 +1326,11 @@ BOOST_AUTO_TEST_CASE (PerformanceSPSCQueue)
 
   const size_t capacity = 20480;
 
-  using QueueType = boost::lockfree::spsc_queue<uint8_t>;
+  using QueueType = boost::lockfree::spsc_queue<int64_t>;
 
   QueueType queue (capacity);
 
-  bool stop = false;
+  std::atomic_bool stop = false;
 
   Timer timer;
 
@@ -1351,19 +1340,17 @@ BOOST_AUTO_TEST_CASE (PerformanceSPSCQueue)
   int64_t min = Nanoseconds::max ().count ();
   int64_t max = Nanoseconds::min ().count ();
 
-  std::atomic<bool> send { false };
-
   int64_t total_latency = 0;
 
   auto consumer = std::thread ([&] () {
+
+    std::deque<int64_t> cache;
 
     int64_t timestamp = 0;
 
     bind_to_cpu (1);
 
     Timer timer;
-
-    send = true;
 
     for (int64_t i = 0; ; ++i)
     {
@@ -1373,9 +1360,12 @@ BOOST_AUTO_TEST_CASE (PerformanceSPSCQueue)
         break;
       }
 
-      if (queue.read_available () >= sizeof (timestamp) &&
-          queue.pop (reinterpret_cast<uint8_t*> (&timestamp), sizeof (timestamp)))
+      if (!cache.empty ())
       {
+        timestamp = cache.front ();
+
+        cache.pop_front ();
+
         const int64_t diff = nanoseconds_since_epoch (Clock::now ()) - timestamp;
 
         total_latency += diff;
@@ -1385,9 +1375,11 @@ BOOST_AUTO_TEST_CASE (PerformanceSPSCQueue)
 
         ++messages_consumed;
       }
+      else
+      {
+        queue.pop (std::back_inserter (cache));
+      }
     }
-
-    send = false;
   });
 
   while (!consumer.joinable ())
@@ -1403,12 +1395,7 @@ BOOST_AUTO_TEST_CASE (PerformanceSPSCQueue)
     {
       const int64_t timestamp = nanoseconds_since_epoch (Clock::now ());
 
-      if (queue.write_available () > sizeof (int64_t))
-      {
-        queue.push (reinterpret_cast <const uint8_t*> (&timestamp),
-                    sizeof (int64_t));
-      }
-      else
+      if (!queue.push (timestamp))
       {
         ++enqueue_blocked;
       }
@@ -1421,6 +1408,125 @@ BOOST_AUTO_TEST_CASE (PerformanceSPSCQueue)
 
   producer.join ();
   consumer.join ();
+
+  BOOST_CHECK ((messages_consumed/to_seconds (timer.elapsed ())) > 1000);
+
+  BOOST_CHECK (messages_consumed > 1e3);
+
+  // values are in nanoseconds
+  BOOST_CHECK (Nanoseconds (min) < 1ms);
+  BOOST_CHECK (Nanoseconds (max) < 20ms);
+
+  auto rate = static_cast<uint64_t>((messages_consumed/1e6)
+                                      / to_seconds (timer.elapsed ()));
+
+  BOOST_CHECK (rate > 1);   // rate > 1 M ops/sec
+  BOOST_TEST_MESSAGE ("Throughput:\t"
+      << throughput_messages_to_pretty (messages_consumed, timer.elapsed ()));
+  BOOST_TEST_MESSAGE ("Latency");
+  BOOST_TEST_MESSAGE ("  min:\t\t" << nanoseconds_to_pretty (min));
+  BOOST_TEST_MESSAGE ("  avg:\t\t" << nanoseconds_to_pretty (
+                      total_latency / messages_consumed));
+  BOOST_TEST_MESSAGE ("  max:\t\t" << nanoseconds_to_pretty (max));
+
+  BOOST_TEST_MESSAGE ("Enqueue blocked: "
+    << throughput_messages_to_pretty (enqueue_blocked, timer.elapsed ()));
+  BOOST_TEST_MESSAGE (" ");
+}
+
+/*
+ * Test the core SPMC queue
+ */
+BOOST_AUTO_TEST_CASE (PerformanceSPMCQueue)
+{
+  BOOST_TEST_MESSAGE ("PerformanceSPMCQueue");
+
+  std::string log_level = "ERROR";
+
+  if (getenv ("LOG_LEVEL") != nullptr)
+  {
+    log_level = getenv ("LOG_LEVEL");
+  }
+
+  ScopedLogLevel scoped_log_level (log_level);
+
+  const size_t capacity = 20480 * sizeof (int64_t);
+
+  using QueueType = SPMCQueue<std::allocator<uint8_t>>;
+
+  QueueType queue (capacity);
+
+  detail::ConsumerState consumerState;
+  queue.register_consumer (consumerState);
+
+  bool stop = false;
+
+  Timer timer;
+
+  uint64_t enqueue_blocked = 0;
+  uint64_t messages_consumed = 0;
+
+  int64_t min = Nanoseconds::max ().count ();
+  int64_t max = Nanoseconds::min ().count ();
+
+  int64_t total_latency = 0;
+
+  auto consumer = std::thread ([&] () {
+
+    int64_t timestamp = 0;
+
+    bind_to_cpu (1);
+
+    Timer timer;
+
+    for (int64_t i = 0; ; ++i)
+    {
+      if (stop)
+      {
+        timer.stop ();
+        break;
+      }
+
+      if (queue.pop (timestamp, consumerState))
+      {
+        const int64_t diff = nanoseconds_since_epoch (Clock::now ()) - timestamp;
+
+        total_latency += diff;
+
+        if (diff < min) min = diff;
+        if (diff > max) max = diff;
+
+        ++messages_consumed;
+      }
+    }
+  });
+
+  while (!consumer.joinable ())
+  {
+    std::this_thread::sleep_for (1us);
+  }
+
+  auto producer = std::thread ([&] () {
+
+    bind_to_cpu (2);
+
+    while (!stop)
+    {
+      const int64_t timestamp = nanoseconds_since_epoch (Clock::now ());
+
+      if (!queue.push (timestamp))
+      {
+        ++enqueue_blocked;
+      }
+    }
+  });
+
+  std::this_thread::sleep_for (get_test_duration ().nanoseconds ());
+
+  stop = true;
+
+  consumer.join ();
+  producer.join ();
 
   BOOST_CHECK ((messages_consumed/to_seconds (timer.elapsed ())) > 1000);
 
