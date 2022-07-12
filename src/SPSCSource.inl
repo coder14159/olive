@@ -59,7 +59,7 @@ void SPSCSource<Allocator>::next (const std::vector<uint8_t> &data)
    * Set timestamp when queue space is available so that only internal queue
    * latency is measured
    *
-   * TODO: Add a variadic push function for spscqueue
+   * TODO: Add a variadic push function for the SPSC queue
    */
   header.timestamp = nanoseconds_since_epoch (Clock::now ());
 
