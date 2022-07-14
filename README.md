@@ -15,14 +15,21 @@ $ make -j all
 
 The sample spmc (single producer, multiple consumer) tools illustrate how to use the Olive library.
 
-The command below starts a server which creates (or opens existing) named shared memory and then sends messages to the shared queue at the configured rate. Here, the rate is 1000 messages/second. A command line value of '0' indicates maximum throughput.
+First delete named shared memory which will be used.
 
-In the example below I select a message size similar to that of a market data message size. The small queue size is sufficient for low throughputs and is helpful for keeping latency values low.
+```
+$ ./build/x86_64/bin/remove_shared_memory --names spmc
+```
 
-Next we run a client which consumes messages from the shared queue running in shared memory. The optional stats argument outputs performance statistics to stdout.
+The command below starts a server which creates (or opens existing) named shared memory and places a queue within it. Messages are then sent to the queue at a configured rate. Here, the rate is 1000 messages/second. A command line value of '0' indicates maximum throughput.
+
+In the example below a message size similar to that of a typical market data message size is set. The small queue size is sufficient for relatively low throughputs and will help keep latency values low.
+
 ```
-$ ./build/x86_64/bin/remove_shared_memory --names spmc; build/x86_64/bin/spmc_server --cpu 1 --name spmc --message_size 32 --queue_size 100 --rate 1000 --log_level INFO
+$ build/x86_64/bin/spmc_server --cpu 1 --name spmc
+--message_size 32 --queue_size 100 --rate 1000 --log_level INFO
 ```
+Next run a client which consumes messages from the queue. The optional stats argument outputs performance statistics to stdout.
 ```
 $ timeout 30 build/x86_64/bin/spmc_client --name spmc --log_level INFO --cpu 2 --stats latency,throughput
 
@@ -52,11 +59,6 @@ max         818 ns
 An understanding of likely message sizes and throughput enables one to optimise the best queue size for your use case. Larger queue sizes permits a higher throughput at a cost of increased latency values and vise versa.
 
 For example
-
-```
-$ build/x86_64/bin/spmc_server --name spmc --cpu 1 --message_size 32 --queue_size 256 --rate 5000 --log_level INFO
-```
-
 ```
 $ ./build/x86_64/bin/remove_shared_memory --names spmc; build/x86_64/bin/spmc_server --cpu 1 --name spmc --message_size 32 --queue_size 102400 --rate 0 --log_level INFO
 
@@ -83,11 +85,14 @@ $ ./build/x86_64/bin/remove_shared_memory --names spmc; build/x86_64/bin/spmc_se
  max          12 us
 ```
 
-On my machine, I found that utilising the **tuned-adm** tool improved
-both latency and throughput.
+On my machine, I found that utilising the **tuned-adm** tool for latency optimisation improved throughput at the expense of latency.
 
 ```
-2.0 GB/s   34 M msgs/s
+$ sudo tuned-adm profile latency-performance
+```
+
+```
+2.1 GB/s   35 M msgs/s
 percentile latency
 ---------- -------
 min         169 ns
