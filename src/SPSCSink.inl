@@ -177,12 +177,13 @@ bool SPSCSink<Allocator>::pop_from_cache (Header &header, Data &data)
 
     /*
      * Make sure the payload is received, waiting if necessary
-     *
-     * TODO: exit this loop if the producer exits before the payload is sent
      */
     while (m_cache.size () < header.size)
     {
-      prefetch_to_cache ();
+      if (!prefetch_to_cache () && m_stop)
+      {
+        return false;
+      }
     }
 
     return m_cache.pop (data, header.size);
