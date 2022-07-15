@@ -47,10 +47,10 @@ private:
    * Pop data off the queue to the location pointed to by data
    */
   bool pop (uint8_t* to, size_t size);
-
+  /*
+   * Copy available data to a local cache
+   */
   bool prefetch_to_cache ();
-
-  bool check_cache_size (size_t size);
 
   /*
    * Pop header and data from the cache
