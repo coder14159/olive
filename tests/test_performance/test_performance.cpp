@@ -251,11 +251,11 @@ BOOST_AUTO_TEST_CASE (ThroughputCircularBuffers)
     return throughput;
   };
 
-  for (size_t bufferCapacity : { 32, 64, 128, 1024, 2048, 20480})
+  for (size_t bufferCapacity : { 32, 1024, 20480})
   {
     BOOST_TEST_MESSAGE ("buffer capacity: " << bufferCapacity);
 
-    for (size_t messageSize : { 32, 64, 128, 512 })
+    for (size_t messageSize : { 32, 64, 128 })
     {
       if (messageSize > bufferCapacity)
       {
@@ -1292,7 +1292,7 @@ BOOST_AUTO_TEST_CASE (PerformanceSPSCQueue)
 
   // values are in nanoseconds
   BOOST_CHECK (Nanoseconds (min) < 1ms);
-  BOOST_CHECK (Nanoseconds (max) < 20ms);
+  BOOST_CHECK (Nanoseconds (max) < 100ms);
 
   auto rate = static_cast<uint64_t>((messages_consumed/1e6)
                                       / to_seconds (timer.elapsed ()));
@@ -1314,6 +1314,10 @@ BOOST_AUTO_TEST_CASE (PerformanceSPSCQueue)
 BOOST_AUTO_TEST_CASE (PerformanceSPSCQueueBatchConsume)
 {
   BOOST_TEST_MESSAGE ("PerformanceSPSCQueueBatchConsume");
+  /*
+   * Throughput is higher, with an increased latency cost when compared with
+   * the SPMCQueue
+   */
 
   std::string log_level = "ERROR";
 
@@ -1415,7 +1419,8 @@ BOOST_AUTO_TEST_CASE (PerformanceSPSCQueueBatchConsume)
 
   // values are in nanoseconds
   BOOST_CHECK (Nanoseconds (min) < 1ms);
-  BOOST_CHECK (Nanoseconds (max) < 20ms);
+  BOOST_CHECK (Nanoseconds (max) < 100ms);
+
 
   auto rate = static_cast<uint64_t>((messages_consumed/1e6)
                                       / to_seconds (timer.elapsed ()));
@@ -1534,7 +1539,7 @@ BOOST_AUTO_TEST_CASE (PerformanceSPMCQueue)
 
   // values are in nanoseconds
   BOOST_CHECK (Nanoseconds (min) < 1ms);
-  BOOST_CHECK (Nanoseconds (max) < 20ms);
+  BOOST_CHECK (Nanoseconds (max) < 100ms);
 
   auto rate = static_cast<uint64_t>((messages_consumed/1e6)
                                       / to_seconds (timer.elapsed ()));
@@ -1595,7 +1600,43 @@ BOOST_AUTO_TEST_CASE (SmallCircularBuffer)
     return throughput;
   };
 
-  auto stress_local_dynamic_circular_buffer = [&duration] () -> Throughput
+  auto stress_deque = [&duration] () -> Throughput
+  {
+    std::deque<int> buffer (capacity);
+
+    Throughput throughput;
+
+    Timer timer;
+
+    for (int i = 0; ; ++i)
+    {
+      buffer.push_back (1);
+      buffer.push_back (2);
+      buffer.push_back (3);
+      buffer.push_back (4);
+
+      buffer.pop_front ();
+      buffer.pop_front ();
+      buffer.pop_front ();
+      buffer.pop_front ();
+
+      throughput.next (sizeof (int), 4);
+
+      if ((i % 1000) == 0 && duration < timer.elapsed ())
+      {
+        break;
+      }
+    }
+    throughput.stop ();
+
+    timer.stop ();
+
+    BOOST_TEST_MESSAGE (throughput.to_string () << "\tdeque" );
+
+    return throughput;
+  };
+
+  auto stress_custom_circular_buffer = [&duration] () -> Throughput
   {
     /*
      * Buffer is out-performaned by the boost circular buffer for small sizes
@@ -1634,12 +1675,13 @@ BOOST_AUTO_TEST_CASE (SmallCircularBuffer)
 
     timer.stop ();
 
-    BOOST_TEST_MESSAGE (throughput.to_string () << "\tlocal circular buffer" );
+    BOOST_TEST_MESSAGE (throughput.to_string () << "\tcustom circular buffer" );
 
     return throughput;
   };
   auto throughput_boost = stress_boost_circular_buffer ();
-  auto throughput_local_circular_buffer = stress_local_dynamic_circular_buffer ();
+  auto throughput_deque = stress_deque ();
+  auto throughput_local_circular_buffer = stress_custom_circular_buffer ();
 
   BOOST_CHECK (throughput_boost.megabytes_per_sec () >
                   throughput_local_circular_buffer.megabytes_per_sec ());
