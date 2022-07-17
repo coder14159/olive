@@ -2,9 +2,7 @@
 
 The Olive library implements a method of inter-process communication between processes on a single machine over named shared memory.
 
-The goal is to make latency values between processes as low as possible with *zero message drops guaranteed* and without compromising message throughput rates.
-
-The design enables a server to send messages to one or more clients.
+The goal of the project is to send data messages from a server process to 1 or more clients processes with *zero message drops guaranteed* and holding latencies as low as possible.
 
 ## Building Olive
 ```
