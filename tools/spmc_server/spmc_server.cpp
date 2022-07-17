@@ -7,8 +7,6 @@
 #include "detail/CXXOptsHelper.h"
 #include "detail/Utils.h"
 
-#include <boost/interprocess/managed_shared_memory.hpp>
-
 #include <atomic>
 #include <chrono>
 #include <csignal>
@@ -20,7 +18,7 @@ namespace bi = boost::interprocess;
 CxxOptsHelper parse (int argc, char* argv[])
 {
   std::string oneKB = std::to_string (1024);
-  std::string oneGB = std::to_string (1024*1024*1024);
+  std::string oneMB = std::to_string (1024*1024);
   std::string level = "NOTICE";
   std::string rate  = "0";
   std::string cpu   = "-1";
@@ -34,7 +32,7 @@ CxxOptsHelper parse (int argc, char* argv[])
     ("message_size", "Message size (bytes)",
      cxxopts::value<size_t> ()->default_value (oneKB))
     ("queue_size", "Size of queue (bytes)",
-     cxxopts::value<size_t> ()->default_value (oneGB))
+     cxxopts::value<size_t> ()->default_value (oneMB))
     ("rate", "msgs/sec (value=0 for maximum rate)",
      cxxopts::value<uint32_t> ()->default_value (rate))
     ("l,log_level", "Logging level",
@@ -59,6 +57,8 @@ void server (const std::string& name,
              size_t             queueSize,
              uint32_t           rate)
 {
+  BOOST_LOG_TRIVIAL (info) << "Target message rate: "
+                           << ((rate == 0) ? "max" : std::to_string (rate));
   /*
    * Create enough shared memory for a single queue which is shared by all the
    * clients.
@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) try
   auto name        = options.required<std::string> ("name");
   auto messageSize = options.required<size_t>      ("message_size");
   auto queueSize   = options.required<size_t>      ("queue_size");
-  auto rate        = options.required<uint32_t>    ("rate");
+  auto rate        = options.value<uint32_t>       ("rate", 0);
   auto cpu         = options.value<int>            ("cpu", -1);
   auto logLevel    = options.value<std::string>    ("log_level", log_levels (),
                                                     "INFO");

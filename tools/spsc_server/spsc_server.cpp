@@ -47,7 +47,7 @@ CxxOptsHelper parse (int argc, char* argv[])
      cxxopts::value<uint32_t> ()->default_value (rate))
     ("l,log_level", "Logging level",
      cxxopts::value<std::string> ()->default_value (level))
-    ("cpu", "bind main thread to a cpu processor id",
+    ("cpu", "Bind main thread to a cpu processor id",
      cxxopts::value<int> ()->default_value (cpu));
 
   CxxOptsHelper options (cxxopts.parse (argc, argv));
@@ -68,6 +68,9 @@ void server (const std::string& name,
              size_t             queueSize,
              uint32_t           rate)
 {
+  BOOST_LOG_TRIVIAL (info) << "Target message rate: "
+                           << ((rate == 0) ? "max" : std::to_string (rate));
+
   // define the number of clients to service
   SharedMemoryCounter clientCount (name + ":client:count", name);
 
@@ -199,7 +202,7 @@ int main(int argc, char *argv[]) try
   auto clients     = options.required<int>         ("clients");
   auto messageSize = options.required<size_t>      ("message_size");
   auto queueSize   = options.required<size_t>      ("queue_size");
-  auto rate        = options.required<uint32_t>    ("rate");
+  auto rate        = options.value<uint32_t>       ("rate", 0);
   auto cpu         = options.value<int>            ("cpu", -1);
   auto logLevel    = options.value<std::string>    ("log_level", log_levels (),
                                                     "INFO");
