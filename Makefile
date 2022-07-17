@@ -128,7 +128,7 @@ $(BIN_DIR)/spmc_client: Makefile tools/spmc_client/spmc_client.cpp $(LIB_FILE_PA
 
 spmc_server: $(BIN_DIR)/spmc_server
 $(BIN_DIR)/spmc_server: Makefile tools/spmc_server/spmc_server.cpp $(LIB_FILE_PATH) | $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) -I$(CXXOPTS_DIR) tools/spmc_server/spmc_server.cpp -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -lspmc $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) -o $@
+	$(COMPILER) $(CXXFLAGS) -I$(CXXOPTS_DIR) tools/spmc_server/spmc_server.cpp -L$(LIB_DIR) -L$(BOOST_LIB_DIR) -lspmc $(LIB_BOOST_FILESYSTEM) $(LIB_BOOST_LOG) $(LIB_BOOST_SYSTEM) -o $@
 
 spmc: spmc_client spmc_server
 
