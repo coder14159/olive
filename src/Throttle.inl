@@ -3,7 +3,7 @@
 namespace olive {
 
 Throttle::Throttle (uint32_t rate)
-  : m_rate (rate), m_startTime (Clock::now ())
+: m_rate (rate), m_startTime (Clock::now ())
 { }
 
 void Throttle::throttle ()
