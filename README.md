@@ -26,8 +26,7 @@ The command below starts a server which creates (or opens existing) named shared
 In the example below a message size similar to that of a typical market data message size is set. The small queue size is sufficient for relatively low throughputs and will help keep latency values low.
 
 ```
-$ build/x86_64/bin/spmc_server --cpu 1 --name spmc
---message_size 32 --queue_size 100 --rate 1000 --log_level INFO
+$ build/x86_64/bin/spmc_server --cpu 1 --name spmc --message_size 32 --queue_size 100 --rate 1000 --log_level INFO
 ```
 Next run a client which consumes messages from the queue. The optional stats argument outputs performance statistics to stdout.
 ```
