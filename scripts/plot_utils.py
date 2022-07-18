@@ -66,7 +66,7 @@ def output_directory_path (
   server_queue_size, server_rate, server_message_size,
   client_count):
 
-  server_rate_str = 'max' if server_rate is '0' else str (server_rate)
+  server_rate_str = 'max' if server_rate == '0' else str (server_rate)
 
   path = Path (base_directory) \
             / 'server_queue_size'    / str (server_queue_size) \
@@ -123,7 +123,7 @@ def load_performance_data (args, filename):
   latencies = {}
   latency_column_count = 0
 
-  if args.client_directory_descriptions is not None:
+  if args.client_directory_descriptions != None:
     legend_prefix_texts = queue.Queue ()
 
     for prefix in args.client_directory_descriptions:
@@ -132,7 +132,7 @@ def load_performance_data (args, filename):
   for dir in args.client_directories:
 
     legend_prefix = ''
-    if legend_prefix_texts is not None:
+    if legend_prefix_texts != None:
       legend_prefix = legend_prefix_texts.get ()
 
     for server_rate in args.server_rates:
@@ -211,7 +211,7 @@ def load_performance_data (args, filename):
 
               df = df.transpose ()
 
-              if dataframe is None:
+              if dataframe == None:
                 dataframe = df.astype (int)
               else:
                 throughput_column_count += 1
@@ -268,7 +268,7 @@ def get_plot_texts (args, legend_texts, message_size, server_rate,
   else:
     title_text.add ('clients:' + str (client_count))
 
-  if join_legend_list is True:
+  if join_legend_list == True:
     legend_texts = [join_list (legend_texts, ' ')]
 
   return dict (legend_texts=legend_texts,

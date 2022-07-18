@@ -101,7 +101,7 @@ def throughput_to_pretty (rate):
 
 
 #
-# Invoke a command described by the command_list and wait until is completes
+# Invoke a command described by the command_list and wait until == completes
 #
 def check_call (command_list):
   print ("$ " + ' '.join (command_list))
@@ -123,7 +123,7 @@ def execute (command_list):
 #
 def wait_for_stdout_string (process, target_string):
 
-  while process.poll () is None:
+  while process.poll () == None:
     line = process.stdout.readline ()
 
     print_line (line)
@@ -148,7 +148,7 @@ def output_directory_path (
   server_queue_size, server_rate, server_message_size,
   client_count, client_prefetch_size = None):
 
-  server_rate_str = 'max' if server_rate is '0' else str (server_rate)
+  server_rate_str = 'max' if server_rate == '0' else str (server_rate)
 
   path = Path (base_directory) \
             / 'server_queue_size'    / str (server_queue_size) \
@@ -156,7 +156,7 @@ def output_directory_path (
             / 'server_message_size'  / str (server_message_size) \
             / 'client_count'         / str (client_count)
 
-  if client_prefetch_size is not None:
+  if client_prefetch_size != None:
     path /= Path ('client_prefetch_size') / str (client_prefetch_size)
 
   return path
@@ -191,7 +191,7 @@ def run_spmc_server (args, build_type):
   # Wait until the server is ready
   wait_for_stdout_string (server, "Found or created queue")
 
-  server_rate_str = 'max' if args.server_rate is '0' else str (args.server_rate)
+  server_rate_str = 'max' if args.server_rate == '0' else str (args.server_rate)
 
   return server
 
@@ -214,7 +214,7 @@ def run_spmc_clients (args, build_type):
   # Run the clients
   for count in range (0, int (args.client_count)):
 
-    log_level = args.log_level if count is int (args.client_count) -1 \
+    log_level = args.log_level if count == int (args.client_count) -1 \
                                else "ERROR"
 
     cpu = NO_CPU_BIND if len (args.client_cpu_list) == 0 \
@@ -223,7 +223,7 @@ def run_spmc_clients (args, build_type):
     client = execute ([str (client_exe_path),
           "--name", args.memory_name,
           "--stats", ','.join (args.client_stats),
-          "" if cpu is NO_CPU_BIND else "--cpu " + str (cpu),
+          "" if cpu == NO_CPU_BIND else "--cpu " + str (cpu),
           "--log_level", log_level])
 
     clients.append (client)
