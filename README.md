@@ -6,7 +6,7 @@ The goal of the project is to send data messages from a server process to 1 or m
 
 ## Building Olive
 ```
-$ make -j all
+$ make all
 ```
 
 ## Sample usage
@@ -111,3 +111,6 @@ min         169 ns
 99.99        39 us
 max          45 us
 ```
+
+An implementation using the boost boost::lockfree::spsc_queue is also 
+implemented for comparison.
