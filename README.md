@@ -4,11 +4,12 @@ The Olive library implements a method of inter-process communication between pro
 
 The goal of the project is to send data messages from a server process to 1 or more clients processes with *zero message drops guaranteed* and holding latencies as low as possible.
 
+An implementation using boost::lockfree::spsc_queue is also implemented for comparison.
+
 ## Building Olive
 ```
 $ make all
 ```
-
 ## Sample usage
 
 The sample spmc (single producer, multiple consumer) tools illustrate how to use the Olive library.
@@ -111,6 +112,3 @@ min         169 ns
 99.99        39 us
 max          45 us
 ```
-
-An implementation using the boost boost::lockfree::spsc_queue is also 
-implemented for comparison.
