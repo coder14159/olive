@@ -69,10 +69,10 @@ parser.add_argument ("--client_pgo", default=False, action="store_true",
 
 args = parser.parse_args ()
 
-server_exe_dir = exe_dir_pgo if args.server_pgo is True else exe_dir
+server_exe_dir = exe_dir_pgo if args.server_pgo == True else exe_dir
 server_exe     = os.path.join (server_exe_dir, args.tool_type + '_server')
 
-client_exe_dir = exe_dir_pgo if args.client_pgo is True else exe_dir
+client_exe_dir = exe_dir_pgo if args.client_pgo == True else exe_dir
 client_exe     = os.path.join (client_exe_dir, args.tool_type + '_client')
 
 print ("host_name:              " + socket.gethostname ())
@@ -83,7 +83,7 @@ print ("log_level:              " + args.log_level)
 print ("memory_name:            " + args.memory_name)
 print ("")
 print ("server_exe              " + server_exe)
-print ("server_cpu:             " + (str ("") if args.server_cpu is -1 else str (args.server_cpu)))
+print ("server_cpu:             " + (str ("") if args.server_cpu == -1 else str (args.server_cpu)))
 print ("server_queue_size_list: " + ','.join (map (str, args.server_queue_size_list)))
 print ("server_message_size:    " + str (args.server_message_size) + " bytes")
 print ("server_rate_list:       " + ','.join (map (str, args.server_rate_list))
@@ -93,7 +93,7 @@ print ("client_exe:             " + client_exe)
 print ("client_count_list:      " + ','.join (map (str, args.client_count_list)))
 print ("client_cpu_list:        " + ','.join (map (str, args.client_cpu_list)))
 print ("client_stats:           " + ','.join (args.client_stats))
-if args.client_directory is not None:
+if args.client_directory != None:
     print ("client_directory:       " + str (args.client_directory))
 
 # Create the server command
@@ -107,13 +107,13 @@ for server_rate in args.server_rate_list:
 
             directory = None
 
-            if args.client_directory is not None:
+            if args.client_directory != None:
                 directory = utils.output_directory_path (args.client_directory,
                                                     server_queue_size,
                                                     server_rate,
                                                     args.server_message_size,
                                                     client_count)
-                if directory.exists () is True:
+                if directory.exists () == True:
                     print ('WARNING: Ignore test. Output directory ' +
                            'already exists: ' + str (directory))
                     print ("")
@@ -144,7 +144,7 @@ for server_rate in args.server_rate_list:
             # Allow the server time to start, then check if it is running
             time.sleep (1)
             poll = server.poll ()
-            if poll is not None:
+            if poll != None:
                 print ("spmc_server did not run")
                 server.send_signal (signal.SIGINT)
                 exit (1)

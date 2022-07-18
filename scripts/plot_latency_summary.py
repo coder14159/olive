@@ -102,7 +102,7 @@ def plot_summary_latencies (axis, latency_log_scale, show_platform=False):
   axis = sns.lineplot (ax=axis, data=latency_data['latency_summaries'],
                        dashes=False)
 
-  if latency_log_scale is True:
+  if latency_log_scale == True:
     axis.set (yscale='log')
 
   utils.set_tick_sizes (axis)
@@ -113,7 +113,7 @@ def plot_summary_latencies (axis, latency_log_scale, show_platform=False):
 
   xlabel = 'Percentiles'
 
-  if show_platform is True:
+  if show_platform == True:
     xlabel += '\n\n' + platform.platform (terse=1) + '\n' + utils.get_hardware_specs ()
 
   axis.set_xlabel (xlabel, fontsize=8)
@@ -127,14 +127,14 @@ def plot_interval_throughput (axis, y_label, show_platform=False):
   plt = sns.lineplot (ax=axis, data=interval_data['dataframe'][y_label],
                       dashes=False)
 
-  if axis.get_legend () is not None:
+  if axis.get_legend () != None:
     axis.get_legend ().remove ()
 
   utils.set_tick_sizes (axis)
 
   xlabel = 'Time (secs)'
 
-  if show_platform is True:
+  if show_platform == True:
     xlabel += '\n\n' + platform.platform (terse=1) + '\n' + utils.get_hardware_specs ()
 
   axis.set_xlabel (xlabel, fontsize=8)
@@ -146,7 +146,7 @@ def plot_interval_throughput (axis, y_label, show_platform=False):
 #
 # Throughput over time is plotted if explicitly enabled.
 #
-if args.show_throughput is True:
+if args.show_throughput == True:
 
   fig = plt.figure ()
 
