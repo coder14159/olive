@@ -114,7 +114,8 @@ def plot_summary_latencies (axis, latency_log_scale, show_platform=False):
   xlabel = 'Percentiles'
 
   if show_platform == True:
-    xlabel += '\n\n' + platform.platform (terse=1) + '\n' + utils.get_hardware_specs ()
+    xlabel += '\n\n' + platform.platform (terse=1) + '\n' \
+                     + utils.get_hardware_specs ()
 
   axis.set_xlabel (xlabel, fontsize=8)
   axis.set_ylabel ('Latency (nanoseconds)')

@@ -101,7 +101,7 @@ def throughput_to_pretty (rate):
 
 
 #
-# Invoke a command described by the command_list and wait until == completes
+# Invoke a command described by the command_list and wait until it completes
 #
 def check_call (command_list):
   print ("$ " + ' '.join (command_list))
