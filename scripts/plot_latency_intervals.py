@@ -79,25 +79,15 @@ logger.info ("percentiles:          " +
             utils.join_list (args.client_latency_percentiles))
 
 
-def plot_interval_latencies (axis, data_type):
+def plot_interval_latencies (axis):
 
   latency_data = utils.get_latency_interval_data (args)
+
+  plt.suptitle (args.title, fontsize=10)
 
   interval_data = latency_data["latency_intervals"]
 
   axis = sns.lineplot (ax=axis, data=interval_data["latencies"], dashes=False)
-
-  utils.set_tick_sizes (axis)
-
-  axis.set_title (" ".join (latency_data["title_texts"]), fontsize=8)
-
-  axis.set_ylabel ("Latency (nanoseconds)")
-
-  axis.set_xlabel ("Time (secs)\n\n"
-                  + platform.platform (terse=1) + "\n"
-                  + utils.get_hardware_specs (), fontsize=8)
-
-  plt.suptitle (args.title, fontsize=10)
 
   utils.set_tick_sizes (axis)
 
@@ -114,13 +104,11 @@ def plot_interval_latencies (axis, data_type):
                   + utils.get_hardware_specs (), fontsize=8)
   axis.set_ylabel ("Latency (nanoseconds)", fontsize=8)
 
-axis = plt.subplot2grid ((10,10), (0,0), rowspan=10, colspan=10)
+axis = plt.subplot2grid ((10,9), (0,0), rowspan=9, colspan=10)
 
-# plot_interval_latencies (axis, "spsc")
 logger.info ("Plotting...")
 
-plot_interval_latencies (axis, ["spmc"])
-# plot_interval_latencies (axis, ["spmc", "spsc"])
+plot_interval_latencies (axis)
 
 plt.suptitle (args.title, fontsize=10)
 
