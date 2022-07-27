@@ -114,7 +114,6 @@ def load_performance_data (args, filename):
   legend_texts = []
   legend_prefix_texts = None
   plot_texts = dict ()
-  title_text = set ()
   dataframe = None
 
   throughputs = {}
@@ -162,8 +161,23 @@ def load_performance_data (args, filename):
             logging.info ('Loading: ' + str (file_path))
             df = pd.read_csv (file_path)
 
-            if 'latency-interval' in filename:
+            if 'latency-summary' in filename:
               join_legend_list = True
+
+              df = df.transpose ()
+
+              if dataframe is None:
+                dataframe = df.astype (int)
+              else:
+                throughput_column_count += 1
+                dataframe[throughput_column_count] = df.astype (int)
+
+              logging.info (dataframe)
+
+              legend_texts.append (legend_prefix)
+
+            if 'latency-interval' in filename:
+              join_legend_list = False
               if not latencies:
                 latencies['latencies'] = pd.DataFrame ()
 
@@ -205,21 +219,6 @@ def load_performance_data (args, filename):
                            [throughput_column_count] = df['bytes_per_sec']
 
                 dataframe = throughputs
-
-            if 'latency-summary' in filename:
-              join_legend_list = True
-
-              df = df.transpose ()
-
-              if dataframe == None:
-                dataframe = df.astype (int)
-              else:
-                throughput_column_count += 1
-                dataframe[throughput_column_count] = df.astype (int)
-
-              logging.info (dataframe)
-
-              legend_texts.append (legend_prefix)
 
             # Construct line descriptions
             texts = get_plot_texts (args, legend_texts,
