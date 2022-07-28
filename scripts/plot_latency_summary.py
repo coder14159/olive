@@ -66,21 +66,6 @@ if len (args.client_directory_descriptions) != len (args.client_directories):
   print ('client_directory_descriptions count should equal client_directories count')
   exit (1)
 
-# Ignore font logging
-class LocalLogger(logging.Logger):
-
-  def __init__(self, name):
-    logging.Logger.__init__(self, name)
-    self.addFilter(self.MyFilter())
-
-  class MyFilter(logging.Filter):
-    def filter(self, record):
-      if record.name != 'findfont':
-        return False
-      return True
-
-logging.setLoggerClass(LocalLogger)
-
 max = '0'
 
 logger = utils.init_logger (logging, args.log_level)
@@ -88,12 +73,6 @@ logger = utils.init_logger (logging, args.log_level)
 utils.log_machine_specs (logger)
 
 utils.log_run_args (logger, args)
-
-def show_legend (data):
-  if len (data) > 1:
-    return True
-
-  return False
 
 def plot_summary_latencies (axis, latency_log_scale, show_platform=False):
 
@@ -120,27 +99,7 @@ def plot_summary_latencies (axis, latency_log_scale, show_platform=False):
   axis.set_xlabel (xlabel, fontsize=8)
   axis.set_ylabel ('Latency (nanoseconds)')
 
-def plot_interval_throughput (axis, y_label, show_platform=False):
-
-  throughput_data = utils.get_throughput_interval_data (args)
-  interval_data   = throughput_data['throughput_intervals']
-
-  plt = sns.lineplot (ax=axis, data=interval_data['dataframe'][y_label],
-                      dashes=False)
-
-  if axis.get_legend () != None:
-    axis.get_legend ().remove ()
-
-  utils.set_tick_sizes (axis)
-
-  xlabel = 'Time (secs)'
-
-  if show_platform == True:
-    xlabel += '\n\n' + platform.platform (terse=1) + '\n' + utils.get_hardware_specs ()
-
-  axis.set_xlabel (xlabel, fontsize=8)
-
-  return plt
+logger.info ("Plotting...")
 
 #
 # Plot latency percentiles
@@ -164,11 +123,18 @@ if args.show_throughput == True:
   rhs_axis = lhs_axis.twinx ()
 
   lhs_axis.set_ylabel ('messages/sec', fontsize='9')
-  plot_interval_throughput (lhs_axis, 'messages_per_sec', show_platform=True)
+
+  throughput_interval_data = utils.get_throughput_interval_data (args)
+
+  utils.plot_interval_throughput (throughput_interval_data,
+                        lhs_axis, 'messages_per_sec', show_platform=True)
 
   # Plot throughput bytes/sec on the other y-axis
   rhs_axis.set_ylabel ('bytes/sec', fontsize='9')
-  plot_interval_throughput (rhs_axis, 'bytes_per_sec')
+
+  utils.plot_interval_throughput (throughput_interval_data,
+                        rhs_axis, 'bytes_per_sec')
+
   rhs_axis.tick_params (axis='y', grid_alpha=0)
 
 else:

@@ -6,6 +6,7 @@ import numpy as np
 import platform
 import psutil
 import queue
+import seaborn as sns
 
 import logging
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -20,7 +21,7 @@ log_levels = {
 }
 
 #
-# Initialise the logging
+# Initialise the logger
 #
 def init_logger (logger, level_str):
   logging.basicConfig (level=log_levels.get (level_str.lower ()),
@@ -59,8 +60,9 @@ def cpu_bind_list (cpu_list, client_count):
     cpu_list.insert (0, NO_CPU_BIND)
 
   return cpu_list
-
+#
 # Return a directory based on the parameters supplied
+#
 def output_directory_path (
   base_directory,
   server_queue_size, server_rate, server_message_size,
@@ -75,8 +77,9 @@ def output_directory_path (
             / 'client_count'         / str (client_count)
 
   return path
-
+#
 # Return a human readable message throughput string
+#
 def throughput_messages_to_pretty (rate):
   if rate == 'max' or rate == '0':
     return 'max'
@@ -95,8 +98,9 @@ def throughput_messages_to_pretty (rate):
     return str (round (float_rate / K)) + ' K msgs/s'
 
   return str (round (float_rate)) + ' msgs/s'
-
+#
 # Return human readable data size string
+#
 def size_to_pretty (bytes, suffix='B'):
   factor = 1024
 
@@ -104,12 +108,15 @@ def size_to_pretty (bytes, suffix='B'):
     if bytes < factor:
       return f'{bytes:.2f} {unit}{suffix}'
     bytes /= factor
-
+#
 # Return legend text
+#
 def get_legend_list (data):
   return data['legend_texts']
 
+#
 # Load performance data from CSV files and generate data for plotting
+#
 def load_performance_data (args, filename):
   legend_texts = []
   legend_prefix_texts = None
@@ -172,12 +179,12 @@ def load_performance_data (args, filename):
                 throughput_column_count += 1
                 dataframe[throughput_column_count] = df.astype (int)
 
-              logging.info (dataframe)
+              logging.debug (dataframe)
 
               legend_texts.append (legend_prefix)
 
             if 'latency-interval' in filename:
-              join_legend_list = False
+              join_legend_list = True
               if not latencies:
                 latencies['latencies'] = pd.DataFrame ()
 
@@ -239,6 +246,9 @@ def load_performance_data (args, filename):
                legend_texts=plot_texts['legend_texts'],
                title_texts=plot_texts['title_texts'])
 
+#
+# Get text descriptions for a plot
+#
 def get_plot_texts (args, legend_texts, message_size, server_rate,
                     server_queue_size, client_count,
                     join_legend_list=False):
@@ -283,7 +293,9 @@ def get_latency_summary_data (args):
   return dict (latency_summaries=latency_data['dataframe'],
                legend_texts=latency_data['legend_texts'],
                title_texts=latency_data['title_texts'])
-
+#
+# Get latency data for a plot
+#
 def get_latency_interval_data (args):
 
   latency_data = load_performance_data (args,'latency-interval.csv')
@@ -291,7 +303,9 @@ def get_latency_interval_data (args):
   return dict (latency_intervals=latency_data['dataframe'],
                legend_texts=latency_data['legend_texts'],
                title_texts=latency_data['title_texts'])
-
+#
+# Get interval throughput data for a plot
+#
 def get_throughput_interval_data (args):
 
   throughput_data = load_performance_data (args, 'throughput-interval.csv')
@@ -299,7 +313,35 @@ def get_throughput_interval_data (args):
   return dict (throughput_intervals=throughput_data,
                legend_texts=throughput_data['legend_texts'],
                title_texts=throughput_data['title_texts'])
+#
+# Get interval throughput data for a plot
+#
+def plot_interval_throughput (throughput_data, axis, y_label,
+                              show_platform=False):
 
+  interval_data = throughput_data['throughput_intervals']
+
+  plt = sns.lineplot (ax=axis, data=interval_data['dataframe'][y_label],
+                      dashes=False)
+
+  if axis.get_legend () != None:
+    axis.get_legend ().remove ()
+
+  set_tick_sizes (axis)
+
+  xlabel = 'Time (secs)'
+
+  if show_platform == True:
+    xlabel += '\n\n' + platform.platform (terse=1)  \
+            + '\n' + get_hardware_specs ()
+
+  axis.set_xlabel (xlabel, fontsize=8)
+
+  return plt
+
+#
+# Print local machine specs
+#
 def log_machine_specs (logger):
   vm = psutil.virtual_memory ()
 
@@ -309,10 +351,15 @@ def log_machine_specs (logger):
   logger.info ("memory_total:         " + str (size_to_pretty (vm.total)))
   logger.info ("memory_available:     " + str (size_to_pretty (vm.available)))
 
-
+#
+# Convert a list to a comma separated (by default) string
+#
 def join_list (list, sep=','):
   return str (sep.join (list))
 
+#
+# Print arguments of a plot
+#
 def log_run_args (logger, args):
 
   logger.info ("=====Parameters=======")
@@ -321,6 +368,9 @@ def log_run_args (logger, args):
   logger.info ("server_rates:         " + join_list (args.server_rates) + " msgs/second")
   logger.info ("client_counts:        " + join_list (args.client_counts))
 
+#
+# Print specs for the current machine
+#
 def get_hardware_specs ():
 
   stats = f'Processor core_count={psutil.cpu_count (logical=False)} '
