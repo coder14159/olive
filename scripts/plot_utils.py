@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 from pathlib import Path
 import pandas as pd
 import numpy as np
@@ -19,6 +20,10 @@ log_levels = {
     'info':     INFO,
     'debug':    DEBUG
 }
+
+# This statement stops the logger outputting the notification below
+# "QSocketNotifier: Can only be used with threads started with QThread"
+os.environ["XDG_SESSION_TYPE"] = "x11"
 
 #
 # Initialise the logger
@@ -129,6 +134,13 @@ def load_performance_data (args, filename):
   latencies = {}
   latency_column_count = 0
 
+  #
+  # Redirect matplotlib output to workaround the logging of the line
+  # "INFO: Using categorical units to plot a list of strings that are all parsable"
+  mlogging = logging.getLogger ('matplotlib')
+  mlogging.setLevel (logging.WARNING)
+  #
+
   if args.client_directory_descriptions != None:
     legend_prefix_texts = queue.Queue ()
 
@@ -190,10 +202,9 @@ def load_performance_data (args, filename):
 
                 for percentile in args.client_latency_percentiles:
                   latencies['latencies'] \
-                           [latency_column_count] = df[str (percentile)].astype (int)
+                           [latency_column_count] = df[percentile].astype (int)
 
-                  legend_texts.append (legend_prefix + ':' +
-                                       str (percentile) + '%')
+                  legend_texts.append (legend_prefix + ':' + percentile + '%')
 
                   latency_column_count += 1
 

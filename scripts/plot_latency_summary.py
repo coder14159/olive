@@ -74,6 +74,9 @@ utils.log_machine_specs (logger)
 
 utils.log_run_args (logger, args)
 
+#
+# Plot summary latencies
+#
 def plot_summary_latencies (axis, latency_log_scale, show_platform=False):
 
   latency_data = utils.get_latency_summary_data (args)
@@ -99,7 +102,7 @@ def plot_summary_latencies (axis, latency_log_scale, show_platform=False):
   axis.set_xlabel (xlabel, fontsize=8)
   axis.set_ylabel ('Latency (nanoseconds)')
 
-logger.info ("Plotting...")
+logger.info ("=====Plotting=========")
 
 #
 # Plot latency percentiles
