@@ -78,7 +78,7 @@ utils.log_run_args (logger, args)
 logger.info ("percentiles:          " +
             utils.join_list (args.client_latency_percentiles))
 
-def plot_interval_latencies (axis):
+def plot_interval_latencies (axis, show_platform=False):
 
   latency_data = utils.get_latency_interval_data (args)
 
@@ -94,10 +94,6 @@ def plot_interval_latencies (axis):
 
   axis.set_ylabel ("Latency (nanoseconds)")
 
-  axis.set_xlabel ("Time (secs)\n\n"
-                  + platform.platform (terse=1) + "\n"
-                  + utils.get_hardware_specs (), fontsize=8)
-
   plt.suptitle (args.title, fontsize=10)
 
   utils.set_tick_sizes (axis)
@@ -110,19 +106,21 @@ def plot_interval_latencies (axis):
 
   axis.set_title (" ".join (latency_data["title_texts"]), fontsize=8)
 
-  axis.set_xlabel ("Time (secs)\n\n"
-                  + platform.platform (terse=1) + "\n"
-                  + utils.get_hardware_specs (), fontsize=8)
+  if show_platform == True:
+    axis.set_xlabel ("Time (secs)\n\n"
+                    + platform.platform (terse=1) + "\n"
+                    + utils.get_hardware_specs (), fontsize=8)
+
   axis.set_ylabel ("Latency (nanoseconds)", fontsize=8)
 ################################################################################
 
-logger.info ("Plotting...")
+logger.info ("=====Plotting=========")
 
 #
 # Plot latency percentiles
 #
 # Throughput over time is plotted if explicitly enabled.
-# #
+#
 if args.show_throughput == True:
 
   fig = plt.figure ()
@@ -157,7 +155,7 @@ if args.show_throughput == True:
 else:
   axis = plt.subplot2grid ((10,9), (0,0), rowspan=9, colspan=10)
 
-  plot_interval_latencies (axis)
+  plot_interval_latencies (axis, show_platform=True)
 
 plt.suptitle (args.title, fontsize=10)
 
