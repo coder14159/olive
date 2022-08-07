@@ -98,10 +98,6 @@ def plot_interval_latencies (axis, show_platform=False):
 
   utils.set_tick_sizes (axis)
 
-  # Position the legend outside of the plot
-  axis.legend (bbox_to_anchor=(1.02, 1), loc="upper left",
-               borderaxespad=0, fontsize=8)
-
   axis.legend (utils.get_legend_list (latency_data), fontsize=8)
 
   axis.set_title (" ".join (latency_data["title_texts"]), fontsize=8)
@@ -127,7 +123,6 @@ if args.show_throughput == True:
 
   # Prepare interval latency graph
   plt_latency = plt.subplot2grid ((10,10), (0,0), colspan=10, rowspan=5)
-  plt_latency.set_xlabel ('Percentiles', fontsize='9')
   plt_latency.set_ylabel ('Latency (nanoseconds)', fontsize='9')
 
   # Plot latency distributions
@@ -160,5 +155,3 @@ else:
 plt.suptitle (args.title, fontsize=10)
 
 plt.show ()
-
-logger.info ("Exit")

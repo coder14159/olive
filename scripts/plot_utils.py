@@ -134,9 +134,16 @@ def load_performance_data (args, filename):
   latencies = {}
   latency_column_count = 0
 
+  # TODO: Prefer to use a local logger rather than filtering
+  # eg mylogger = logging.getLogger('UNIQUE_NAME_HERE')
+  # log.setLevel(logging.DEBUG)
   #
   # Redirect matplotlib output to workaround the logging of the line
   # "INFO: Using categorical units to plot a list of strings that are all parsable"
+  #
+  flogging = logging.getLogger ('matplotlib.findfont')
+  flogging.setLevel (logging.WARNING)
+
   mlogging = logging.getLogger ('matplotlib')
   mlogging.setLevel (logging.WARNING)
   #
@@ -196,30 +203,20 @@ def load_performance_data (args, filename):
               legend_texts.append (legend_prefix)
 
             if 'latency-interval' in filename:
-              join_legend_list = True
+              join_legend_list = False
+
               if not latencies:
                 latencies['latencies'] = pd.DataFrame ()
 
-                for percentile in args.client_latency_percentiles:
-                  latencies['latencies'] \
-                           [latency_column_count] = df[percentile].astype (int)
+              for percentile in args.client_latency_percentiles:
+                latencies['latencies'] \
+                         [latency_column_count] = df[percentile].astype (int)
 
-                  legend_texts.append (legend_prefix + ':' + percentile + '%')
+                legend_texts.append (legend_prefix + ':' + percentile + '%')
 
-                  latency_column_count += 1
+                latency_column_count += 1
 
-                dataframe = latencies
-              else:
-                for percentile in args.client_latency_percentiles:
-                  latencies['latencies'] \
-                           [latency_column_count] = df[str (percentile)].astype (int)
-
-                  legend_texts.append (legend_prefix + ':'
-                                        + str (percentile) + '%')
-
-                  latency_column_count += 1
-
-                dataframe = latencies
+              dataframe = latencies
 
             if 'throughput-interval' in filename:
               if not throughputs:
@@ -238,6 +235,8 @@ def load_performance_data (args, filename):
 
                 dataframe = throughputs
 
+              legend_texts.append (legend_prefix)
+
             # Construct line descriptions
             texts = get_plot_texts (args, legend_texts,
                             message_size, server_rate, server_queue_size,
@@ -252,6 +251,9 @@ def load_performance_data (args, filename):
 
             texts = []
             legend_texts = []
+
+  if len (plot_texts['legend_texts']) == 1:
+    plot_texts['legend_texts'] = []
 
   return dict (dataframe=dataframe,
                legend_texts=plot_texts['legend_texts'],
@@ -335,8 +337,7 @@ def plot_interval_throughput (throughput_data, axis, y_label,
   plt = sns.lineplot (ax=axis, data=interval_data['dataframe'][y_label],
                       dashes=False)
 
-  if axis.get_legend () != None:
-    axis.get_legend ().remove ()
+  axis.legend (get_legend_list (throughput_data), fontsize=8)
 
   set_tick_sizes (axis)
 
