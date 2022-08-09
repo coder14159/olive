@@ -164,8 +164,8 @@ def load_performance_data (args, filename):
       for server_queue_size in args.server_queue_sizes:
 
         if Path (dir).exists () == False:
-            logging.error ('Invalid path: ' + dir)
-            continue
+          logging.error ('Invalid directory: ' + dir)
+          continue
 
         for message_size in args.server_message_sizes:
 
@@ -204,7 +204,6 @@ def load_performance_data (args, filename):
 
             if 'latency-interval' in filename:
               join_legend_list = False
-
               if not latencies:
                 latencies['latencies'] = pd.DataFrame ()
 
@@ -212,13 +211,16 @@ def load_performance_data (args, filename):
                 latencies['latencies'] \
                          [latency_column_count] = df[percentile].astype (int)
 
-                legend_texts.append (legend_prefix + ':' + percentile + '%')
+                legend_texts.append (legend_prefix + ':' + percentile + '%'
+                                      + " clients:" + str (client_count))
 
                 latency_column_count += 1
 
               dataframe = latencies
 
             if 'throughput-interval' in filename:
+              join_legend_list = True
+
               if not throughputs:
                 throughputs['messages_per_sec'] = pd.DataFrame (
                     { throughput_column_count : df['messages_per_sec'] })
@@ -285,7 +287,7 @@ def get_plot_texts (args, legend_texts, message_size, server_rate,
   else:
     title_text.add ('queue_size:' + str (server_queue_size))
 
-  if len (args.client_counts) > 1:
+  if len (args.client_counts) > 1 and 'clients' not in legend_texts[0]:
     legend_texts.append ('clients:' + str (client_count))
   else:
     title_text.add ('clients:' + str (client_count))
@@ -330,7 +332,7 @@ def get_throughput_interval_data (args):
 # Get interval throughput data for a plot
 #
 def plot_interval_throughput (throughput_data, axis, y_label,
-                              show_platform=False):
+                              show_platform=False, show_legend=True):
 
   interval_data = throughput_data['throughput_intervals']
 
@@ -338,6 +340,9 @@ def plot_interval_throughput (throughput_data, axis, y_label,
                       dashes=False)
 
   axis.legend (get_legend_list (throughput_data), fontsize=8)
+
+  if show_legend == False:
+    axis.get_legend ().set_visible (False)
 
   set_tick_sizes (axis)
 
