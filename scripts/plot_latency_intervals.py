@@ -96,8 +96,6 @@ def plot_interval_latencies (axis, show_platform=False):
 
   plt.suptitle (args.title, fontsize=10)
 
-  utils.set_tick_sizes (axis)
-
   axis.legend (utils.get_legend_list (latency_data), fontsize=8)
 
   axis.set_title (" ".join (latency_data["title_texts"]), fontsize=8)
@@ -123,7 +121,7 @@ if args.show_throughput == True:
 
   # Prepare interval latency graph
   plt_latency = plt.subplot2grid ((10,10), (0,0), colspan=10, rowspan=5)
-  plt_latency.set_ylabel ('Latency (nanoseconds)', fontsize='9')
+  plt_latency.set_ylabel ('Latency (nanoseconds)', fontsize=8)
 
   # Plot latency distributions
   plot_interval_latencies (plt_latency)
@@ -132,7 +130,7 @@ if args.show_throughput == True:
   lhs_axis = plt.subplot2grid ((10,10), (6,0), colspan=10, rowspan=3)
   rhs_axis = lhs_axis.twinx ()
 
-  lhs_axis.set_ylabel ('messages/sec', fontsize='9')
+  lhs_axis.set_ylabel ('messages/sec', fontsize=8)
 
   throughput_interval_data = utils.get_throughput_interval_data (args)
 
@@ -140,7 +138,7 @@ if args.show_throughput == True:
                         lhs_axis, 'messages_per_sec', show_platform=True)
 
   # Plot throughput bytes/sec on the other y-axis
-  rhs_axis.set_ylabel ('bytes/sec', fontsize='9')
+  rhs_axis.set_ylabel ('bytes/sec', fontsize=8)
 
   utils.plot_interval_throughput (throughput_interval_data,
                         rhs_axis, 'bytes_per_sec')

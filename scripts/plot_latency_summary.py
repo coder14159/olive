@@ -66,8 +66,6 @@ if len (args.client_directory_descriptions) != len (args.client_directories):
   print ('client_directory_descriptions count should equal client_directories count')
   exit (1)
 
-max = '0'
-
 logger = utils.init_logger (logging, args.log_level)
 
 utils.log_machine_specs (logger)
@@ -130,13 +128,15 @@ if args.show_throughput == True:
   throughput_interval_data = utils.get_throughput_interval_data (args)
 
   utils.plot_interval_throughput (throughput_interval_data,
-                        lhs_axis, 'messages_per_sec', show_platform=True)
+                        lhs_axis, 'messages_per_sec',
+                        show_platform=True, show_legend=False)
 
   # Plot throughput bytes/sec on the other y-axis
   rhs_axis.set_ylabel ('bytes/sec', fontsize='9')
 
   utils.plot_interval_throughput (throughput_interval_data,
-                        rhs_axis, 'bytes_per_sec')
+                        rhs_axis, 'bytes_per_sec',
+                        show_platform=False, show_legend=False)
 
   rhs_axis.tick_params (axis='y', grid_alpha=0)
 
