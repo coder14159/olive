@@ -77,7 +77,9 @@ utils.log_run_args (logger, args)
 
 logger.info ("percentiles:          " +
             utils.join_list (args.client_latency_percentiles))
-
+#
+# Plot interval latencies using data output by spmc_client or spsc_client
+#
 def plot_interval_latencies (axis, show_platform=False):
 
   latency_data = utils.get_latency_interval_data (args)
