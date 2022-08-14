@@ -105,7 +105,7 @@ int main(int argc, char* argv[]) try
 
     if (!stop)
     {
-      BOOST_LOG_TRIVIAL (info) << "Stopping spsc_client";
+      BOOST_LOG_TRIVIAL (debug) << "Stopping spsc_client";
 
       stop = true;
 
