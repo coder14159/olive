@@ -135,7 +135,7 @@ def load_performance_data (args, filename):
   latency_column_count = 0
 
   # TODO: Prefer to use a local logger rather than filtering
-  # eg mylogger = logging.getLogger('UNIQUE_NAME_HERE')
+  # eg mylogger = logging.getLogger('UNIQUE_NAME')
   # log.setLevel(logging.DEBUG)
   #
   # Redirect matplotlib output to workaround the logging of the line
@@ -153,6 +153,8 @@ def load_performance_data (args, filename):
 
     for prefix in args.client_directory_descriptions:
       legend_prefix_texts.put (prefix)
+
+  join_legend_list = False
 
   for dir in args.client_directories:
 
@@ -198,25 +200,7 @@ def load_performance_data (args, filename):
                 throughput_column_count += 1
                 dataframe[throughput_column_count] = df.astype (int)
 
-              logging.debug (dataframe)
-
               legend_texts.append (legend_prefix)
-
-            if 'latency-interval' in filename:
-              join_legend_list = False
-              if not latencies:
-                latencies['latencies'] = pd.DataFrame ()
-
-              for percentile in args.client_latency_percentiles:
-                latencies['latencies'] \
-                         [latency_column_count] = df[percentile].astype (int)
-
-                legend_texts.append (legend_prefix + ':' + percentile + '%'
-                                      + " clients:" + str (client_count))
-
-                latency_column_count += 1
-
-              dataframe = latencies
 
             if 'throughput-interval' in filename:
               join_legend_list = True
@@ -239,20 +223,48 @@ def load_performance_data (args, filename):
 
               legend_texts.append (legend_prefix)
 
-            # Construct line descriptions
-            texts = get_plot_texts (args, legend_texts,
-                            message_size, server_rate, server_queue_size,
-                            client_count, join_legend_list)
+            if 'latency-interval' in filename:
+              join_legend_list = True
 
-            if plot_texts:
-              plot_texts['legend_texts'] += texts['legend_texts']
+              if not latencies:
+                latencies['latencies'] = pd.DataFrame ()
+
+              for percentile in args.client_latency_percentiles:
+                legend_line = []
+
+                latencies['latencies'] \
+                         [latency_column_count] = df[percentile].astype (int)
+
+                latency_column_count += 1
+
+                legend_line.append (legend_prefix + ':' + percentile + '%')
+
+                texts = get_plot_texts (args, legend_line,
+                                  message_size, server_rate, server_queue_size,
+                                  client_count, join_legend_list)
+                if plot_texts:
+                  plot_texts['legend_texts'] += texts['legend_texts']
+                else:
+                  plot_texts['legend_texts'] = texts['legend_texts']
+
+              dataframe = latencies
+
+              plot_texts['title_texts'] = texts['title_texts']
+
             else:
-              plot_texts['legend_texts'] = texts['legend_texts']
+              texts = get_plot_texts (args, legend_texts,
+                              message_size, server_rate, server_queue_size,
+                              client_count, join_legend_list)
 
-            plot_texts['title_texts'] = texts['title_texts']
+              if plot_texts:
+                plot_texts['legend_texts'] += texts['legend_texts']
+              else:
+                plot_texts['legend_texts'] = texts['legend_texts']
 
-            texts = []
-            legend_texts = []
+              plot_texts['title_texts'] = texts['title_texts']
+
+              texts = []
+              legend_texts = []
 
   if len (plot_texts['legend_texts']) == 1:
     plot_texts['legend_texts'] = []
@@ -287,7 +299,7 @@ def get_plot_texts (args, legend_texts, message_size, server_rate,
   else:
     title_text.add ('queue_size:' + str (server_queue_size))
 
-  if len (args.client_counts) > 1 and 'clients' not in legend_texts[0]:
+  if len (args.client_counts) > 1:
     legend_texts.append ('clients:' + str (client_count))
   else:
     title_text.add ('clients:' + str (client_count))
