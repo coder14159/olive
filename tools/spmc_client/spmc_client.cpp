@@ -117,6 +117,7 @@ int main(int argc, char* argv[]) try
   Sink sink (name, name + ":queue");
 
   std::atomic<bool> stop = { false };
+
   /*
    * Handle signals
    */
