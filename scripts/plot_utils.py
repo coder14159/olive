@@ -266,6 +266,9 @@ def load_performance_data (args, filename):
               texts = []
               legend_texts = []
 
+  if plot_texts.get ('legend_texts') is None:
+    exit (1)
+
   if len (plot_texts['legend_texts']) == 1:
     plot_texts['legend_texts'] = []
 
@@ -317,6 +320,9 @@ def get_latency_summary_data (args):
 
   latency_data = load_performance_data (args,'latency-summary.csv')
 
+  if latency_data == None:
+    exit (1)
+
   return dict (latency_summaries=latency_data['dataframe'],
                legend_texts=latency_data['legend_texts'],
                title_texts=latency_data['title_texts'])
@@ -326,6 +332,9 @@ def get_latency_summary_data (args):
 def get_latency_interval_data (args):
 
   latency_data = load_performance_data (args,'latency-interval.csv')
+
+  if latency_data == None:
+    exit (1)
 
   return dict (latency_intervals=latency_data['dataframe'],
                legend_texts=latency_data['legend_texts'],

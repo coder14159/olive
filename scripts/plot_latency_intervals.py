@@ -84,6 +84,9 @@ def plot_interval_latencies (axis, show_platform=False):
 
   latency_data = utils.get_latency_interval_data (args)
 
+  if latency_data is None:
+    exit (1)
+
   plt.suptitle (args.title, fontsize=10)
 
   interval_data = latency_data["latency_intervals"]
@@ -126,7 +129,8 @@ if args.show_throughput == True:
   plt_latency.set_ylabel ('Latency (nanoseconds)', fontsize=8)
 
   # Plot latency distributions
-  plot_interval_latencies (plt_latency)
+  if plot_interval_latencies (plt_latency) is None:
+    exit (1)
 
   # Plot throughput messages/sec
   lhs_axis = plt.subplot2grid ((10,10), (6,0), colspan=10, rowspan=3)
@@ -135,6 +139,9 @@ if args.show_throughput == True:
   lhs_axis.set_ylabel ('messages/sec', fontsize=8)
 
   throughput_interval_data = utils.get_throughput_interval_data (args)
+
+  if throughput_interval_data is None:
+    exit (1)
 
   utils.plot_interval_throughput (throughput_interval_data,
                         lhs_axis, 'messages_per_sec', show_platform=True)
