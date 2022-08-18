@@ -77,28 +77,6 @@ public:
    * progress of all the consumers
    */
   size_t write_available () const;
-  /*
-   * Return the capacity of the consumer local data cache
-   */
-  size_t cache_capacity () const;
-
-  /*
-   * Return true if the cache is currently enabled
-   */
-  bool cache_enabled () const;
-
-  /*
-   * Return the current size of the consumer local data cache
-   */
-  size_t cache_size () const;
-
-  /*
-   * Set the capacity of the consumer local data cache.
-   *
-   * Using the cache enables higher throughput, particularly for multiple
-   * clients, at the expense of latency values
-   */
-  void resize_cache (size_t size);
 
   /*
    * Push data of type POD into the queue.
