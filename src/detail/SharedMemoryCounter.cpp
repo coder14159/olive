@@ -28,8 +28,8 @@ SharedMemoryCounter::~SharedMemoryCounter ()
 {
   CounterType &counter = *m_counter;
 
-
   BOOST_LOG_TRIVIAL(debug)  << "Destroy object: " << m_objectName;
+
   BOOST_LOG_TRIVIAL(debug)  << "Counter: " << counter;
 
   if (counter == 0)
@@ -38,13 +38,8 @@ SharedMemoryCounter::~SharedMemoryCounter ()
 
     if (m_memory.destroy<CounterType> (m_objectName.c_str ()))
     {
-      BOOST_LOG_TRIVIAL(error)  << "Failed to destroy object: " << m_objectName;
-    }
-    else
-    {
       BOOST_LOG_TRIVIAL(debug)  << "Destroyed object: " << m_objectName;
     }
-
   }
 }
 
