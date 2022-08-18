@@ -134,14 +134,6 @@ template <typename Allocator>
 template<class Header, class Data>
 bool SPSCSink<Allocator>::pop_from_cache (Header &header, Data &data)
 {
-  auto &queue = *m_queuePtr;
-
-  size_t available = queue.read_available ();
-
-  if (available == 0)
-  {
-    return false;
-  }
   /*
    * Append as much available data as possible to the cache
    */
