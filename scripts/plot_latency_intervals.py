@@ -111,6 +111,7 @@ def plot_interval_latencies (axis, show_platform=False):
                     + utils.get_hardware_specs (), fontsize=8)
 
   axis.set_ylabel ("Latency (nanoseconds)", fontsize=8)
+
 ################################################################################
 
 logger.info ("=====Plotting=========")
@@ -129,8 +130,7 @@ if args.show_throughput == True:
   plt_latency.set_ylabel ('Latency (nanoseconds)', fontsize=8)
 
   # Plot latency distributions
-  if plot_interval_latencies (plt_latency) is None:
-    exit (1)
+  plot_interval_latencies (plt_latency)
 
   # Plot throughput messages/sec
   lhs_axis = plt.subplot2grid ((10,10), (6,0), colspan=10, rowspan=3)
