@@ -27,7 +27,7 @@ void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
    * Requesting a timestamp too often impacts performance, therefore latency
    * values are sampled
    */
-  if ((timestamp - m_sampled) < 5us)
+  if ((timestamp - m_sampled) < 10us)
   {
     return;
   }
