@@ -1,14 +1,9 @@
 #!/usr/bin/env python3
 
 import argparse
-import cpuinfo
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-import numpy as np
 import os
-import pandas as pd
 import platform
-import queue
 import seaborn as sns
 
 from pathlib import Path
@@ -17,8 +12,6 @@ import logging
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 import plot_utils as utils
-
-import psutil
 
 plt.style.use ("seaborn-darkgrid")
 
