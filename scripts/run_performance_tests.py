@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import gc
 import multiprocessing
 import os
 import pathlib
@@ -8,12 +9,9 @@ import platform
 import signal
 import socket
 import subprocess
-import sys
 import time
 
 import build_run_spmc_pgo_utils as utils
-
-import plot_utils
 
 cpu_count = multiprocessing.cpu_count ()
 
@@ -96,6 +94,9 @@ print ("client_stats:           " + ','.join (args.client_stats))
 if args.client_directory != None:
     print ("client_directory:       " + str (args.client_directory))
 
+# Disable automatic garbage collection for performance reasons
+gc.disable ()
+
 # Create the server command
 for server_rate in args.server_rate_list:
     for client_count_str in args.client_count_list:
@@ -103,6 +104,7 @@ for server_rate in args.server_rate_list:
         client_count = int (client_count_str)
 
         for server_queue_size in args.server_queue_size_list:
+
             client_cpu_list = utils.cpu_bind_list (args.client_cpu_list, client_count)
 
             directory = None
@@ -154,7 +156,11 @@ for server_rate in args.server_rate_list:
 
             stats = ','.join (args.client_stats)
 
+            gc.collect ()
+            time.sleep (int (2))
+
             for client_index in range (client_count):
+
                 client_cmd = [client_exe,
                             "--name",     args.memory_name,
                             "--log_level", "INFO"]

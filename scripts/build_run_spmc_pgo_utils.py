@@ -2,15 +2,13 @@
 
 from enum import Enum
 from pathlib import Path
-from subprocess import Popen, PIPE, STDOUT, CalledProcessError
+from subprocess import Popen, PIPE, CalledProcessError
 
 import platform
 import subprocess
 import os
 import signal
-import sys
 import time
-import datetime
 
 #
 # Print a line of text

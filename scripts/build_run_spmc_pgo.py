@@ -1,23 +1,15 @@
 #!/usr/bin/env python3
 
 import argparse
-import datetime
+import gc
 import multiprocessing
-import os
-import pathlib
 import platform
-import signal
 import socket
-import subprocess
 import sys
-import time
-
-from time import sleep
-from enum import Enum
-from subprocess import Popen, PIPE, STDOUT, CalledProcessError
-from pathlib import Path
 
 import build_run_spmc_pgo_utils as utils
+
+gc.disable ()
 
 parser = argparse.ArgumentParser (
   description="Generate Profile Guided Optimised (PGO) binaries")
@@ -147,3 +139,5 @@ print ("# Remove the named shared memory")
 utils.execute ([str (utils.sub_dir_path_bin (
                   utils.BuildType.RELEASE) / "remove_shared_memory"),
                 "--names", args.memory_name])
+
+gc.enable ()
