@@ -42,7 +42,7 @@ namespace olive {
 
 #ifdef ENABLE_CHECKS
 /*
- * Checks are always enabled
+ * Checks can be disabled at compile time
  */
 #define CHECK(condition, message) do  \
 {                                     \
