@@ -34,15 +34,15 @@ throughput_bytes_to_pretty (uint64_t bytes, TimeDuration duration)
 
   if (bytes_per_second > GB)
   {
-    return (boost::format ("%4.1f GB/s") % (bytes_per_second/GB)).str ();
+    return (boost::format ("%5.1f GB/s") % (bytes_per_second/GB)).str ();
   }
   else if (bytes_per_second > MB)
   {
-    return (boost::format ("%4.1f MB/s") % std::lround (bytes_per_second/MB)).str ();
+    return (boost::format ("%5.1f MB/s") % (bytes_per_second/MB)).str ();
   }
   else if (bytes_per_second > KB)
   {
-    return (boost::format ("%4.0f KB/s") % std::lround (bytes_per_second/KB)).str ();
+    return (boost::format ("%5.1f KB/s") % (bytes_per_second/KB)).str ();
   }
 
   return (boost::format ("%4.0f bytes/s") % std::lround (bytes_per_second)).str ();
@@ -63,20 +63,20 @@ throughput_messages_to_pretty (uint64_t messages, TimeDuration duration)
   constexpr double M = 1.0e6;
   constexpr double G = 1.0e9;
 
-  if (messages_per_second > G)
+  if (messages_per_second >= G)
   {
-    return (boost::format ("%4.1f G msgs/s") % std::lround (messages_per_second/G)).str ();
+    return (boost::format ("%4.1f G msgs/s") % (messages_per_second/G)).str ();
   }
-  else if (messages_per_second > M)
+  else if (messages_per_second >= M)
   {
-    return (boost::format ("%4.1f M msgs/s") % std::lround (messages_per_second/M)).str ();
+    return (boost::format ("%4.1f M msgs/s") % (messages_per_second/M)).str ();
   }
-  else if (messages_per_second > K)
+  else if (messages_per_second >= K)
   {
-    return (boost::format ("%4.0f K msgs/s") % std::lround (messages_per_second/K)).str ();
+    return (boost::format ("%4.1f K msgs/s") % (messages_per_second/K)).str ();
   }
 
-  return (boost::format ("%4.0f msgs/s") % messages_per_second).str ();
+  return (boost::format ("%4.0f   msgs/s") % messages_per_second).str ();
 }
 
 Throughput::Throughput ()
