@@ -4,7 +4,7 @@ The Olive library implements inter-process communication between a producer proc
 
 The goal of the project is to send the messages with a zero message drop guarantee while holding latencies as low as possible and to support high throughput. An example use case might be for distributing market data from a stock exchange.
 
-An implementation of *boost::lockfree::spsc_queue* (SPSC) communicating over shared memory is provided for performance comparision.
+An implementation of *boost::lockfree::spsc_queue* (SPSC) communicating over shared memory is implemented to provide a performance comparision.
 
 To build, unit test and generate performance test data see [build and test the Olive binaries](./README-build-test.md).
 
