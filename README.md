@@ -12,13 +12,15 @@ To build, unit test and generate performance test data see [build and test the O
 
 ## Performance plots
 
-Having generated performance data, the following plots illustrate latency and throughput performance for SPMC and SPSC implementations
+Having generated performance data, the following plots illustrate latency and throughput performance for SPMC and SPSC implementations.
 
-Using a smaller queue size exhibits lower latency values but a lower maximum throughput.
-![Alt](images/client_interval_latency-spmc-vs-spsc-rate-1000-clients-1-queue_size-128.png "SPMC vs SPSC with small queue size")
+### Small queue size
+Smaller queue sizes exhibit lower latency values for lower throughputs but also lower maximum throughputs.
 
-A larger queue size improves throughput at the cost of higher latencies.
-![Alt](images/client_interval_latency-spmc-vs-spsc-rate-max-clients-1-2-queue_size-2048000.png "SPMC vs SPSC with large queue size")
+<img src="images/client_interval_latency-spmc-vs-spsc-rate-1000-clients-1-queue_size-128.png" width=80% height=20%>
 
+### Larger queue size
+The SPMC behaviour for larger queues is to prioritise throughput at the expence of latencies.
 
+<img src="images/client_interval_latency-spmc-vs-spsc-rate-max-clients-1-2-queue_size-2048000.png" width=80% height=20%>
 
