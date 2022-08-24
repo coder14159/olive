@@ -1,6 +1,6 @@
 # `Olive`
 
-The Olive library implements inter-process communication between a producer process and multiple consumers on a single machine over named shared memory. These prefixed by SPMC (single producer/multiple consumers).
+The Olive library implements inter-process communication between a producer process and multiple consumers on a single machine over named shared memory. The relevant tools are prefixed by SPMC (single producer/multiple consumers).
 
 The goal of the project is to send the messages with a zero message drop guarantee while holding latencies as low as possible and to support high throughput. An example use case might be for distributing market data from a stock exchange.
 
