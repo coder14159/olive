@@ -18,5 +18,7 @@ Using a smaller queue size exhibits lower latency values but a lower maximum thr
 ![Alt](images/client_interval_latency-spmc-vs-spsc-rate-1000-clients-1-queue_size-128.png "SPMC vs SPSC with small queue size")
 
 A larger queue size improves throughput at the cost of higher latencies.
+![Alt](images/client_interval_latency-spmc-vs-spsc-rate-max-clients-1-2-queue_size-2048000.png "SPMC vs SPSC with large queue size")
+
 
 
