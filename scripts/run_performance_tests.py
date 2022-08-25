@@ -46,8 +46,9 @@ parser.add_argument ("--server_cpu",  type=int, default=-1,
 parser.add_argument ("--server_queue_size_list", required=True, nargs='+',
                     help="Queue size (bytes)")
 parser.add_argument ("--server_message_size", required=True, help="Message size (bytes)")
-parser.add_argument ("--server_rate_list", default=0, nargs='+',
-                    help="Target messages per second rates. Maximum throughput is \"0\"")
+parser.add_argument ("--server_rate_list", default='max', nargs='+',
+                    help="Target messages per second rates. "
+                    "For maximum throughput use either \'max\' or '\0\'")
 parser.add_argument ("--server_pgo", default=False, action="store_true",
                     help="Use profile guided optimised server binary")
 
@@ -99,6 +100,7 @@ gc.disable ()
 
 # Create the server command
 for server_rate in args.server_rate_list:
+
     for client_count_str in args.client_count_list:
 
         client_count = int (client_count_str)
@@ -127,12 +129,15 @@ for server_rate in args.server_rate_list:
 
             subprocess.check_call ([pathlib.Path (exe_dir) / "remove_shared_memory",
                                     "--names", args.memory_name])
+
+            # The server requires a numeral for rate
+            server_cmd_rate = 0 if server_rate == 'max' else server_rate
             server_cmd = [server_exe,
                 "--cpu",          str (args.server_cpu),
                 "--name",         args.memory_name,
                 "--message_size", str (args.server_message_size),
                 "--queue_size",   str (server_queue_size),
-                "--rate",         str (server_rate),
+                "--rate",         str (server_cmd_rate),
                 "--log_level",    args.log_level]
 
             if args.tool_type == 'spsc':
