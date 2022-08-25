@@ -266,6 +266,8 @@ def load_performance_data (args, filename):
               texts = []
               legend_texts = []
 
+  if plot_texts == {}:
+    return None
   if len (plot_texts['legend_texts']) == 1:
     plot_texts['legend_texts'] = []
 
