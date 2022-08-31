@@ -84,7 +84,8 @@ def plot_interval_latencies (axis, show_platform=False):
 
   interval_data = latency_data["latency_intervals"]
 
-  axis = sns.lineplot (ax=axis, data=interval_data["latencies"], dashes=False)
+  axis = sns.lineplot (ax=axis, data=interval_data["latencies"],
+                       dashes=False)
 
   utils.set_tick_sizes (axis)
 
