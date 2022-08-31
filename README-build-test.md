@@ -85,7 +85,7 @@ max          12 us
 ---
 Utilising **Profile Guided Optimisation** (PGO) can improve throughput and latency values.
 
-On my machine, enabling the **tuned-adm** profile *latency-performance* also improves both latency and throughput performance, but only when applied to the *spmc_server* and not to the *spmc_client*
+On my machine, enabling the **tuned-adm** profile *latency-performance* improves both latency and throughput performance, but only when applied to the *spmc_server* and not to the *spmc_client*
 
 Run the **build_run_spmc_pgo.py** script to generate PGO binaries.
 
@@ -124,7 +124,7 @@ min         169 ns
 max          45 us
 ```
 ---
-An implementation of a client and server based on **boost::lockfree::spsc_queue** over shared memory has been implemented to provide a reference comparision for SPMC client and server.
+An implementation of a client and server based on **boost::lockfree::spsc_queue** over shared memory has been implemented to provide a reference comparision for the SPMC client and server.
 
 I find that maximum throughput for the SPSC implementation for this use case is roughly 1/3 of the SPMC implementation. Note that currently, the SPSC client count must be set on starting the SPSC server and requires all clients to be running.
 
@@ -156,3 +156,5 @@ min          81 ns
 99.99        22 us
 max          32 us
 ```
+
+Reading the data in batches improves throughput at the expence of latency, much like the SPMC implementation.
