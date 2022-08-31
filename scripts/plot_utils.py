@@ -286,10 +286,10 @@ def get_plot_texts (args, legend_texts, message_size, server_rate,
 
   rate = (server_rate if server_rate != '0' else 'max')
 
-  if len (args.server_rates) > 1:
-    legend_texts.append ('rate:' + str (rate))
+  if len (args.client_counts) > 1:
+    legend_texts.append ('clients:' + str (client_count))
   else:
-    title_text.add ('rate:' + str (rate))
+    title_text.add ('clients:' + str (client_count))
 
   if len (args.server_message_sizes) > 1:
     legend_texts.append ('message_size:' + str (message_size))
@@ -301,10 +301,10 @@ def get_plot_texts (args, legend_texts, message_size, server_rate,
   else:
     title_text.add ('queue_size:' + str (server_queue_size))
 
-  if len (args.client_counts) > 1:
-    legend_texts.append ('clients:' + str (client_count))
+  if len (args.server_rates) > 1:
+    legend_texts.append ('rate:' + str (rate))
   else:
-    title_text.add ('clients:' + str (client_count))
+    title_text.add ('rate:' + str (rate))
 
   if join_legend_list == True:
     legend_texts = [join_list (legend_texts, ' ')]
