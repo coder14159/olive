@@ -134,7 +134,7 @@ void server (const std::string& name,
 
   BOOST_LOG_TRIVIAL (info)
     << ((numClients > 1) ? (std::to_string (numClients) + " clients")
-                         : "Client")
+                         : "client")
     << " ready";
 
   // create a reusable test message
@@ -146,8 +146,8 @@ void server (const std::string& name,
   size_t sourceCount = sources.size ();
 
   /*
-   * For fair data distribution of message latencies rotate the ordering the
-   * that clients receives data.
+   * For fair distribution of message latencies rotate the ordering that the
+   * clients receives data.
    */
   if (rate == 0)
   {
@@ -164,11 +164,9 @@ void server (const std::string& name,
   else
   {
     /*
-     * If rate is not set to the maximum throttle sends null messages to
-     * keep the fast path warm.
-     *
-     * Throttle also periodically sends a WARMUP_MESSAGE_TYPE message to keep
-     * the cache warm.
+     * The Throttle is used to limit the throughput of messages of messages if
+     * required. This is useful for testing performance behaviour at different
+     * throughput rates.
      */
     Throttle throttle (rate);
 
@@ -189,7 +187,6 @@ void server (const std::string& name,
       throttle.throttle ();
     }
   }
-
 }
 
 } // namespace {
