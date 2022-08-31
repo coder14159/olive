@@ -22,7 +22,6 @@ void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
    */
   m_intervalBytes += bytes;
   ++m_intervalMessages;
-
   /*
    * Requesting a timestamp too often impacts performance, therefore latency
    * values are sampled
@@ -40,9 +39,8 @@ void PerformanceStats::update (uint64_t bytes, uint64_t seqNum,
   {
     m_intervalBytes = 0;
     m_intervalMessages = 0;
+    m_seqNum = seqNum;
   }
-
-  m_seqNum = seqNum;
 }
 
 } // namespace olive {

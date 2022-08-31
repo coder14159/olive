@@ -24,19 +24,19 @@ void Throttle::throttle ()
 
   auto intervalStart = Clock::now ();
 
-  auto actualInterval = intervalStart - m_startTime;
+  auto interval = intervalStart - m_startTime;
 
-  while (actualInterval < targetInterval)
+  if (interval < targetInterval)
   {
-    std::this_thread::sleep_for (targetInterval - actualInterval);
+    std::this_thread::sleep_for (targetInterval - interval);
 
-    actualInterval = Clock::now () - m_startTime;
+    interval = Clock::now () - m_startTime;
   }
 
   /*
-    * Periodically reset the counters so that the throttle is better able to
-    * handle variations in workload.
-    */
+   * Periodically reset the counters so that the throttle is better able to
+   * handle variations in workload.
+   */
   if ((intervalStart - m_startTime) > 1s)
   {
     m_startTime = intervalStart;
@@ -85,7 +85,7 @@ void Throttle::throttle (Sink &sink)
    * Periodically reset the counters so that the throttle is better able to
    * handle variations in workload.
    */
-  if (currentInterval > 500ms)
+  if (currentInterval > 1s)
   {
     m_startTime = Clock::now ();
     m_counter = 0;
