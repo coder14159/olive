@@ -13,18 +13,18 @@ View the [Makefile](Makefile) for targets to build individual or groups of targe
 
 ## Sample use cases
 
-The sample spmc (single producer, multiple consumer) tools illustrate how to use the Olive library.
+The sample SPMC (single producer, multiple consumer) tools illustrate how to use the Olive library.
 
-The command below starts a server which creates named shared memory and places a queue within it (or opens a queue of the same name if it already exists). Messages are then sent to the queue at a configured rate. Here, the rate is 1000 messages/second. Not setting a throughput rate on the command line implies maximum throughput.
+The command below starts a server which creates a named shared memory space and places a queue within it (or opens a queue of the same name if it already exists). Messages are then sent to the queue at a configured rate. Here, the rate is 1000 messages/second. Not setting a throughput rate on the command line, or using '0' implies maximum throughput.
 
-In this example below, the message size slected is similar to that of a typical market data message size. The small queue size is sufficient for a lower throughputs and helps keep latency values low.
+In the example below, the message size selected is similar to that of a typical market data message size. The small queue size is sufficient for a lower throughputs and helps to keep latency values small. The value set to the **name** field will be the name of the shared memory to be created and/or opened.
 
 ```
-$ build/x86_64/bin/spmc_server --cpu 1 --name spmc --message_size 32 --queue_size 100 --rate 1000 --log_level INFO
+$ build/x86_64/bin/spmc_server --cpu 1 --name smem --message_size 32 --queue_size 100 --rate 1000 --log_level INFO
 ```
 Run a client to consume messages from the queue. The optional stats argument outputs performance statistics to stdout.
 ```
-$ timeout 30 build/x86_64/bin/spmc_client --name spmc --log_level INFO --cpu 2 --stats latency,throughput
+$ timeout 30 build/x86_64/bin/spmc_client --name smem --log_level INFO --cpu 2 --stats latency,throughput
 <snip>
 65 KB/s    1 K msgs/s
 percentile latency
@@ -52,13 +52,13 @@ An understanding of likely message sizes and throughput values enables one to op
 
 For example
 ```
-$ build/x86_64/bin/remove_shared_memory --names spmc
+$ build/x86_64/bin/remove_shared_memory --names smem
 ```
 ```
-$ build/x86_64/bin/spmc_server --cpu 1 --name spmc --message_size 32 --queue_size 102400 --log_level INFO
+$ build/x86_64/bin/spmc_server --cpu 1 --name smem --message_size 32 --queue_size 102400 --log_level INFO
 ```
 ```
-$ timeout 30 build/x86_64/bin/spmc_client --name spmc --log_level INFO --cpu 2 --stats latency,throughput
+$ timeout 30 build/x86_64/bin/spmc_client --name smem --log_level INFO --cpu 2 --stats latency,throughput
 <snip>
 1.1 GB/s   19 M msgs/s
 percentile latency
@@ -126,10 +126,12 @@ max          45 us
 ---
 An implementation of a client and server based on **boost::lockfree::spsc_queue** over shared memory has been implemented to provide a reference comparision for the SPMC client and server.
 
-I find that maximum throughput for the SPSC implementation for this use case is roughly 1/3 of the SPMC implementation. Note that currently, the SPSC client count must be set on starting the SPSC server and requires all clients to be running.
+I find that maximum throughput for the SPSC implementation for this use case is roughly 1/3 of the SPMC implementation.
+
+Note that currently, the SPSC client count must be set on starting the SPSC server and requires all clients to be running before data can be sent.
 
 ```
-$ build/x86_64/bin/spsc_server --cpu 1 --name spmc --message_size 32 --queue_size 102400 --log_level INFO --clients 1
+$ build/x86_64/bin/spsc_server --cpu 1 --name smem --message_size 32 --queue_size 102400 --log_level INFO --clients 1
 ```
 ```
 build/x86_64/bin/spsc_client --name smem --log_level INFO --cpu 2 --stats latency,throughput
