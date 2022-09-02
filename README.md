@@ -57,7 +57,7 @@ At a lower throughput rate, the SPMC implementation demonstrates similar latency
 
 <img src="images/client_summary_latency-spmc-vs-spsc-rate-1000-clients-1-2-queue_size-512.png" width=80% height=20%>
 
-Maximum throughput is much higher for the SPMC implementation than for the SPSC version.
+Maximum throughput is much higher and latency is lower for the SPMC implementation than for SPSC.
 
 <img src="images/client_summary_latency-spmc-vs-spsc-rate-max-clients-1-2-queue_size-512.png" width=80% height=20%>
 
