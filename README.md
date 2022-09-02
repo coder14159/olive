@@ -1,12 +1,12 @@
 # `Olive`
 
-The Olive library implements inter-process communication between a producer process and one or more consumers on a single machine over named shared memory. The relevant tools are prefixed by SPMC (single producer/multiple consumers).
+The Olive library implements inter-process communication between a producer process and one or more consumers on a single machine over named shared memory. The relevant tools are prefixed by **SPMC** (single producer/multiple consumers).
 
 The goal of the project is to enable a producer process to send messages, with a zero message drop guarantee, to one or more consumers  while holding latencies as low as possible and to support high throughput.
 
 An example use case for this software could be distributing data between micro services with a zero message drop guarantee.
 
-A shared memory implementation of *boost::lockfree::spsc_queue* (SPSC) producer/consumer executables is also implemented to provide a comparison for the SPMC code.
+Shared memory implementations of producer/consumer based around **boost::lockfree::spsc_queue** (**SPSC**) executables is also implemented to provide a comparison for the SPMC code.
 
 To build, unit test and generate performance test data see [build and test the Olive binaries](./README-build-test.md).
 
@@ -30,19 +30,56 @@ Comparison performance data is generated using a *boost::lockfree::spsc_queue* b
 ```
 scripts/run_performance_tests.py --tool_type spsc --timeout 60 --server_cpu 1 --server_queue_size_list 512 65536 1048576 --server_message_size 32 --server_rate_list 1000 max  --client_stats latency throughput interval --client_directory ~/data/spsc/v1 --memory_name smem --client_count_list 1 2 --client_cpu_list 2 3 --server_pgo
 ```
-
+---
 ### `Plot performance data`
-Having generated performance data, one can compare the throughput and latency for the different performance test configurations using the plotting scripts.
+Having generated performance data, one can compare throughput and latency information for different performance test configurations by using the plotting scripts ***plot_latency_intervals.py*** and ***plot_latency_summary.py***
 
-#### `Small queue size`
-Both the SPMC and SPSC implementations exhibit lower latency values for smaller queue sizes but also lower maximum throughputs.
+#### `Using a smaller queue size`
+
+Using smaller queue sizes is beneficial for generating lower latencies. Conversely, maximum throughput values are reduced when working with smaller queues.
+
+The plot below was generated using a throighput limited to 1000 msgs/sec. Both the SPMC and SPSC implementations exhibit lower latency values for smaller queue sizes.
+
+Maximum latency values for the SPMC implementation are lower than the equivalent values for the SPSC design.
+However, the throughput graph for SPMC is less smooth than SPSC. This is due to the SPMC data being consumed in batches.
 
 <img src="images/client_interval_latency-spmc-vs-spsc-rate-1000-clients-1-queue_size-512.png" width=80% height=20%>
 
-#### `Large queue size`
-When using a larger queue, the SPMC implementation prioritises throughput over latency values.
+When testing at maximum throughput, the SPMC implementation continues to exhibit lower latencies as well as a much higher throughput than the SPSC implementation.
 
-The maximum throughput for a single SPSC client is roughly one third of the equivalent SPMC implementation and is roughly equal to the SPMC implementation running two clients.
+<img src="images/client_interval_latency-spmc-vs-spsc-rate-max-clients-1-queue_size-512.png" width=80% height=20%>
 
-<img src="images/client_interval_latency-spmc-vs-spsc-rate-max-clients-1-2-queue_size-2048000.png" width=80% height=20%>
+**Performance Summaries**
 
+The performance summaries below show the full latency profile using a log scale to more easily visualise the data.
+
+At a lower throughput rate, the SPMC implementation demonstrates similar latency profile to SPSC up to around 90%. Above 90% the SPMC implementation exhibits a better latency profile.
+
+<img src="images/client_summary_latency-spmc-vs-spsc-rate-1000-clients-1-2-queue_size-512.png" width=80% height=20%>
+
+Maximum throughput is much higher for the SPMC implementation than for the SPSC version.
+
+<img src="images/client_summary_latency-spmc-vs-spsc-rate-max-clients-1-2-queue_size-512.png" width=80% height=20%>
+
+
+#### `Using a larger queue size`
+
+When limited to a low throughput, the SPMC implementation displays a lower maximum latency than the SPSC implementation. However, the 99th pecentiles are largely similar for both implementations.
+
+<img src="images/client_interval_latency-spmc-vs-spsc-rate-1000-clients-1-2-queue_size-65536.png" width=80% height=20%>
+
+Using larger queues for the SPMC implementation results in a bias towards throughput at the expense of increased latency values.
+
+<img src="images/client_interval_latency-spmc-vs-spsc-rate-max-clients-1-2-queue_size-65536.png" width=80% height=20%>
+
+**Performance Summaries**
+
+The performance summaries below show the full latency profile using a log scale.
+
+Limiting throughput to 1000 messages/second.
+
+<img src="images/client_summary_latency-spmc-vs-spsc-rate-1000-clients-1-2-queue_size-65536.png" width=80% height=20%>
+
+When throughput is not limited, the SPMC implementation has a much higher throughput than equivalent SPSC configuration. Latency is also generally higher, due to the batching behaviour of the SPMC code.
+
+<img src="images/client_summary_latency-spmc-vs-spsc-rate-max-clients-1-2-queue_size-65536.png" width=80% height=20%>
