@@ -83,6 +83,8 @@ min          89 ns
 max          12 us
 ```
 ---
+
+## PGO
 Utilising **Profile Guided Optimisation** (PGO) can improve throughput and latency values.
 
 On my machine, enabling the **tuned-adm** profile *latency-performance* improves both latency and throughput performance, but only when applied to the *spmc_server* and not to the *spmc_client*
