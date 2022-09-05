@@ -17,7 +17,7 @@ To build, unit test and generate performance test data see [build and test the O
 ### `Generate sample performance data`
 Using the script *run_performance_tests.py* a range of performance test data can be generated.
 
-Generate performance data for the SPMC implementation. This invocation assumes the server being invoked makes use of *Profile Guided Optimisation* available on Linux - see [here](./README-build-test.md).
+Generate performance data for the SPMC implementation. This invocation assumes the server being invoked makes use of *Profile Guided Optimisation* available on Linux via the command line option *--server_pgo*. See [PGO](./README-build-test.md) section for more information.
 
 Here we generate data for a range of queue sizes, throughput rates and client counts.
 
@@ -38,10 +38,9 @@ Having generated performance data, one can compare throughput and latency inform
 
 Using smaller queue sizes is beneficial for generating lower latencies. Conversely, maximum throughput values are reduced when working with smaller queues.
 
-The plot below was generated using a throighput limited to 1000 msgs/sec. Both the SPMC and SPSC implementations exhibit lower latency values for smaller queue sizes.
+The plot below was generated using a throughput limited to 1000 msgs/sec. Both the SPMC and SPSC implementations exhibit lower latency values for smaller queue sizes.
 
-Maximum latency values for the SPMC implementation are lower than the equivalent values for the SPSC design.
-However, the throughput graph for SPMC is less smooth than SPSC. This is due to the SPMC data being consumed in batches.
+Maximum latency values for the SPMC implementation are lower than the equivalent values for the SPSC design. However, the throughput graph for SPMC is less smooth than SPSC. This is due to the SPMC data being consumed in batches.
 
 <img src="images/client_interval_latency-spmc-vs-spsc-rate-1000-clients-1-queue_size-512.png" width=80% height=20%>
 
