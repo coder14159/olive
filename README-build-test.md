@@ -87,7 +87,16 @@ max          12 us
 ## PGO
 Utilising **Profile Guided Optimisation** (PGO) can improve throughput and latency values.
 
-On my machine, enabling the **tuned-adm** profile *latency-performance* improves both latency and throughput performance, but only when applied to the *spmc_server* and not to the *spmc_client*
+On my machine, enabling the **tuned-adm** profile *latency-performance* improves both latency and throughput performance, but only when applied to the *spmc_server* and not to the *spmc_client*.
+
+To enable tuned-adm
+```
+$ tuned-adm active
+No current active profile.
+$ tuned-adm profile latency-performance
+$ tuned-adm active
+Current active profile: latency-performance
+```
 
 Run the **build_run_spmc_pgo.py** script to generate PGO binaries.
 
