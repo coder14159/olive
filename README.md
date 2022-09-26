@@ -6,7 +6,7 @@ The goal of the project is to enable a producer process to send messages, with a
 
 An example use case for this software could be distributing data between micro services.
 
-A second implementation of communication over shared memory is implemented using **boost::lockfree::spsc_queue** (**SPSC**) code is also implemented to provide a baseline comparison for the SPMC code.
+A second implementation of communication over shared memory is implemented using **boost::lockfree::spsc_queue** (**SPSC**) code to provide a baseline comparison for the SPMC code.
 
 To build, unit test and generate performance test data see [build and test the Olive binaries](./README-build-test.md).
 
