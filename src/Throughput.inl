@@ -3,14 +3,14 @@
 #include "detail/SharedMemory.h"
 #include "detail/Utils.h"
 
-#include <boost/filesystem.hpp>
 #include <boost/format.hpp>
 #include <boost/log/trivial.hpp>
 
+#include <filesystem>
 #include <iostream>
 #include <iomanip>
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace olive {
 
