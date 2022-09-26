@@ -1,11 +1,12 @@
 #include "LatencyStats.h"
 
-#include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
+
+#include <filesystem>
 
 using namespace std::chrono_literals;
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace olive {
 

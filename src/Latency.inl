@@ -2,14 +2,12 @@
 #include "Logger.h"
 
 #include <boost/cstdint.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/format.hpp>
 
 #include <algorithm>
 #include <sstream>
 
 namespace ba = boost::accumulators;
-namespace fs = boost::filesystem;
 
 namespace olive {
 
