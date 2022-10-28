@@ -76,6 +76,27 @@ ifdef PGO_RELEASE
   BUILD_SUFFIX += .pgo_release
 endif
 
+# Intel VTune
+# Sample build: $ make VTUNE=1 spmc -j2
+ifdef VTUNE
+  CXXFLAGS  += -DVTUNE=1
+
+  VTUNE_DIR := /run/media/ian/Elements/ProgramFiles/intel/vtune/sw_dev_tools/vtune_profiler_2020.2.0.610396
+
+  CXXFLAGS  += -I$(VTUNE_DIR)/include
+  CXXFLAGS  += -L$(VTUNE_DIR)/sdk/lib64
+  CXXFLAGS  += -Wl,-rpath=$(VTUNE_DIR)/sdk/lib64
+  CXXFLAGS  += -L$(VTUNE_DIR)/lib64/runtime
+
+  BUILD_SUFFIX += .vtune
+
+  LIB_VTUNE_NOTIFY    := -littnotify
+  LIB_VTUNE_COLLECTOR := -littnotify_collector
+
+  THIRD_PARTY_LIBS += $(LIB_VTUNE_NOTIFY)
+  THIRD_PARTY_LIBS += $(LIB_VTUNE_COLLECTOR)
+endif
+
 BIN_DIR := build/$(PROCESSOR)$(BUILD_SUFFIX)/bin
 LIB_DIR := build/$(PROCESSOR)$(BUILD_SUFFIX)/lib
 
@@ -91,26 +112,6 @@ CXXFLAGS          += -Wl,-rpath=$(BOOST_LIB_DIR)
 
 # CxxOpts
 CXXOPTS_DIR := thirdparty/cxxopts-2.2.0
-
-# Intel VTune
-# Sample build: $ make VTUNE=1 spmc -j2
-ifdef VTUNE
-  CXXFLAGS  += -DVTUNE=1
-
-  VTUNE_DIR := /run/media/ian/Elements/thirdparty/intel/dev_tools/sw_dev_tools/vtune_profiler_2020.2.0.610396
-  CXXFLAGS  += -I$(VTUNE_DIR)/include
-  CXXFLAGS  += -L$(VTUNE_DIR)/sdk/lib64
-  CXXFLAGS  += -Wl,-rpath=$(VTUNE_DIR)/sdk/lib64
-  CXXFLAGS  += -L$(VTUNE_DIR)/lib64/runtime
-
-  BUILD_SUFFIX += .vtune
-
-  LIB_VTUNE_NOTIFY    := -littnotify
-  LIB_VTUNE_COLLECTOR := -littnotify_collector
-
-  THIRD_PARTY_LIBS += $(LIB_VTUNE_NOTIFY)
-  THIRD_PARTY_LIBS += $(LIB_VTUNE_COLLECTOR)
-endif
 
 # Valgrind
 ifdef VALGRIND
