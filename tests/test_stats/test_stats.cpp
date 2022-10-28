@@ -2,7 +2,7 @@
 #include "PerformanceStats.h"
 #include "detail/SharedMemory.h"
 
-#include "boost/filesystem.hpp"
+#include <boost/filesystem.hpp>
 
 #define BOOST_TEST_DYN_LINK
 
