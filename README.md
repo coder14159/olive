@@ -34,6 +34,14 @@ scripts/run_performance_tests.py --tool_type spsc --timeout 60 --server_cpu 1 --
 ### `Plot performance data`
 Having generated performance data, one can compare throughput and latency information for different performance test configurations by using the plotting scripts ***plot_latency_intervals.py*** and ***plot_latency_summary.py***
 
+Example plotting latency and throughput data for olive and boost implementations
+
+```
+./scripts/plot_latency_intervals.py --client_directories ~/data/spmc/v1 ~/data/spsc/v1 --server_queue_sizes 512 --server_message_sizes 32 --server_rates 1000 --client_latency_percentiles 100 99 --title "Latency Profile"  --client_directory_descriptions spmc spsc --client_counts 1 --show_throughput
+
+scripts/plot_latency_summary.py --server_queue_sizes 512 --server_message_sizes 32 --server_rates 1000 --client_counts 1 2 --client_directories ~/data/spmc/v1 ~/data/spsc/v1 --client_directory_descriptions spmc spsc --show_throughput
+```
+
 #### `Using a smaller queue size`
 
 Using smaller queue sizes is beneficial for generating lower latencies. Conversely, maximum throughput values are reduced when working with smaller queues.
