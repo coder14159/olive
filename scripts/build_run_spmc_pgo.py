@@ -84,19 +84,19 @@ print ("# Build standard release spmc_client and spmc_server")
 utils.build_executable ("remove_shared_memory",
                         utils.BuildType.RELEASE, args.build_jobs)
 
-print ("# Delete the named test shared memory if it exists")
+print ("\n# Delete the named test shared memory if it exists")
 utils.execute ([str (utils.sub_dir_path_bin (
                       utils.BuildType.RELEASE) / "remove_shared_memory"),
                 "--names", args.memory_name])
 ###############################################################################
-print ("# Build standard release spmc_client and spmc_server")
+print ("\n# Build standard release spmc_client and spmc_server")
 utils.build_executable ("spmc_client",
                         utils.BuildType.RELEASE, args.build_jobs)
 utils.build_executable ("spmc_server",
                         utils.BuildType.RELEASE, args.build_jobs)
 
 ###############################################################################
-print ("# Build Profile Guided Optimisation (PGO) binaries")
+print ("\n# Build Profile Guided Optimisation (PGO) binaries")
 
 print ("# Build/run client and server genarating PGO data")
 utils.build_executable ("spmc_client",
@@ -104,38 +104,38 @@ utils.build_executable ("spmc_client",
 utils.build_executable ("spmc_server",
                         utils.BuildType.PGO_PROFILE, args.build_jobs)
 
-print ("# Run SPMC server [BuildType=PGO_PROFILE]")
+print ("\n# Run SPMC server [BuildType=PGO_PROFILE]")
 server = utils.run_spmc_server (args, utils.BuildType.PGO_PROFILE)
 
-print ("# Start SPMC clients [BuildType=PGO_PROFILE]")
+print ("\n# Start SPMC clients [BuildType=PGO_PROFILE]")
 clients = utils.run_spmc_clients (args, utils.BuildType.PGO_PROFILE)
 
-print ("# Monitor the running clients and exit after a configured period")
+print ("\n# Monitor the running clients and exit after a configured period")
 utils.monitor_server_and_clients (args, clients, server)
 
-print ("# Remove the named shared memory")
+print ("\n# Remove the named shared memory")
 utils.execute ([str (utils.sub_dir_path_bin (
                       utils.BuildType.RELEASE) / "remove_shared_memory"),
                 "--names", args.memory_name])
 
 ###############################################################################
-print ("# Build/run client and server utilising the PGO data")
+print ("\n# Build/run client and server utilising the PGO data")
 
 utils.build_executable ("spmc_client",
                         utils.BuildType.PGO_RELEASE, args.build_jobs)
 utils.build_executable ("spmc_server",
                         utils.BuildType.PGO_RELEASE, args.build_jobs)
 
-print ("# Run SPMC server [BuildType=PGO_RELEASE]")
+print ("\n# Run SPMC server [BuildType=PGO_RELEASE]")
 server = utils.run_spmc_server (args, utils.BuildType.PGO_RELEASE)
 
-print ("# Start SPMC clients [BuildType=PGO_RELEASE]")
+print ("\n# Start SPMC clients [BuildType=PGO_RELEASE]")
 clients = utils.run_spmc_clients (args, utils.BuildType.PGO_RELEASE)
 
-print ("# Monitor the running clients and exit after a configured period")
+print ("\n# Monitor the running clients and exit after a configured period")
 utils.monitor_server_and_clients (args, clients, server)
 
-print ("# Remove the named shared memory")
+print ("\n# Remove the named shared memory")
 utils.execute ([str (utils.sub_dir_path_bin (
                   utils.BuildType.RELEASE) / "remove_shared_memory"),
                 "--names", args.memory_name])
