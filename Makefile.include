@@ -67,7 +67,7 @@ ifdef PGO_PROFILE
   BUILD_SUFFIX += .pgo_profile
 endif
 
-# Use PGO profile data files to build PGO executables
+# Use PGO profile data files to build PGO release executables
 ifdef PGO_RELEASE
   CXXFLAGS     += -fprofile-use
   CXXFLAGS     += -fprofile-correction
