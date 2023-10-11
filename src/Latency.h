@@ -101,8 +101,8 @@ public:
    * Reset the the latency the values
    * Called on receipt of a RESET_INTERVAL token on the latency queue
    *
-   * This should only be called from the same context as the thread calling
-   * the Latency::write_xxx () method
+   * This should only be called from the same thread context as the thread
+   * calling the Latency::write_data () method
    */
   void reset ();
 
@@ -111,10 +111,6 @@ private:
   Latency (const Latency &) = delete;
 
   Latency & operator=(const Latency&) = delete;
-
-  void init_quantiles ();
-
-  void init_file ();
 
   void write_header ();
 
