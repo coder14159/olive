@@ -48,9 +48,9 @@ void SharedMemoryCounter::set (int value)
   *m_counter = value;
 }
 
-int SharedMemoryCounter::get ()
+int SharedMemoryCounter::get () const
 {
-  return *m_counter;
+  return m_counter->load (std::memory_order_acquire);
 }
 
 SharedMemoryCounter &SharedMemoryCounter::operator++ ()
