@@ -24,6 +24,14 @@ void SPMCSource<Queuetype>::stop ()
 }
 
 template <class Queuetype>
+void SPMCSource<Queuetype>::next (const std::string &str)
+{
+  std::vector<uint8_t> vec (str.begin (), str.end ());
+
+  next (str.begin (), str.end ());
+}
+
+template <class Queuetype>
 void SPMCSource<Queuetype>::next (const std::vector<uint8_t> &data)
 {
   Header header;
