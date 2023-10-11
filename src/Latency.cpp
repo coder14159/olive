@@ -140,7 +140,7 @@ std::string Latency::to_string () const
 
   return nanoseconds_to_pretty (min ()) + " " +
          nanoseconds_to_pretty (median) + " " +
-         nanoseconds_to_pretty (max ());
+         nanoseconds_to_pretty (max ()) + " ";
 }
 
 std::vector<std::string> Latency::to_strings () const

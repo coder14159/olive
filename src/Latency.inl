@@ -29,6 +29,11 @@ void Latency::next (Nanoseconds nanoseconds)
 
   auto count = nanoseconds.count ();
 
+  if (count == 0)
+  {
+    return;
+  }
+
   for (auto &quantile : m_quantiles)
   {
     quantile.second (count);
