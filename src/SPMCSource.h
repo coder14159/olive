@@ -40,7 +40,13 @@ public:
   void stop ();
 
   /*
-   * Serialise data to the queue
+   * Serialise string data and send to the queue
+   * Blocks until successful
+   */
+  void next (const std::string &data);
+
+  /*
+   * Serialise data and send to the queue
    * Blocks until successful
    */
   void next (const std::vector<uint8_t> &data);
