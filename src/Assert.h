@@ -63,6 +63,11 @@ namespace olive {
   }                                     \
 } while(0)
 
+#else
+
+#define CHECK(condition, message) {};
+#define CHECK_SS(condition, message) {};
+
 #endif // ENABLE_CHECKS
 
 } // namespace olive
