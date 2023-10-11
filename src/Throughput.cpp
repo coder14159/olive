@@ -45,7 +45,7 @@ throughput_bytes_to_pretty (uint64_t bytes, TimeDuration duration)
     return (boost::format ("%5.1f KB/s") % (bytes_per_second/KB)).str ();
   }
 
-  return (boost::format ("%4.0f bytes/s") % std::lround (bytes_per_second)).str ();
+  return (boost::format ("%5.0f bytes/s") % std::lround (bytes_per_second)).str ();
 }
 
 std::string

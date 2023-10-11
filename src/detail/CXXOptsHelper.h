@@ -33,7 +33,7 @@ public:
    */
   bool positional (const std::string &name, const std::string &value) const;
 
-   /*
+  /*
    * Return the value parsed from a string. Throw if not present.
    */
   template<typename T>
