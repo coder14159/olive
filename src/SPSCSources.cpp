@@ -32,6 +32,7 @@ SPSCSources::SPSCSources (const std::string &memoryName, size_t capacity)
 
   BOOST_LOG_TRIVIAL (info) << "constructed " << objectName;
 
+#if __TODO__
   m_thread = std::thread ([this] () {
 
     auto requests = *m_requests;
@@ -49,6 +50,7 @@ SPSCSources::SPSCSources (const std::string &memoryName, size_t capacity)
     }
 
   });
+#endif // __TODO__
 }
 
 SPSCSources::~SPSCSources ()
