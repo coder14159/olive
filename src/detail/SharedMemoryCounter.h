@@ -35,7 +35,7 @@ public:
   void set (int value);
 
   // get the counter value
-  int get ();
+  int get () const;
 
 private:
   std::string  m_objectName;
