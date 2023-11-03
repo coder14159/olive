@@ -1,4 +1,5 @@
 #ifndef OLIVE_SPMC_SINK_H
+#define OLIVE_SPMC_SINK_H
 
 #include "SPMCQueue.h"
 #include "detail/SharedMemory.h"
